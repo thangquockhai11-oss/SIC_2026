@@ -184,3 +184,4 @@ Toàn bộ **44/44 bài test** của toàn dự án (bao gồm Auth, Dataset Loa
 
 ## 8. KẾT LUẬN NGHIỆM THU
 Hệ thống **Advanced Hybrid RAG** đã hoạt động ổn định trên môi trường thực tế, đáp ứng toàn diện mọi yêu cầu kỹ thuật và quy chuẩn khoa học của TrustMedia AI.
+

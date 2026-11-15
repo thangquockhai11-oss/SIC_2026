@@ -69,10 +69,10 @@ def submit_analysis(
                 detail=f"URL Extraction Error: {str(e)}",
             ) from e
 
-    if not content or len(content) < 20:
+    if not content or len(content) < 5:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Article content is required (minimum 20 characters) or valid article URL must be provided.",
+            detail="Nội dung bài viết tối thiểu 5 ký tự hoặc cần cung cấp URL bài báo hợp lệ.",
         )
 
     if not title:

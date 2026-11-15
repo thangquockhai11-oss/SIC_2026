@@ -104,7 +104,7 @@ export default function NewsAnalyzerPage() {
   // Metrics
   const charCount = content.length;
   const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;
-  const isValidLength = charCount >= 20;
+  const isValidLength = charCount >= 5;
 
   // Load existing analysis if ID in URL
   useEffect(() => {
@@ -159,6 +159,23 @@ export default function NewsAnalyzerPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
+
+    if (inputMode === "url") {
+      if (!sourceUrl.trim()) {
+        setErrorMessage("Vui lòng nhập URL bài báo trực tuyến cần thẩm định.");
+        return;
+      }
+    } else {
+      if (!content.trim()) {
+        setErrorMessage("Vui lòng nhập hoặc dán nội dung bài viết cần phân tích (hoặc chọn 1 kịch bản mẫu ở trên để kiểm thử nhanh).");
+        return;
+      }
+      if (content.trim().length < 5) {
+        setErrorMessage("Nội dung bài viết quá ngắn (tối thiểu 5 ký tự) để phân tích claim.");
+        return;
+      }
+    }
+
     setResult(null);
     setSubmitting(true);
     setJobProgress(15);
@@ -167,13 +184,9 @@ export default function NewsAnalyzerPage() {
     try {
       const payload: any = { language, scope };
       if (inputMode === "url") {
-        if (!sourceUrl.trim()) throw new Error("Vui lòng nhập URL bài báo");
         payload.source_url = sourceUrl.trim();
         if (title.trim()) payload.title = title.trim();
       } else {
-        if (!content.trim() || content.trim().length < 20) {
-          throw new Error("Nội dung bài viết tối thiểu 20 ký tự để trích xuất claim");
-        }
         payload.content = content.trim();
         payload.title = title.trim() || undefined;
       }
@@ -456,7 +469,7 @@ export default function NewsAnalyzerPage() {
                         <AlertTriangle size={12} />
                       )}
                       <span>
-                        {charCount} ký tự {isValidLength ? `(~${wordCount} từ)` : "/ tối thiểu 20"}
+                        {charCount} ký tự {isValidLength ? `(~${wordCount} từ)` : "/ tối thiểu 5"}
                       </span>
                     </div>
                   </div>
@@ -480,6 +493,21 @@ export default function NewsAnalyzerPage() {
                     disabled={submitting}
                   />
                 </div>
+
+                {!content.trim() && (
+                  <div className="empty-content-helper-row" style={{ marginTop: 10, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                    <Zap size={14} className="text-teal" />
+                    <span style={{ fontSize: 13, color: "#475569" }}>Chưa có nội dung?</span>
+                    <button
+                      type="button"
+                      className="button button-outline"
+                      style={{ padding: "4px 12px", fontSize: 12, borderRadius: 20 }}
+                      onClick={() => handleApplyPreset(SAMPLE_PRESETS[0])}
+                    >
+                      ⚡ Nhấn để nạp nhanh kịch bản mẫu: "Bếp gas chạy bằng nước lã"
+                    </button>
+                  </div>
+                )}
 
                 <div className="textarea-bottom-bar">
                   <div className="bar-left-info">
@@ -544,7 +572,7 @@ export default function NewsAnalyzerPage() {
               <button
                 type="submit"
                 className="btn-analyze-primary"
-                disabled={submitting || (inputMode === "text" && !isValidLength) || (inputMode === "url" && !sourceUrl.trim())}
+                disabled={submitting}
               >
                 {submitting ? (
                   <>
