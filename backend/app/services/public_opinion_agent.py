@@ -11,6 +11,7 @@ import uuid
 
 from app.services.dataset_loaders import opinion_loader
 from app.services.model_manager import model_manager
+from app.services.rag.hybrid_retriever import hybrid_rag_retriever
 
 
 class PublicOpinionAgent:
@@ -134,6 +135,14 @@ class PublicOpinionAgent:
             "raw_comments_sample": raw_samples,
         }
 
+        # RAG retrieval for social sentiment context and related discussions
+        rag_hits = hybrid_rag_retriever.retrieve(
+            query=f"{title_text} thảo luận ý kiến cộng đồng dư luận",
+            top_k=2,
+            agent_name="PublicOpinionAgent",
+        )
+        evidence_ids = [h["chunk_id"] for h in rag_hits]
+
         latency_ms = int((time.time() - t0) * 1000)
         end_time = datetime.now(timezone.utc)
 
@@ -152,8 +161,8 @@ class PublicOpinionAgent:
             "model_version": model_version,
             "dataset_ids": ["UIT-VSMEC", "TweetEval"],
             "dataset_versions": {"UIT-VSMEC": "1.0", "TweetEval": "2020"},
-            "evidence_ids": [],
-            "retrieval_count": len(comments),
+            "evidence_ids": evidence_ids,
+            "retrieval_count": len(evidence_ids) if evidence_ids else len(comments),
             "start_time": start_time,
             "end_time": end_time,
             "result_summary": f"Lập trường chủ đạo: {stance_text}. Cảm xúc hàng đầu: {res.get('top_emotion', 'Other')}.",

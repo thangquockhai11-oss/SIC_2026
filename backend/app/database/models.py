@@ -15,6 +15,7 @@ from sqlalchemy import (
     Text,
 )
 from sqlalchemy.orm import DeclarativeBase, relationship
+from pgvector.sqlalchemy import Vector
 
 
 def utc_now() -> datetime:
@@ -237,5 +238,121 @@ class DatasetItem(Base):
     license_status = Column(String(30), nullable=False, default="UNVERIFIED")
     schema_status = Column(String(30), nullable=False, default="UNVERIFIED")
     notes = Column(Text, nullable=False, default="")
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+
+class Document(Base):
+    __tablename__ = "documents"
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    title = Column(String(500), nullable=False)
+    content = Column(Text, nullable=False)
+    doc_type = Column(String(50), nullable=False, default="dataset_excerpt")
+    source_url = Column(String(2000), nullable=True)
+    source_name = Column(String(255), nullable=False)
+    dataset_id = Column(String(100), nullable=True, index=True)
+    record_id = Column(String(100), nullable=True)
+    language = Column(String(10), nullable=False, default="vi")
+    publication_date = Column(DateTime(timezone=True), nullable=True)
+    metadata_json = Column(JSON, nullable=False, default=dict)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now)
+
+    chunks = relationship("DocumentChunk", back_populates="document", cascade="all, delete-orphan")
+
+
+class DocumentChunk(Base):
+    __tablename__ = "document_chunks"
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    document_id = Column(String(36), ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True)
+    chunk_index = Column(Integer, nullable=False, default=0)
+    content = Column(Text, nullable=False)
+    embedding = Column(Vector(1024), nullable=True)
+    token_count = Column(Integer, nullable=False, default=0)
+    metadata_json = Column(JSON, nullable=False, default=dict)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+    document = relationship("Document", back_populates="chunks")
+    embeddings = relationship("EmbeddingRecord", back_populates="chunk", cascade="all, delete-orphan")
+    evidence_records = relationship("EvidenceRecord", back_populates="chunk")
+
+
+class EmbeddingRecord(Base):
+    __tablename__ = "embeddings"
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    chunk_id = Column(String(36), ForeignKey("document_chunks.id", ondelete="CASCADE"), nullable=False, index=True)
+    model_name = Column(String(150), nullable=False, default="BAAI/bge-m3")
+    model_version = Column(String(50), nullable=False, default="1.0")
+    dimension = Column(Integer, nullable=False, default=1024)
+    vector_hash = Column(String(64), nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+    chunk = relationship("DocumentChunk", back_populates="embeddings")
+
+
+class RetrievalLog(Base):
+    __tablename__ = "retrieval_logs"
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    query = Column(Text, nullable=False)
+    agent_name = Column(String(100), nullable=False)
+    dataset_id = Column(String(100), nullable=True)
+    top_k = Column(Integer, nullable=False, default=5)
+    bm25_count = Column(Integer, nullable=False, default=0)
+    vector_count = Column(Integer, nullable=False, default=0)
+    hybrid_count = Column(Integer, nullable=False, default=0)
+    rerank_count = Column(Integer, nullable=False, default=0)
+    latency_ms = Column(Float, nullable=False, default=0.0)
+    chosen_evidence_ids = Column(JSON, nullable=False, default=list)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+
+class EvidenceRecord(Base):
+    __tablename__ = "evidence_records"
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    analysis_id = Column(String(36), ForeignKey("analyses.id", ondelete="CASCADE"), nullable=True, index=True)
+    claim_id = Column(String(36), ForeignKey("claims.id", ondelete="CASCADE"), nullable=True, index=True)
+    chunk_id = Column(String(36), ForeignKey("document_chunks.id", ondelete="SET NULL"), nullable=True, index=True)
+    claim_text = Column(Text, nullable=False)
+    query = Column(Text, nullable=True)
+    relevance_score = Column(Float, nullable=False, default=0.0)
+    rerank_score = Column(Float, nullable=False, default=0.0)
+    rrf_score = Column(Float, nullable=False, default=0.0)
+    retrieval_method = Column(String(50), nullable=False, default="hybrid_rrf_rerank")
+    source_name = Column(String(255), nullable=True)
+    source_url = Column(String(2000), nullable=True)
+    dataset_source = Column(String(100), nullable=True)
+    dataset_record_id = Column(String(100), nullable=True)
+    excerpt = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+    chunk = relationship("DocumentChunk", back_populates="evidence_records")
+
+
+class RAGExecution(Base):
+    __tablename__ = "rag_executions"
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    execution_id = Column(String(36), default=gen_uuid, nullable=False, index=True)
+    agent_name = Column(String(100), nullable=False)
+    query = Column(Text, nullable=False)
+    status = Column(String(30), nullable=False, default="COMPLETED")
+    latency_ms = Column(Integer, nullable=False, default=0)
+    config = Column(JSON, nullable=False, default=dict)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+
+class RAGModelVersion(Base):
+    __tablename__ = "rag_model_versions"
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    component = Column(String(50), nullable=False)
+    model_name = Column(String(150), nullable=False)
+    model_version = Column(String(50), nullable=False)
+    dimension = Column(Integer, nullable=False, default=1024)
+    is_active = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
 

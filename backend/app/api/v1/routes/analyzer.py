@@ -378,3 +378,54 @@ def get_model_catalog() -> list[dict]:
     from app.services.model_manager import model_manager
     return model_manager.list_models()
 
+
+@router.get(
+    "/analysis/{analysis_id}/evidence",
+    summary="Get all retrieved evidence records and provenance for an analysis",
+)
+def get_analysis_evidence(
+    analysis_id: str,
+    db: Session = Depends(get_db_session),
+) -> dict:
+    """Return verified evidence records with source URL, stance, and dataset provenance."""
+    analysis = (
+        db.query(Analysis)
+        .options(joinedload(Analysis.claims).joinedload(Claim.evidences))
+        .filter(Analysis.id == analysis_id)
+        .first()
+    )
+    if not analysis:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Không tìm thấy bài phân tích ID: {analysis_id}",
+        )
+
+    evidences_list = []
+    for c in analysis.claims:
+        for ev in c.evidences:
+            evidences_list.append({
+                "id": ev.id,
+                "claim_id": c.id,
+                "claim_text": c.claim_text,
+                "claim_verdict": c.verdict,
+                "source_name": ev.source_name,
+                "source_url": ev.source_url,
+                "excerpt": ev.excerpt,
+                "stance": ev.stance,
+                "reliability_score": ev.reliability_score,
+                "relevance_score": ev.relevance_score,
+                "dataset_source": ev.dataset_source,
+                "dataset_record_id": ev.dataset_record_id,
+                "nli_relation": ev.nli_relation,
+                "retrieval_timestamp": ev.retrieval_timestamp.isoformat() if ev.retrieval_timestamp else None,
+            })
+
+    return {
+        "analysis_id": analysis.id,
+        "title": analysis.title,
+        "total_claims": len(analysis.claims),
+        "total_evidences": len(evidences_list),
+        "evidences": evidences_list,
+    }
+
+

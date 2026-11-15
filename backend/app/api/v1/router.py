@@ -10,6 +10,7 @@ from app.api.v1.routes.evidence import router as evidence_router
 from app.api.v1.routes.health import router as health_router
 from app.api.v1.routes.history import router as history_router
 from app.api.v1.routes.opinion import router as opinion_router
+from app.api.v1.routes.rag import router as rag_router
 from app.api.v1.routes.reception import router as reception_router
 from app.api.v1.routes.reports import router as reports_router
 from app.api.v1.routes.trust import router as trust_router
@@ -27,3 +28,4 @@ router.include_router(trust_router, tags=["trust"])
 router.include_router(reception_router, tags=["reception"])
 router.include_router(reports_router, tags=["reports"])
 router.include_router(datasets_router, tags=["datasets"])
+router.include_router(rag_router, tags=["rag"])

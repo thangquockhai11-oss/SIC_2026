@@ -244,4 +244,38 @@ export const api = {
       return res.data;
     },
   },
+
+  // Advanced Hybrid RAG Engine
+  rag: {
+    stats: async (): Promise<any> => {
+      const res = await client.get("/rag/stats");
+      return res.data;
+    },
+    health: async (): Promise<any> => {
+      const res = await client.get("/rag/health");
+      return res.data;
+    },
+    search: async (params: {
+      query: string;
+      top_k?: number;
+      method?: "hybrid" | "vector" | "bm25";
+      use_reranker?: boolean;
+      dataset_filter?: string;
+    }): Promise<any> => {
+      const res = await client.post("/rag/search", params);
+      return res.data;
+    },
+    retrieve: async (params: { query: string; claim_text?: string; top_k?: number }): Promise<any> => {
+      const res = await client.post("/rag/retrieve", params);
+      return res.data;
+    },
+    documents: async (params: { page?: number; page_size?: number; q?: string; dataset_id?: string } = {}): Promise<any> => {
+      const res = await client.get("/rag/documents", { params });
+      return res.data;
+    },
+    documentDetail: async (docId: string): Promise<any> => {
+      const res = await client.get(`/rag/documents/${docId}`);
+      return res.data;
+    },
+  },
 };

@@ -10,6 +10,8 @@ import time
 from typing import Any
 import uuid
 
+from app.services.rag.hybrid_retriever import hybrid_rag_retriever
+
 
 class InformationReceptionAgent:
     """Specialized agent analyzing information reception and cognitive barriers."""
@@ -75,6 +77,14 @@ class InformationReceptionAgent:
             "cognitive_resistance_notes": resistance_note,
         }
 
+        # RAG retrieval for reception criteria & comprehension baseline
+        rag_hits = hybrid_rag_retriever.retrieve(
+            query=f"{article_title or content[:60]} tiếp nhận đọc hiểu thông điệp",
+            top_k=2,
+            agent_name="InformationReceptionAgent",
+        )
+        evidence_ids = [h["chunk_id"] for h in rag_hits]
+
         latency_ms = int((time.time() - t0) * 1000)
         end_time = datetime.now(timezone.utc)
 
@@ -89,8 +99,8 @@ class InformationReceptionAgent:
             "model_version": "1.0",
             "dataset_ids": ["MIND-Reception-Benchmark"],
             "dataset_versions": {"MIND": "1.0"},
-            "evidence_ids": [],
-            "retrieval_count": 1,
+            "evidence_ids": evidence_ids,
+            "retrieval_count": len(evidence_ids) if evidence_ids else 1,
             "start_time": start_time,
             "end_time": end_time,
             "result_summary": f"Điểm đọc hiểu: {reception_data['comprehension_score']}%. Tỷ lệ kiểm chứng trước khi chia sẻ: {reception_data['verify_before_sharing_rate']}%.",

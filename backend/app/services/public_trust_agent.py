@@ -11,6 +11,7 @@ from typing import Any
 import uuid
 
 from app.services.model_manager import model_manager
+from app.services.rag.hybrid_retriever import hybrid_rag_retriever
 
 
 class PublicTrustAgent:
@@ -88,6 +89,14 @@ class PublicTrustAgent:
             "limitations": "Khảo sát thực hiện qua nền tảng số nên có thể chưa bao phủ đầy đủ cư dân vùng sâu vùng xa.",
         }
 
+        # RAG retrieval for survey benchmarks & codebook references
+        rag_hits = hybrid_rag_retriever.retrieve(
+            query=f"{title_topic} khảo sát niềm tin công chúng WVS",
+            top_k=2,
+            agent_name="PublicTrustAgent",
+        )
+        evidence_ids = [h["chunk_id"] for h in rag_hits]
+
         latency_ms = int((time.time() - t0) * 1000)
         end_time = datetime.now(timezone.utc)
 
@@ -102,8 +111,8 @@ class PublicTrustAgent:
             "model_version": "Wave-7",
             "dataset_ids": ["WVS-Wave-7"],
             "dataset_versions": {"WVS": "Wave 7"},
-            "evidence_ids": [],
-            "retrieval_count": 1,
+            "evidence_ids": evidence_ids,
+            "retrieval_count": len(evidence_ids) if evidence_ids else 1,
             "start_time": start_time,
             "end_time": end_time,
             "result_summary": f"Điểm niềm tin bằng chứng: {survey_data['trust_evidence_score']}/100. Cỡ mẫu khảo sát: {survey_data['sample_size']}.",

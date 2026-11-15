@@ -13,6 +13,7 @@ import uuid
 
 from app.services.dataset_loaders import credibility_loader
 from app.services.model_manager import model_manager
+from app.services.rag.hybrid_retriever import hybrid_rag_retriever
 
 
 class MediaCredibilityAgent:
@@ -41,6 +42,14 @@ class MediaCredibilityAgent:
             "reasoning": res["explanation"],
         }
 
+        # RAG retrieval for publisher guidelines and source audit records
+        rag_hits = hybrid_rag_retriever.retrieve(
+            query=f"{domain or cred_data['source_name']} journalistic credibility transparency",
+            top_k=2,
+            agent_name="MediaCredibilityAgent",
+        )
+        evidence_ids = [h["chunk_id"] for h in rag_hits]
+
         latency_ms = int((time.time() - t0) * 1000)
         end_time = datetime.now(timezone.utc)
 
@@ -59,8 +68,8 @@ class MediaCredibilityAgent:
             "model_version": model_version,
             "dataset_ids": ["NELA-GT-2020"],
             "dataset_versions": {"NELA-GT": "2020"},
-            "evidence_ids": [],
-            "retrieval_count": 1 if domain else 0,
+            "evidence_ids": evidence_ids,
+            "retrieval_count": len(evidence_ids) if evidence_ids else (1 if domain else 0),
             "start_time": start_time,
             "end_time": end_time,
             "result_summary": f"Độ tin cậy nguồn '{cred_data['source_name']}': {cred_data['overall_credibility_score']}/100.",

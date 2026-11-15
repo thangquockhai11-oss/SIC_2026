@@ -17,6 +17,8 @@ import numpy as np
 
 from app.services.hybrid_retrieval import hybrid_retriever
 from app.services.model_manager import model_manager
+from app.services.rag.context_builder import context_builder
+from app.services.rag.hybrid_retriever import hybrid_rag_retriever
 
 logger = logging.getLogger(__name__)
 
@@ -230,12 +232,20 @@ class FactCheckingAgent:
                 "retrieval_count": 1,
             }
 
-        # Step 6: Hybrid Retrieval (BM25 + TF-IDF Vector)
-        candidates = hybrid_retriever.retrieve(
-            claim_text=claim_text,
-            top_k=2,
-            min_relevance_threshold=0.28,
+        # Step 6: Advanced Hybrid Retrieval (BM25 + pgvector + RRF + BGE Reranker)
+        candidates = hybrid_rag_retriever.retrieve(
+            query=claim_text,
+            top_k=3,
+            min_relevance_threshold=0.25,
+            agent_name="FactCheckingAgent",
         )
+        if not candidates:
+            # Fallback to local in-memory dataset chunks if pgvector is empty
+            candidates = hybrid_retriever.retrieve(
+                claim_text=claim_text,
+                top_k=2,
+                min_relevance_threshold=0.28,
+            )
 
         now = datetime.now(timezone.utc)
 

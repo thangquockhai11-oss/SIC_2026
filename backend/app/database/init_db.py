@@ -5,6 +5,7 @@ import json
 import logging
 from pathlib import Path
 
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
@@ -15,11 +16,18 @@ from app.database.models import (
     Base,
     Claim,
     DatasetItem,
+    Document,
+    DocumentChunk,
+    EmbeddingRecord,
     Evidence,
+    EvidenceRecord,
     InformationReception,
     MediaCredibility,
     PublicOpinion,
     PublicTrustSurvey,
+    RAGExecution,
+    RAGModelVersion,
+    RetrievalLog,
     User,
     gen_uuid,
     utc_now,
@@ -31,7 +39,26 @@ logger = logging.getLogger(__name__)
 def init_db() -> None:
     """Create all tables and seed baseline accounts, datasets and sample research analyses."""
     engine = get_engine()
+    if engine.dialect.name == "postgresql":
+        with engine.connect() as conn:
+            try:
+                conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+                conn.commit()
+            except Exception as e:
+                logger.warning("Could not execute CREATE EXTENSION vector: %s", e)
+
     Base.metadata.create_all(bind=engine)
+
+    if engine.dialect.name == "postgresql":
+        with engine.connect() as conn:
+            try:
+                conn.execute(text(
+                    "CREATE INDEX IF NOT EXISTS document_chunks_embedding_hnsw_idx "
+                    "ON document_chunks USING hnsw (embedding vector_cosine_ops);"
+                ))
+                conn.commit()
+            except Exception as e:
+                logger.warning("Could not create HNSW index: %s", e)
 
     with Session(engine) as session:
         # 1. Seed default accounts if missing
@@ -89,6 +116,35 @@ def init_db() -> None:
                     )
                     session.add(item)
                 session.flush()
+
+        # 3. Seed RAG Model Versions if empty
+        rag_version_count = session.query(RAGModelVersion).count()
+        if rag_version_count == 0:
+            session.add(RAGModelVersion(
+                id=gen_uuid(),
+                component="embedding",
+                model_name="BAAI/bge-m3",
+                model_version="1.0.0",
+                dimension=1024,
+                is_active=True,
+            ))
+            session.add(RAGModelVersion(
+                id=gen_uuid(),
+                component="reranker",
+                model_name="BAAI/bge-reranker-v2-m3",
+                model_version="1.0.0",
+                dimension=1024,
+                is_active=True,
+            ))
+            session.add(RAGModelVersion(
+                id=gen_uuid(),
+                component="retrieval_fusion",
+                model_name="RRF-ReciprocalRankFusion",
+                model_version="1.0.0",
+                dimension=1024,
+                is_active=True,
+            ))
+            session.flush()
 
         # 3. Seed initial real analysis if empty
         analysis_count = session.query(Analysis).count()
