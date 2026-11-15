@@ -38,27 +38,48 @@ async def run_multi_agent_analysis(
     t_start = time.time()
     agent_executions: list[dict[str, Any]] = []
 
-    # 1. Fact-Checking Agent (Hybrid Retrieval + NLI Verification)
-    claims, fact_trace = fact_checking_agent.execute_fact_checking(content, language=language)
-    agent_executions.append(fact_trace)
-
-    # 2. Media Credibility Agent (Independent Source & Journalistic Integrity)
+    # 1. Media Credibility Agent (Independent Source & Journalistic Integrity evaluated first)
     credibility_data, cred_trace = media_credibility_agent.evaluate(source_url, content)
     agent_executions.append(cred_trace)
+    source_name = credibility_data.get("source_name", "Nguồn tin")
+    source_cred = credibility_data.get("overall_credibility_score", 70.0)
 
-    # 3. Public Opinion Agent (Dual-Aspect Sentiment vs Stance)
+    # 2. Fact-Checking Agent (Hybrid Retrieval + NLI Verification with source attribution)
+    claims, fact_trace = fact_checking_agent.execute_fact_checking(
+        content,
+        language=language,
+        source_url=source_url,
+        source_name=source_name,
+        source_credibility=source_cred,
+        article_title=title,
+    )
+    agent_executions.append(fact_trace)
+
+    # 3. Public Opinion Agent (Dual-Aspect Sentiment vs Stance with topical comments)
     primary_claim_text = claims[0]["claim_text"] if claims else title
     opinion_data, op_trace = public_opinion_agent.analyze(
-        content, claim_text=primary_claim_text, language=language
+        content,
+        claim_text=primary_claim_text,
+        language=language,
+        article_title=title,
     )
     agent_executions.append(op_trace)
 
-    # 4. Public Trust Agent (Survey-grounded polling metrics)
-    trust_data, trust_trace = public_trust_agent.evaluate(content)
+    # 4. Public Trust Agent (Survey-grounded polling metrics calibrated to topic & source)
+    trust_data, trust_trace = public_trust_agent.evaluate(
+        content,
+        source_name=source_name,
+        source_credibility=source_cred,
+        article_title=title,
+    )
     agent_executions.append(trust_trace)
 
     # 5. Information Reception Agent (Comprehension & Cognitive Resistance)
-    reception_data, rec_trace = information_reception_agent.evaluate(content)
+    reception_data, rec_trace = information_reception_agent.evaluate(
+        content,
+        source_name=source_name,
+        article_title=title,
+    )
     agent_executions.append(rec_trace)
 
     # 6. Meta-Agent Consensus Synthesis & Conflict Resolution
@@ -68,6 +89,10 @@ async def run_multi_agent_analysis(
         opinion_data=opinion_data,
         trust_data=trust_data,
         reception_data=reception_data,
+        article_title=title,
+        article_content=content,
+        source_url=source_url,
+        language=language,
     )
     agent_executions.append(meta_trace)
 
@@ -92,4 +117,5 @@ async def run_multi_agent_analysis(
         "agent_executions": agent_executions,
         "total_latency_ms": total_latency_ms,
         "disagreement_detected": meta_result.get("disagreement_detected", False),
+        "calibration_criteria": meta_result.get("calibration_criteria", []),
     }
