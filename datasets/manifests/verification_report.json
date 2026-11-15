@@ -1,0 +1,420 @@
+{
+  "fever": {
+    "dataset_id": "fever",
+    "name": "FEVER (Fact Extraction and VERification)",
+    "files": {
+      "train.jsonl": {
+        "exists": true,
+        "size_bytes": 33024303,
+        "sha256": "eba7e8f87076753f8494718b9a857827af7bf73e76c9e4b75420207d26e588b6",
+        "records": 145449
+      },
+      "shared_task_dev.jsonl": {
+        "exists": true,
+        "size_bytes": 4349935,
+        "sha256": "e89865bfe1b4dd054e03dd57d7241a6fde24862905f31117cf0cd719f7c78df7",
+        "records": 19998
+      },
+      "paper_dev.jsonl": {
+        "exists": true,
+        "size_bytes": 2168767,
+        "sha256": "41158707810008747946bf23471e82df53e77a513524b9e3ec1c2e674ef5ef8c",
+        "records": 9999
+      }
+    },
+    "total_records": 175446,
+    "status": "VALIDATED",
+    "criteria_passed": {
+      "1_file_existence": true,
+      "2_non_zero_size": true,
+      "3_format_integrity": true,
+      "4_extraction_success": true,
+      "5_encoding_utf8": true,
+      "6_python_parseable": true,
+      "7_record_counts": true,
+      "8_required_schema": true,
+      "9_label_validity": true,
+      "10_duplicate_integrity": true
+    },
+    "labels": [
+      "NOT ENOUGH INFO",
+      "REFUTES",
+      "SUPPORTS"
+    ],
+    "schema": [
+      "id",
+      "verifiable",
+      "label",
+      "claim",
+      "evidence"
+    ],
+    "duplicate_ids_across_splits": 9999
+  },
+  "vifactcheck": {
+    "dataset_id": "vifactcheck",
+    "name": "ViFactCheck (Vietnamese Fact-Checking)",
+    "status": "VALIDATED",
+    "total_records": 7232,
+    "splits": {
+      "dev-00000-of-00001.parquet": {
+        "records": 723,
+        "size_bytes": 1225466,
+        "sha256": "16b6d8b244ec07be1a6d80fcb389486c2f26e5c10cdc66f6cab72bd159920454"
+      },
+      "test-00000-of-00001.parquet": {
+        "records": 1447,
+        "size_bytes": 2484723,
+        "sha256": "d797eb5a3797f12c052d4c8dbdda0b9cf7174f3dfce91050f95354b044816214"
+      },
+      "train-00000-of-00001.parquet": {
+        "records": 5062,
+        "size_bytes": 8071153,
+        "sha256": "ff054bc61afb59e3c9aa1dd402f0eb44700a30866c75ee6c66e117517bd510e8"
+      }
+    },
+    "criteria_passed": {
+      "1_file_existence": true,
+      "2_non_zero_size": true,
+      "3_format_integrity": true,
+      "4_extraction_success": true,
+      "5_encoding_utf8": true,
+      "6_python_parseable": true,
+      "7_record_counts": true,
+      "8_required_schema": true,
+      "9_label_validity": true,
+      "10_duplicate_integrity": true
+    },
+    "schema": [
+      "Unnamed: 0",
+      "index",
+      "Statement",
+      "Context",
+      "annotation_id",
+      "Topic",
+      "Author",
+      "Url",
+      "labels",
+      "Evidence"
+    ],
+    "labels": [
+      0,
+      1,
+      2
+    ],
+    "label_meaning": {
+      "0": "Supported",
+      "1": "Refuted",
+      "2": "Not Enough Information"
+    },
+    "duplicates_count": 2
+  },
+  "xfact": {
+    "dataset_id": "xfact",
+    "name": "X-FACT (Multilingual Fact-Checking)",
+    "status": "VALIDATED",
+    "total_records": 31189,
+    "splits": {
+      "dev-00000-of-00001.csv": {
+        "records": 2535,
+        "size_bytes": 5272974,
+        "sha256": "fb33fcbf614baa5db11658fca8932580707470b4f26b2c80672009d2ba6ce837"
+      },
+      "ood-00000-of-00001.csv": {
+        "records": 2368,
+        "size_bytes": 4679319,
+        "sha256": "73d4c219297e315a89637703b31aff90ecba52dfee055ee07429df1c5f9e1858"
+      },
+      "test-00000-of-00001.csv": {
+        "records": 3826,
+        "size_bytes": 7915295,
+        "sha256": "855352a62db90908afac20b93faaf39ccbd273dc1ed716836433af9a9a4a9512"
+      },
+      "train-00000-of-00001.csv": {
+        "records": 19079,
+        "size_bytes": 38925888,
+        "sha256": "978ab03e74b3b1c8d4a24818dd82464bbfe2b53a398d8e4842311239cbe3fcf4"
+      },
+      "zeroshot-00000-of-00001.csv": {
+        "records": 3381,
+        "size_bytes": 8434540,
+        "sha256": "7181f07f6bba2814f3db76d326e32a81aaafd6680584533f05a84ce708ab4f16"
+      }
+    },
+    "criteria_passed": {
+      "1_file_existence": true,
+      "2_non_zero_size": true,
+      "3_format_integrity": true,
+      "4_extraction_success": true,
+      "5_encoding_utf8": true,
+      "6_python_parseable": true,
+      "7_record_counts": true,
+      "8_required_schema": true,
+      "9_label_validity": true,
+      "10_duplicate_integrity": true
+    },
+    "schema": [
+      "language",
+      "site",
+      "evidence_1",
+      "evidence_2",
+      "evidence_3",
+      "evidence_4",
+      "evidence_5",
+      "link_1",
+      "link_2",
+      "link_3",
+      "link_4",
+      "link_5",
+      "claimDate",
+      "reviewDate",
+      "claimant",
+      "claim",
+      "label"
+    ],
+    "labels_sample": [
+      "complicated/hard to categorise",
+      "false",
+      "mostly false",
+      "mostly true",
+      "other",
+      "partly true/misleading",
+      "true"
+    ]
+  },
+  "goemotions": {
+    "dataset_id": "goemotions",
+    "name": "GoEmotions (Fine-Grained Emotion Dataset)",
+    "status": "VALIDATED",
+    "total_records": 211225,
+    "files": {
+      "goemotions_1.csv": {
+        "exists": true,
+        "size_bytes": 14174600,
+        "sha256": "cac049036bad5d68d1081f72b65f2cc51e4df82af05e3e22cfa747051cac1af3",
+        "records": 70000
+      },
+      "goemotions_2.csv": {
+        "exists": true,
+        "size_bytes": 14173154,
+        "sha256": "f699ecc5aa425c1720c1d02475f1e41815244b680bd75b282eb770d2c76cd84d",
+        "records": 70000
+      },
+      "goemotions_3.csv": {
+        "exists": true,
+        "size_bytes": 14395164,
+        "sha256": "467f1e7191af00f2e76cc7f425885c2dc304bea8aff284b10e8c460d22f2e1af",
+        "records": 71225
+      }
+    },
+    "criteria_passed": {
+      "1_file_existence": true,
+      "2_non_zero_size": true,
+      "3_format_integrity": true,
+      "4_extraction_success": true,
+      "5_encoding_utf8": true,
+      "6_python_parseable": true,
+      "7_record_counts": true,
+      "8_required_schema": true,
+      "9_label_validity": true,
+      "10_duplicate_integrity": true
+    },
+    "schema_count": 37,
+    "emotion_labels_count": 28
+  },
+  "uit_vsmec": {
+    "dataset_id": "uit_vsmec",
+    "name": "UIT-VSMEC (Vietnamese Social Media Emotion Corpus)",
+    "status": "VALIDATED",
+    "total_records": 6927,
+    "splits": {
+      "train.csv": {
+        "records": 5548,
+        "size_bytes": 463018,
+        "sha256": "14e931c58cc27ac11a64ad7f84d78c02b2884c3e32ebb21960f78fb5c2ebc1a5"
+      },
+      "test.csv": {
+        "records": 693,
+        "size_bytes": 57164,
+        "sha256": "96b6dc3c533696399a6eca823afe55259f7ebc4a68409fce68ead224cf565481"
+      },
+      "validation.csv": {
+        "records": 686,
+        "size_bytes": 57833,
+        "sha256": "487fecba839616b78fd7984a4f9bce7162099c0414757e5efbda620553e02816"
+      }
+    },
+    "criteria_passed": {
+      "1_file_existence": true,
+      "2_non_zero_size": true,
+      "3_format_integrity": true,
+      "4_extraction_success": true,
+      "5_encoding_utf8": true,
+      "6_python_parseable": true,
+      "7_record_counts": true,
+      "8_required_schema": true,
+      "9_label_validity": true,
+      "10_duplicate_integrity": true
+    },
+    "schema": [
+      "Emotion",
+      "Sentence"
+    ],
+    "labels": [
+      "Anger",
+      "Disgust",
+      "Enjoyment",
+      "Fear",
+      "Other",
+      "Sadness",
+      "Surprise"
+    ]
+  },
+  "pheme": {
+    "dataset_id": "pheme",
+    "name": "PHEME (Rumour and Veracity Dataset)",
+    "status": "VALIDATED",
+    "archive_size_bytes": 46529729,
+    "total_records": 6425,
+    "events": {
+      "charliehebdo-all-rnr-threads": {
+        "rumours": 458,
+        "non_rumours": 1621,
+        "total_threads": 2079
+      },
+      "ebola-essien-all-rnr-threads": {
+        "rumours": 14,
+        "non_rumours": 0,
+        "total_threads": 14
+      },
+      "ferguson-all-rnr-threads": {
+        "rumours": 284,
+        "non_rumours": 859,
+        "total_threads": 1143
+      },
+      "germanwings-crash-all-rnr-threads": {
+        "rumours": 238,
+        "non_rumours": 231,
+        "total_threads": 469
+      },
+      "gurlitt-all-rnr-threads": {
+        "rumours": 61,
+        "non_rumours": 77,
+        "total_threads": 138
+      },
+      "ottawashooting-all-rnr-threads": {
+        "rumours": 470,
+        "non_rumours": 420,
+        "total_threads": 890
+      },
+      "prince-toronto-all-rnr-threads": {
+        "rumours": 229,
+        "non_rumours": 4,
+        "total_threads": 233
+      },
+      "putinmissing-all-rnr-threads": {
+        "rumours": 126,
+        "non_rumours": 112,
+        "total_threads": 238
+      },
+      "sydneysiege-all-rnr-threads": {
+        "rumours": 522,
+        "non_rumours": 699,
+        "total_threads": 1221
+      }
+    },
+    "criteria_passed": {
+      "1_file_existence": true,
+      "2_non_zero_size": true,
+      "3_format_integrity": true,
+      "4_extraction_success": true,
+      "5_encoding_utf8": true,
+      "6_python_parseable": true,
+      "7_record_counts": true,
+      "8_required_schema": true,
+      "9_label_validity": true,
+      "10_duplicate_integrity": true
+    },
+    "archive_sha256": "079f6ffdbc0b367399262f101774372e5d19dd8278c33d6c97a84461a9bc58dd",
+    "total_extracted_files": 255945
+  },
+  "tweeteval": {
+    "dataset_id": "tweeteval",
+    "name": "TweetEval (Multi-Task Twitter Benchmark)",
+    "status": "VALIDATED_LICENSE_REVIEW_REQUIRED",
+    "license_status": "LICENSE_REVIEW_REQUIRED",
+    "total_records": 200785,
+    "subtasks": {
+      "emoji": 100000,
+      "emotion": 5052,
+      "hate": 12970,
+      "irony": 4601,
+      "offensive": 14100,
+      "sentiment": 59899,
+      "stance_abortion": 933,
+      "stance_atheism": 733,
+      "stance_climate": 564,
+      "stance_feminist": 949,
+      "stance_hillary": 984
+    },
+    "criteria_passed": {
+      "1_file_existence": true,
+      "2_non_zero_size": true,
+      "3_format_integrity": true,
+      "4_extraction_success": true,
+      "5_encoding_utf8": true,
+      "6_python_parseable": true,
+      "7_record_counts": true,
+      "8_required_schema": true,
+      "9_label_validity": true,
+      "10_duplicate_integrity": true
+    }
+  },
+  "nela_gt": {
+    "dataset_id": "nela_gt",
+    "name": "NELA-GT-2020 (News and Source Credibility Benchmark)",
+    "status": "BLOCKED_BY_WAF_CHALLENGE",
+    "total_records": 0,
+    "criteria_passed": {
+      "1_file_existence": false,
+      "2_non_zero_size": false,
+      "3_format_integrity": false,
+      "4_extraction_success": true,
+      "5_encoding_utf8": true,
+      "6_python_parseable": false,
+      "7_record_counts": false,
+      "8_required_schema": false,
+      "9_label_validity": false,
+      "10_duplicate_integrity": true
+    },
+    "waf_challenge_details": {
+      "source_url": "https://dataverse.harvard.edu/api/access/datafile/4366864",
+      "block_type": "AWS WAF Challenge (x-amzn-waf-action: challenge / HTTP 202)",
+      "bot_bypass_policy": "Strict Compliance: Never solve, click through, or bypass anti-bot challenge automatically.",
+      "action_required": "User manual download or API Token configuration."
+    }
+  },
+  "uit_vsfc": {
+    "dataset_id": "uit_vsfc",
+    "name": "UIT-VSFC (Vietnamese Students' Feedback Corpus for Sentiment)",
+    "status": "WAITING_USER_PERMISSION",
+    "total_records": 0,
+    "permission_form_url": "https://github.com/kietnv/VietnameseDatasets",
+    "reason": "Corpus agreement required from official research team."
+  },
+  "wvs": {
+    "dataset_id": "wvs",
+    "name": "World Values Survey (WVS) Wave 7",
+    "status": "WAITING_USER_PERMISSION",
+    "total_records": 0,
+    "registration_url": "https://www.worldvaluessurvey.org/WVSDocumentationWV7.jsp",
+    "reason": "Official registration and Terms of Use acceptance required."
+  },
+  "mind": {
+    "dataset_id": "mind",
+    "name": "Microsoft News Dataset (MIND)",
+    "status": "WAITING_USER_PERMISSION",
+    "total_records": 0,
+    "license_url": "https://msnews.github.io/",
+    "reason": "Microsoft Research License Terms agreement required."
+  }
+}

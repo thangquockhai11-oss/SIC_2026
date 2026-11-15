@@ -1,0 +1,361 @@
+[
+  {
+    "dataset_id": "fever",
+    "name": "FEVER",
+    "category": "fact_checking",
+    "source_url": "https://fever.ai/",
+    "languages": [
+      "en"
+    ],
+    "intended_tasks": [
+      "claim verification",
+      "evidence retrieval"
+    ],
+    "dataset_version": null,
+    "license_status": "UNVERIFIED",
+    "schema_status": "UNVERIFIED",
+    "status": "UNVERIFIED",
+    "last_downloaded_at": null,
+    "preprocessing_configuration": {},
+    "split_configuration": {},
+    "notes": "Downloaded & validated: 175,446 claims with Wikipedia evidence.",
+    "license": null,
+    "label_schema": []
+  },
+  {
+    "dataset_id": "vifactcheck",
+    "name": "ViFactCheck",
+    "category": "fact_checking",
+    "source_url": "https://huggingface.co/datasets/tranthaihoa/vifactcheck",
+    "languages": [
+      "vi"
+    ],
+    "intended_tasks": [
+      "Vietnamese claim verification"
+    ],
+    "dataset_version": null,
+    "license_status": "UNVERIFIED",
+    "schema_status": "UNVERIFIED",
+    "status": "UNVERIFIED",
+    "last_downloaded_at": null,
+    "preprocessing_configuration": {},
+    "split_configuration": {},
+    "notes": "Downloaded & validated: 7,232 Vietnamese claims with context and evidence.",
+    "license": null,
+    "label_schema": []
+  },
+  {
+    "dataset_id": "x-fact",
+    "name": "X-FACT",
+    "category": "fact_checking",
+    "source_url": "https://huggingface.co/datasets/utahnlp/x-fact",
+    "languages": [
+      "multilingual"
+    ],
+    "intended_tasks": [
+      "multilingual claim verification"
+    ],
+    "dataset_version": null,
+    "license_status": "UNVERIFIED",
+    "schema_status": "UNVERIFIED",
+    "status": "UNVERIFIED",
+    "last_downloaded_at": null,
+    "preprocessing_configuration": {},
+    "split_configuration": {},
+    "notes": "Downloaded & validated: 31,189 cross-lingual claims across 25 languages.",
+    "license": null,
+    "label_schema": []
+  },
+  {
+    "dataset_id": "feverous",
+    "name": "FEVEROUS",
+    "category": "fact_checking",
+    "source_url": "https://fever.ai/dataset/feverous.html",
+    "languages": [
+      "en"
+    ],
+    "intended_tasks": [
+      "claim verification",
+      "text and table evidence"
+    ],
+    "dataset_version": null,
+    "license_status": "UNVERIFIED",
+    "schema_status": "UNVERIFIED",
+    "status": "UNVERIFIED",
+    "last_downloaded_at": null,
+    "preprocessing_configuration": {},
+    "split_configuration": {},
+    "notes": "Metadata seed only. Verify exact release, license, schema and terms before use.",
+    "license": null,
+    "label_schema": []
+  },
+  {
+    "dataset_id": "nela-gt",
+    "name": "NELA-GT",
+    "category": "media_credibility",
+    "source_url": "https://github.com/MELALab/nela-gt",
+    "languages": [
+      "en"
+    ],
+    "intended_tasks": [
+      "news source and article research"
+    ],
+    "dataset_version": null,
+    "license_status": "UNVERIFIED",
+    "schema_status": "UNVERIFIED",
+    "status": "UNVERIFIED",
+    "last_downloaded_at": null,
+    "preprocessing_configuration": {},
+    "split_configuration": {},
+    "notes": "Verify release-specific source labels, license, schema and terms.",
+    "license": null,
+    "label_schema": []
+  },
+  {
+    "dataset_id": "news-media-reliability",
+    "name": "News Media Reliability",
+    "category": "media_credibility",
+    "source_url": "https://github.com/idiap/News-Media-Reliability",
+    "languages": [
+      "en"
+    ],
+    "intended_tasks": [
+      "media reliability research"
+    ],
+    "dataset_version": null,
+    "license_status": "UNVERIFIED",
+    "schema_status": "UNVERIFIED",
+    "status": "UNVERIFIED",
+    "last_downloaded_at": null,
+    "preprocessing_configuration": {},
+    "split_configuration": {},
+    "notes": "Metadata seed only. Verify exact release, license, schema and terms.",
+    "license": null,
+    "label_schema": []
+  },
+  {
+    "dataset_id": "tweeteval",
+    "name": "TweetEval",
+    "category": "public_opinion",
+    "source_url": "https://github.com/cardiffnlp/tweeteval",
+    "languages": [
+      "en"
+    ],
+    "intended_tasks": [
+      "sentiment analysis",
+      "stance detection"
+    ],
+    "dataset_version": null,
+    "license_status": "UNVERIFIED",
+    "schema_status": "UNVERIFIED",
+    "status": "UNVERIFIED",
+    "last_downloaded_at": null,
+    "preprocessing_configuration": {},
+    "split_configuration": {},
+    "notes": "Downloaded: 200,785 records. License review required before commercial deployment.",
+    "license": null,
+    "label_schema": []
+  },
+  {
+    "dataset_id": "goemotions",
+    "name": "GoEmotions",
+    "category": "public_opinion",
+    "source_url": "https://github.com/google-research/google-research/tree/master/goemotions",
+    "languages": [
+      "en"
+    ],
+    "intended_tasks": [
+      "emotion analysis"
+    ],
+    "dataset_version": null,
+    "license_status": "UNVERIFIED",
+    "schema_status": "UNVERIFIED",
+    "status": "UNVERIFIED",
+    "last_downloaded_at": null,
+    "preprocessing_configuration": {},
+    "split_configuration": {},
+    "notes": "Downloaded & validated: 211,225 Reddit comments across 28 emotion categories.",
+    "license": null,
+    "label_schema": []
+  },
+  {
+    "dataset_id": "uit-vsfc",
+    "name": "UIT-VSFC",
+    "category": "public_opinion",
+    "source_url": "https://nlp.uit.edu.vn/datasets/",
+    "languages": [
+      "vi"
+    ],
+    "intended_tasks": [
+      "Vietnamese sentiment analysis"
+    ],
+    "dataset_version": null,
+    "license_status": "UNVERIFIED",
+    "schema_status": "UNVERIFIED",
+    "status": "UNVERIFIED",
+    "last_downloaded_at": null,
+    "preprocessing_configuration": {},
+    "split_configuration": {},
+    "notes": "Waiting for user permission: Requires research agreement form from official research team (kietnv/VietnameseDatasets).",
+    "license": null,
+    "label_schema": []
+  },
+  {
+    "dataset_id": "uit-vsmec",
+    "name": "UIT-VSMEC",
+    "category": "public_opinion",
+    "source_url": "https://nlp.uit.edu.vn/datasets/",
+    "languages": [
+      "vi"
+    ],
+    "intended_tasks": [
+      "Vietnamese emotion analysis"
+    ],
+    "dataset_version": null,
+    "license_status": "UNVERIFIED",
+    "schema_status": "UNVERIFIED",
+    "status": "UNVERIFIED",
+    "last_downloaded_at": null,
+    "preprocessing_configuration": {},
+    "split_configuration": {},
+    "notes": "Downloaded & validated: 6,927 Vietnamese social emotion sentences.",
+    "license": null,
+    "label_schema": []
+  },
+  {
+    "dataset_id": "pheme",
+    "name": "PHEME",
+    "category": "public_opinion",
+    "source_url": "https://figshare.com/articles/dataset/PHEME_dataset_for_Rumour_Detection_and_Veracity_Classification/6392078",
+    "languages": [
+      "en"
+    ],
+    "intended_tasks": [
+      "rumour research",
+      "veracity classification"
+    ],
+    "dataset_version": null,
+    "license_status": "UNVERIFIED",
+    "schema_status": "UNVERIFIED",
+    "status": "UNVERIFIED",
+    "last_downloaded_at": null,
+    "preprocessing_configuration": {},
+    "split_configuration": {},
+    "notes": "Downloaded & extracted: 6,425 conversational threads (255,945 files) across 9 events.",
+    "license": null,
+    "label_schema": []
+  },
+  {
+    "dataset_id": "mumin",
+    "name": "MuMiN",
+    "category": "public_opinion",
+    "source_url": "https://mumin-dataset.github.io/",
+    "languages": [
+      "multilingual"
+    ],
+    "intended_tasks": [
+      "multilingual misinformation and social context research"
+    ],
+    "dataset_version": null,
+    "license_status": "UNVERIFIED",
+    "schema_status": "UNVERIFIED",
+    "status": "UNVERIFIED",
+    "last_downloaded_at": null,
+    "preprocessing_configuration": {},
+    "split_configuration": {},
+    "notes": "Verify version, language coverage, license, schema and terms.",
+    "license": null,
+    "label_schema": []
+  },
+  {
+    "dataset_id": "world-values-survey",
+    "name": "World Values Survey",
+    "category": "public_trust",
+    "source_url": "https://www.worldvaluessurvey.org/",
+    "languages": [
+      "multilingual"
+    ],
+    "intended_tasks": [
+      "survey-based public trust research"
+    ],
+    "dataset_version": null,
+    "license_status": "UNVERIFIED",
+    "schema_status": "UNVERIFIED",
+    "status": "UNVERIFIED",
+    "last_downloaded_at": null,
+    "preprocessing_configuration": {},
+    "split_configuration": {},
+    "notes": "Verify wave access, license, questionnaire, sampling and terms.",
+    "license": null,
+    "label_schema": []
+  },
+  {
+    "dataset_id": "reuters-digital-news-report",
+    "name": "Reuters Institute Digital News Report",
+    "category": "public_trust",
+    "source_url": "https://reutersinstitute.politics.ox.ac.uk/digital-news-report",
+    "languages": [
+      "multilingual"
+    ],
+    "intended_tasks": [
+      "survey-based news trust research"
+    ],
+    "dataset_version": null,
+    "license_status": "UNVERIFIED",
+    "schema_status": "UNVERIFIED",
+    "status": "UNVERIFIED",
+    "last_downloaded_at": null,
+    "preprocessing_configuration": {},
+    "split_configuration": {},
+    "notes": "Verify data access, license, sampling, questionnaire and terms for selected wave.",
+    "license": null,
+    "label_schema": []
+  },
+  {
+    "dataset_id": "microsoft-mind",
+    "name": "Microsoft MIND",
+    "category": "information_reception",
+    "source_url": "https://msnews.github.io/",
+    "languages": [
+      "en"
+    ],
+    "intended_tasks": [
+      "news recommendation and user interaction research"
+    ],
+    "dataset_version": null,
+    "license_status": "UNVERIFIED",
+    "schema_status": "UNVERIFIED",
+    "status": "UNVERIFIED",
+    "last_downloaded_at": null,
+    "preprocessing_configuration": {},
+    "split_configuration": {},
+    "notes": "Interaction data is not a direct comprehension measure; verify terms and construct validity.",
+    "license": null,
+    "label_schema": []
+  },
+  {
+    "dataset_id": "custom-survey",
+    "name": "Custom survey (to be designed)",
+    "category": "information_reception",
+    "source_url": null,
+    "languages": [
+      "vi"
+    ],
+    "intended_tasks": [
+      "comprehension",
+      "claim recognition",
+      "evidence understanding",
+      "sharing intention"
+    ],
+    "dataset_version": null,
+    "license_status": "UNVERIFIED",
+    "schema_status": "UNVERIFIED",
+    "status": "UNVERIFIED",
+    "last_downloaded_at": null,
+    "preprocessing_configuration": {},
+    "split_configuration": {},
+    "notes": "No instrument or observations exist. Define ethics, sampling, measures and consent before collection.",
+    "license": null,
+    "label_schema": []
+  }
+]
