@@ -4,8 +4,10 @@ import {
   AlertCircle,
   AlertTriangle,
   Bot,
+  Check,
   CheckCircle2,
   Clock,
+  Copy,
   Cpu,
   Database,
   Download,
@@ -21,11 +23,58 @@ import {
   Search,
   ShieldAlert,
   ShieldCheck,
+  Sliders,
   Sparkles,
+  Trash2,
   Users,
+  Zap,
 } from "lucide-react";
 import { api } from "../api/client";
 import type { AnalysisDetail } from "../api/types";
+
+// Realistic Presets for 1-Click Verification Testing
+const SAMPLE_PRESETS = [
+  {
+    id: "bep-gas",
+    label: "Bếp gas chạy bằng nước lã",
+    badge: "Tin đồn lừa đảo",
+    title: "Xác minh thông tin 'bếp gas chạy bằng nước lã' tiết kiệm 100% nhiên liệu",
+    content:
+      "Gần đây, mạng xã hội liên tục xuất hiện các clip quảng cáo về 'bếp gas chạy bằng nước lã'. Người bán khẳng định chỉ cần đổ nước lã pha chút muối ăn vào bình chứa là ngọn lửa cháy liên tục 24/24 giờ mà không tốn gas, giúp tiết kiệm 100% chi phí năng lượng. Thậm chí có người hỏi thông tin để đặt mua hàng loạt. Các chuyên gia năng lượng và viện hóa học khẳng định nước (H2O) không phải là chất đốt tự nhiên, đây là chiêu trò lừa đảo sử dụng bình đất đèn (khí acetylen) ngụy trang tiềm ẩn nguy cơ nổ cực kỳ nguy hiểm.",
+    language: "vi",
+    scope: "full",
+  },
+  {
+    id: "vo-dap",
+    label: "Tin đồn vỡ đập thủy điện",
+    badge: "Tin giả thiên tai",
+    title: "Kiểm chứng thông tin 'vỡ đập thủy điện' gây hoang mang dư luận tại miền Trung",
+    content:
+      "Trên một số hội nhóm mạng xã hội lan truyền tin khẩn cấp: 'Đập thủy điện Sông Tranh 2 đã bị nứt vỡ thân đập do mưa lũ lớn, người dân vùng hạ du cần sơ tán khẩn cấp ngay trong đêm'. Ban chỉ huy Phòng chống thiên tai tỉnh và đại diện Tập đoàn Điện lực Việt Nam (EVN) đã chính thức bác bỏ, khẳng định toàn bộ các công trình thủy điện miền Trung vẫn vận hành an toàn, mực nước hồ chứa đang trong ngưỡng kiểm soát, không có bất kỳ sự cố rò rỉ hay nứt đập nào.",
+    language: "vi",
+    scope: "full",
+  },
+  {
+    id: "huy-thi",
+    label: "Hủy thi tốt nghiệp THPT",
+    badge: "Tin giáo dục sai lệch",
+    title: "Thực hư tin đồn 'Bộ GD&ĐT chính thức hủy bỏ kỳ thi tốt nghiệp THPT từ năm 2026'",
+    content:
+      "Một tài khoản TikTok đưa tin 'Bộ Giáo dục và Đào tạo vừa ban hành quyết định hủy bỏ hoàn toàn kỳ thi tốt nghiệp THPT từ năm 2026, chuyển giao 100% quyền xét tuyển cho các trường đại học'. Đại diện Bộ Giáo dục và Đào tạo khẳng định đây là thông tin hoàn toàn bịa đặt. Kỳ thi tốt nghiệp THPT năm 2026 vẫn diễn ra bình thường theo Chương trình Giáo dục phổ thông 2018 với định dạng đề thi mới đã được công bố chính thức.",
+    language: "vi",
+    scope: "full",
+  },
+  {
+    id: "gia-dien",
+    label: "EVN điều chỉnh giá điện",
+    badge: "Thời sự / Kinh tế",
+    title: "EVN thông tin chính thức về cơ chế điều chỉnh giá bán lẻ điện bình quân",
+    content:
+      "Tập đoàn Điện lực Việt Nam (EVN) thông báo điều chỉnh mức giá bán lẻ điện bình quân nhằm phản ánh biến động giá than và khí đầu vào. Một số trang tin không chính thống đồn đoán giá điện sẽ tăng gấp đôi trong quý tới. Đại diện Bộ Công Thương khẳng định mức điều chỉnh tuân thủ nghiêm ngặt khung giá của Chính phủ, đồng thời chính sách hỗ trợ tiền điện cho các hộ nghèo và gia đình chính sách tiếp tục được bảo đảm theo quy định.",
+    language: "vi",
+    scope: "full",
+  },
+];
 
 export default function NewsAnalyzerPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -38,6 +87,8 @@ export default function NewsAnalyzerPage() {
   const [sourceUrl, setSourceUrl] = useState("");
   const [language, setLanguage] = useState("vi");
   const [scope, setScope] = useState("full");
+  const [copiedPreset, setCopiedPreset] = useState<string | null>(null);
+  const [pastedStatus, setPastedStatus] = useState(false);
 
   // Execution state
   const [submitting, setSubmitting] = useState(false);
@@ -49,6 +100,11 @@ export default function NewsAnalyzerPage() {
 
   // Active result tab
   const [activeTab, setActiveTab] = useState<"consensus" | "factcheck" | "credibility" | "opinion" | "trust" | "agents">("consensus");
+
+  // Metrics
+  const charCount = content.length;
+  const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;
+  const isValidLength = charCount >= 20;
 
   // Load existing analysis if ID in URL
   useEffect(() => {
@@ -116,7 +172,7 @@ export default function NewsAnalyzerPage() {
         if (title.trim()) payload.title = title.trim();
       } else {
         if (!content.trim() || content.trim().length < 20) {
-          throw new Error("Nội dung bài viết tối thiểu 20 ký tự");
+          throw new Error("Nội dung bài viết tối thiểu 20 ký tự để trích xuất claim");
         }
         payload.content = content.trim();
         payload.title = title.trim() || undefined;
@@ -132,6 +188,37 @@ export default function NewsAnalyzerPage() {
     }
   };
 
+  const handleApplyPreset = (preset: typeof SAMPLE_PRESETS[0]) => {
+    setInputMode("text");
+    setTitle(preset.title);
+    setContent(preset.content);
+    setLanguage(preset.language);
+    setScope(preset.scope);
+    setErrorMessage(null);
+    setCopiedPreset(preset.id);
+    setTimeout(() => setCopiedPreset(null), 2500);
+  };
+
+  const handlePasteClipboard = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) {
+        setContent(text);
+        setPastedStatus(true);
+        setTimeout(() => setPastedStatus(false), 2000);
+      }
+    } catch {
+      // Browser permission denied or not supported
+    }
+  };
+
+  const handleClearForm = () => {
+    setTitle("");
+    setContent("");
+    setSourceUrl("");
+    setErrorMessage(null);
+  };
+
   const handleReset = () => {
     setResult(null);
     setCurrentJobId(null);
@@ -142,164 +229,430 @@ export default function NewsAnalyzerPage() {
 
   return (
     <div className="page-stack">
-      {/* Page Header */}
-      <section className="welcome-row">
-        <div>
-          <div className="eyebrow">CÔNG CỤ PHÂN TÍCH</div>
-          <h1>News Analyzer — Trực quan hóa Đa tác tử</h1>
-          <p className="page-subtitle">
-            Hệ sinh thái AI kiểm chứng thông tin số, đánh giá độc lập nguồn tin, lập trường thảo luận và hiệu chuẩn đồng thuận.
+      {/* Page Header Hero */}
+      <section className="analyzer-header-hero">
+        <div className="analyzer-header-content">
+          <div className="analyzer-badge-chip">
+            <Sparkles size={13} className="sparkle-svg" />
+            <span>HỆ ĐIỀU PHỐI ĐA TÁC TỬ • MULTI-AGENT VERIFICATION</span>
+          </div>
+          <h1 className="analyzer-main-title">
+            News Analyzer <span className="title-gradient">— Giám định & Phân tích Tin tức Số</span>
+          </h1>
+          <p className="analyzer-header-subtitle">
+            Hệ sinh thái AI phối hợp đa tác tử: Trích xuất phát ngôn cốt lõi (Claims), đối chiếu bằng chứng đa nguồn qua Hybrid RAG (FEVER & ViFactCheck), thẩm định độ tin cậy tòa soạn (NELA-GT) và hiệu chuẩn đồng thuận (EWAC).
           </p>
         </div>
         {result && (
-          <button className="button button-outline" onClick={handleReset}>
-            <RefreshCw size={14} /> Phân tích bài báo khác
+          <button className="button button-outline analyzer-new-btn" onClick={handleReset}>
+            <RefreshCw size={14} /> Phân tích bài báo mới
           </button>
         )}
       </section>
 
-      {/* Input Form Section (shown if not currently viewing completed result or can be toggled) */}
+      {/* Input Form Section */}
       {!result && (
-        <section className="panel analyzer-input-panel">
-          <div className="tab-pills-row">
+        <section className="analyzer-input-card">
+          {/* Quick Scenario Presets */}
+          <div className="analyzer-quick-presets">
+            <div className="preset-label">
+              <Zap size={14} className="icon-amber" />
+              <span>Kịch bản mẫu kiểm thử nhanh:</span>
+            </div>
+            <div className="preset-chips-scroll">
+              {SAMPLE_PRESETS.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className={`preset-chip-btn ${copiedPreset === p.id ? "applied" : ""}`}
+                  onClick={() => handleApplyPreset(p)}
+                  title="Nhấn để tự động nạp kịch bản mẫu này"
+                >
+                  <span className="preset-tag">{p.badge}</span>
+                  <span className="preset-name">{p.label}</span>
+                  {copiedPreset === p.id && <Check size={12} className="applied-icon" />}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Segmented Mode Switcher */}
+          <div className="analyzer-mode-switcher">
             <button
-              className={`pill-btn ${inputMode === "text" ? "active" : ""}`}
-              onClick={() => setInputMode("text")}
               type="button"
+              className={`mode-switch-btn ${inputMode === "text" ? "active" : ""}`}
+              onClick={() => setInputMode("text")}
             >
-              <FileText size={15} /> Dán văn bản bài báo
+              <FileText size={16} />
+              <div className="mode-btn-text">
+                <span className="mode-main">Dán văn bản bài báo</span>
+                <span className="mode-sub">Nội dung, bài đăng mạng xã hội hoặc phát ngôn</span>
+              </div>
             </button>
             <button
-              className={`pill-btn ${inputMode === "url" ? "active" : ""}`}
-              onClick={() => setInputMode("url")}
               type="button"
+              className={`mode-switch-btn ${inputMode === "url" ? "active" : ""}`}
+              onClick={() => setInputMode("url")}
             >
-              <Globe size={15} /> Trích xuất từ URL (Chống SSRF)
+              <Globe size={16} />
+              <div className="mode-btn-text">
+                <span className="mode-main">Trích xuất từ URL</span>
+                <span className="mode-sub">Hệ thống bảo vệ Chống SSRF an toàn</span>
+              </div>
             </button>
           </div>
 
           {errorMessage && (
-            <div className="inline-error" style={{ margin: "14px 0" }}>
+            <div className="inline-error" style={{ margin: "16px 0" }}>
               <AlertCircle size={18} />
               <div>
-                <strong>Lỗi phân tích:</strong>
+                <strong>Lỗi xử lý yêu cầu:</strong>
                 <span>{errorMessage}</span>
               </div>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="analyzer-form">
-            <div className="form-field">
-              <label>Tiêu đề bài viết (tùy chọn)</label>
-              <input
-                type="text"
-                placeholder="VD: Cảnh báo tin đồn vỡ đập thủy điện tại miền Trung..."
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                disabled={submitting}
-              />
+          <form onSubmit={handleSubmit} className="analyzer-form-modern">
+            {/* Title field */}
+            <div className="analyzer-field-group">
+              <div className="field-label-row">
+                <label htmlFor="article-title" className="field-main-label">
+                  Tiêu đề bài viết
+                </label>
+                <span className="field-badge-optional">Tùy chọn • Tự động trích xuất nếu để trống</span>
+              </div>
+              <div className="input-modern-wrapper">
+                <FileText size={16} className="input-left-icon" />
+                <input
+                  id="article-title"
+                  type="text"
+                  className="input-control-modern"
+                  placeholder="VD: Cảnh báo tin đồn vỡ đập thủy điện hoặc video 'bếp gas chạy bằng nước lã'..."
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  disabled={submitting}
+                />
+                {title && !submitting && (
+                  <button
+                    type="button"
+                    className="input-clear-btn"
+                    onClick={() => setTitle("")}
+                    title="Xóa tiêu đề"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                )}
+              </div>
             </div>
 
+            {/* Content Textarea OR URL input */}
             {inputMode === "url" ? (
-              <div className="form-field">
-                <label>URL bài báo cần kiểm chứng</label>
-                <div className="input-with-icon">
-                  <Globe size={16} />
+              <div className="analyzer-field-group">
+                <div className="field-label-row">
+                  <label htmlFor="source-url" className="field-main-label">
+                    URL bài báo trực tuyến cần thẩm định <span className="required-star">*</span>
+                  </label>
+                  <span className="field-badge-security">SSRF Shield Active</span>
+                </div>
+
+                <div className="input-modern-wrapper">
+                  <Globe size={16} className="input-left-icon text-teal" />
                   <input
+                    id="source-url"
                     type="url"
-                    placeholder="https://vnexpress.net/thoi-su/..."
+                    className="input-control-modern"
+                    placeholder="https://vnexpress.net/thoi-su/... hoặc https://tuoitre.vn/..."
                     value={sourceUrl}
                     onChange={(e) => setSourceUrl(e.target.value)}
                     required
                     disabled={submitting}
                   />
+                  {sourceUrl && !submitting && (
+                    <button
+                      type="button"
+                      className="input-clear-btn"
+                      onClick={() => setSourceUrl("")}
+                      title="Xóa URL"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
                 </div>
-                <span className="field-hint">
-                  Hệ thống bảo mật SSRF: Chỉ tải từ tên miền công khai hợp lệ, chặn dải IP nội bộ và giới hạn 2MB/6 giây.
-                </span>
+
+                <div className="ssrf-shield-card">
+                  <ShieldCheck size={20} className="shield-icon" />
+                  <div className="shield-details">
+                    <div className="shield-title">Cơ chế Bảo vệ Chống SSRF (Server-Side Request Forgery)</div>
+                    <p className="shield-desc">
+                      Hệ thống tự động phân giải DNS trước khi kết nối, chặn triệt để dải IP nội bộ RFC 1918 (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16), Loopback (127.0.0.1) và Cloud Metadata (169.254.169.254). Giới hạn kích thước tải tối đa 2MB với timeout 6.0 giây để bảo đảm an toàn hạ tầng.
+                    </p>
+                  </div>
+                </div>
               </div>
             ) : (
-              <div className="form-field">
-                <label>Nội dung bài viết / Thông điệp cần kiểm chứng</label>
-                <textarea
-                  rows={6}
-                  placeholder="Dán toàn bộ văn bản bài viết, phát ngôn hoặc thông tin lan truyền trên mạng xã hội vào đây..."
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  required
-                  disabled={submitting}
-                />
+              <div className="analyzer-field-group">
+                <div className="textarea-top-toolbar">
+                  <div className="field-label-row" style={{ marginBottom: 0 }}>
+                    <label htmlFor="article-content" className="field-main-label">
+                      Nội dung bài viết / Thông điệp cần kiểm chứng <span className="required-star">*</span>
+                    </label>
+                  </div>
+
+                  <div className="textarea-quick-tools">
+                    <button
+                      type="button"
+                      className="tool-btn"
+                      onClick={handlePasteClipboard}
+                      disabled={submitting}
+                      title="Dán văn bản trực tiếp từ clipboard máy tính"
+                    >
+                      <Copy size={13} />
+                      <span>{pastedStatus ? "Đã dán!" : "Dán Clipboard"}</span>
+                    </button>
+
+                    {content && !submitting && (
+                      <button
+                        type="button"
+                        className="tool-btn tool-btn-danger"
+                        onClick={() => setContent("")}
+                        title="Xóa nhanh toàn bộ nội dung"
+                      >
+                        <Trash2 size={13} />
+                        <span>Xóa</span>
+                      </button>
+                    )}
+
+                    <div className={`char-counter-pill ${isValidLength ? "valid" : "invalid"}`}>
+                      {isValidLength ? (
+                        <CheckCircle2 size={12} />
+                      ) : (
+                        <AlertTriangle size={12} />
+                      )}
+                      <span>
+                        {charCount} ký tự {isValidLength ? `(~${wordCount} từ)` : "/ tối thiểu 20"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="textarea-modern-wrapper">
+                  <textarea
+                    id="article-content"
+                    rows={7}
+                    className="textarea-control-modern"
+                    placeholder="Dán toàn bộ văn bản bài viết, phát ngôn báo chí hoặc tin đồn lan truyền trên mạng xã hội vào đây... (Mẹo: Có thể dùng phím tắt Ctrl + Enter để bắt đầu phân tích ngay)"
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    onKeyDown={(e) => {
+                      if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && !submitting && isValidLength) {
+                        e.preventDefault();
+                        handleSubmit(e);
+                      }
+                    }}
+                    required
+                    disabled={submitting}
+                  />
+                </div>
+
+                <div className="textarea-bottom-bar">
+                  <div className="bar-left-info">
+                    <span className="rag-indicator">
+                      <Database size={12} /> Hybrid RAG Active: <strong>FEVER</strong> • <strong>ViFactCheck</strong> • <strong>X-FACT</strong>
+                    </span>
+                  </div>
+                  <div className="bar-right-hint">
+                    <span>Nhấn <kbd>Ctrl</kbd> + <kbd>Enter</kbd> để gửi phân tích</span>
+                  </div>
+                </div>
               </div>
             )}
 
-            <div className="form-row-2col">
-              <div className="form-field">
-                <label>Ngôn ngữ phân tích</label>
-                <select value={language} onChange={(e) => setLanguage(e.target.value)} disabled={submitting}>
-                  <option value="vi">Tiếng Việt (Vietnamese)</option>
-                  <option value="en">Tiếng Anh (English)</option>
+            {/* Advanced Configuration Settings (Scope & Language) */}
+            <div className="analyzer-settings-grid">
+              <div className="setting-card">
+                <div className="setting-card-header">
+                  <Globe size={16} className="setting-icon text-blue" />
+                  <div>
+                    <label htmlFor="analysis-lang" className="setting-title">Ngôn ngữ xử lý (Language)</label>
+                    <span className="setting-subtitle">Tối ưu hóa tokenizer và mô hình NLI tương ứng</span>
+                  </div>
+                </div>
+                <select
+                  id="analysis-lang"
+                  className="select-control-modern"
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                  disabled={submitting}
+                >
+                  <option value="vi">🇻🇳 Tiếng Việt (Vietnamese — PhoBERT / ViHate / ViNLI)</option>
+                  <option value="en">🇬🇧 English (Tiếng Anh — RoBERTa / DeBERTa NLI)</option>
                 </select>
               </div>
 
-              <div className="form-field">
-                <label>Phạm vi phân tích (Scope)</label>
-                <select value={scope} onChange={(e) => setScope(e.target.value)} disabled={submitting}>
-                  <option value="full">Toàn diện (Fact-checking + Media + Opinion + Trust + Meta)</option>
-                  <option value="fact_checking">Chỉ kiểm chứng sự thật (Claims & Evidence)</option>
-                  <option value="media_credibility">Chỉ đánh giá nguồn tin (Credibility)</option>
-                  <option value="public_opinion">Chỉ phân tích dư luận & lập trường (Opinion & Stance)</option>
+              <div className="setting-card">
+                <div className="setting-card-header">
+                  <Sliders size={16} className="setting-icon text-emerald" />
+                  <div>
+                    <label htmlFor="analysis-scope" className="setting-title">Phạm vi phân tích (Scope)</label>
+                    <span className="setting-subtitle">Lựa chọn các tác tử chuyên biệt cùng phối hợp</span>
+                  </div>
+                </div>
+                <select
+                  id="analysis-scope"
+                  className="select-control-modern"
+                  value={scope}
+                  onChange={(e) => setScope(e.target.value)}
+                  disabled={submitting}
+                >
+                  <option value="full">🚀 Toàn diện (Fact-checking + Media + Opinion + Public Trust + Meta-Agent)</option>
+                  <option value="fact_checking">🔍 Chỉ Fact-checking (Trích xuất Claims & Bằng chứng RAG)</option>
+                  <option value="media_credibility">📰 Chỉ Media Credibility (Độ tin cậy & Tôn chỉ Tòa soạn NELA-GT)</option>
+                  <option value="public_opinion">💬 Chỉ Public Opinion (Lập trường & Cảm xúc dư luận TweetEval / UIT-VSFC)</option>
                 </select>
               </div>
             </div>
 
-            <button type="submit" className="button button-primary submit-analysis-btn" disabled={submitting}>
-              {submitting ? (
-                <>
-                  <RefreshCw size={16} className="spin-icon" /> Đang điều phối các AI Agent...
-                </>
-              ) : (
-                <>
-                  <Sparkles size={16} /> Bắt đầu phân tích Đa tác tử
-                </>
+            {/* Action Buttons Row */}
+            <div className="analyzer-submit-row">
+              <button
+                type="submit"
+                className="btn-analyze-primary"
+                disabled={submitting || (inputMode === "text" && !isValidLength) || (inputMode === "url" && !sourceUrl.trim())}
+              >
+                {submitting ? (
+                  <>
+                    <RefreshCw size={18} className="spin-icon" />
+                    <div className="btn-text-block">
+                      <span className="btn-main-label">Đang điều phối các Tác tử AI...</span>
+                      <span className="btn-sub-label">LangGraph Multi-Agent Execution</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={18} className="glow-icon" />
+                    <div className="btn-text-block">
+                      <span className="btn-main-label">Bắt đầu phân tích Đa tác tử</span>
+                      <span className="btn-sub-label">Multi-Agent Consensus Verification</span>
+                    </div>
+                  </>
+                )}
+              </button>
+
+              {(title || content || sourceUrl) && !submitting && (
+                <button
+                  type="button"
+                  className="btn-clear-secondary"
+                  onClick={handleClearForm}
+                  title="Xóa trắng dữ liệu vừa nhập"
+                >
+                  <Trash2 size={15} /> Xóa form
+                </button>
               )}
-            </button>
+
+              <div className="submit-meta-info">
+                <span className="meta-tag">
+                  <Database size={11} /> pgvector RAG Active
+                </span>
+                <span className="meta-tag">
+                  <Bot size={11} /> 5 AI Agents Ready
+                </span>
+              </div>
+            </div>
           </form>
 
-          {/* Progress Tracker when Submitting */}
+          {/* Multi-Agent Live Execution Board when Submitting */}
           {submitting && (
-            <div className="analysis-progress-card">
-              <div className="progress-top">
-                <div className="progress-label">
-                  <Bot size={17} />
-                  <span>Trạng thái: <strong>{jobStatus || "PROCESSING"}</strong></span>
+            <div className="agent-pipeline-board">
+              <div className="pipeline-header">
+                <div className="pipeline-title-group">
+                  <div className="pulse-indicator-dot" />
+                  <div>
+                    <div className="pipeline-title">
+                      Hệ điều phối Đa tác tử đang hoạt động (LangGraph Pipeline)
+                    </div>
+                    <div className="pipeline-status-text">
+                      Trạng thái hiện tại: <strong>{jobStatus || "PROCESSING"}</strong>
+                    </div>
+                  </div>
                 </div>
-                <span className="progress-val">{jobProgress}%</span>
+                <div className="pipeline-progress-badge">
+                  <span>Tiến độ tổng thể: <strong>{jobProgress}%</strong></span>
+                </div>
               </div>
-              <div className="progress-bar-track">
-                <div className="progress-bar-fill" style={{ width: `${jobProgress}%` }} />
+
+              {/* Progress track */}
+              <div className="pipeline-track">
+                <div
+                  className="pipeline-fill"
+                  style={{ width: `${Math.max(jobProgress, 8)}%` }}
+                />
               </div>
-              <div className="progress-steps-list">
-                <div className="step-item active">
-                  <span className="step-bullet done">✓</span>
-                  <span>Tiếp nhận & Làm sạch dữ liệu</span>
+
+              {/* 5 Agent Cards */}
+              <div className="pipeline-agents-grid">
+                <div className={`agent-flow-card ${jobProgress >= 15 ? (jobProgress >= 30 ? "done" : "running") : "pending"}`}>
+                  <div className="agent-card-icon">
+                    <ShieldCheck size={18} />
+                  </div>
+                  <div className="agent-card-body">
+                    <div className="agent-card-name">1. Ingestion & Guard Agent</div>
+                    <div className="agent-card-desc">Làm sạch văn bản, chuẩn hóa tiếng Việt & chống SSRF</div>
+                    <div className="agent-card-status">
+                      {jobProgress >= 30 ? "✓ Hoàn thành" : jobProgress >= 15 ? "Đang xử lý..." : "Chờ kích hoạt"}
+                    </div>
+                  </div>
                 </div>
-                <div className={`step-item ${jobProgress >= 30 ? "active" : ""}`}>
-                  <span className={`step-bullet ${jobProgress >= 30 ? "done" : ""}`}>
-                    {jobProgress >= 30 ? "✓" : "2"}
-                  </span>
-                  <span>Trích xuất Claims & Bằng chứng đối chiếu</span>
+
+                <div className={`agent-flow-card ${jobProgress >= 30 ? (jobProgress >= 60 ? "done" : "running") : "pending"}`}>
+                  <div className="agent-card-icon">
+                    <FileCheck2 size={18} />
+                  </div>
+                  <div className="agent-card-body">
+                    <div className="agent-card-name">2. Fact-Checking Agent</div>
+                    <div className="agent-card-desc">Trích xuất Claims & Hybrid RAG (FEVER, ViFactCheck)</div>
+                    <div className="agent-card-status">
+                      {jobProgress >= 60 ? "✓ Hoàn thành" : jobProgress >= 30 ? "Đang truy xuất tri thức..." : "Chờ kích hoạt"}
+                    </div>
+                  </div>
                 </div>
-                <div className={`step-item ${jobProgress >= 60 ? "active" : ""}`}>
-                  <span className={`step-bullet ${jobProgress >= 60 ? "done" : ""}`}>
-                    {jobProgress >= 60 ? "✓" : "3"}
-                  </span>
-                  <span>Đánh giá nguồn tin & Phân tích lập trường dư luận</span>
+
+                <div className={`agent-flow-card ${jobProgress >= 60 ? (jobProgress >= 80 ? "done" : "running") : "pending"}`}>
+                  <div className="agent-card-icon">
+                    <ShieldAlert size={18} />
+                  </div>
+                  <div className="agent-card-body">
+                    <div className="agent-card-name">3. Media Credibility Agent</div>
+                    <div className="agent-card-desc">Đánh giá tôn chỉ, quy trình biên tập NELA-GT</div>
+                    <div className="agent-card-status">
+                      {jobProgress >= 80 ? "✓ Hoàn thành" : jobProgress >= 60 ? "Đang thẩm định tòa soạn..." : "Chờ kích hoạt"}
+                    </div>
+                  </div>
                 </div>
-                <div className={`step-item ${jobProgress >= 90 ? "active" : ""}`}>
-                  <span className={`step-bullet ${jobProgress >= 90 ? "done" : ""}`}>
-                    {jobProgress >= 90 ? "✓" : "4"}
-                  </span>
-                  <span>Hiệu chuẩn đồng thuận Meta-Agent (EWAC)</span>
+
+                <div className={`agent-flow-card ${jobProgress >= 80 ? (jobProgress >= 90 ? "done" : "running") : "pending"}`}>
+                  <div className="agent-card-icon">
+                    <MessageSquareQuote size={18} />
+                  </div>
+                  <div className="agent-card-body">
+                    <div className="agent-card-name">4. Public Opinion & Stance</div>
+                    <div className="agent-card-desc">Phân tích lập trường dư luận TweetEval & UIT-VSFC</div>
+                    <div className="agent-card-status">
+                      {jobProgress >= 90 ? "✓ Hoàn thành" : jobProgress >= 80 ? "Đang tính toán cảm xúc..." : "Chờ kích hoạt"}
+                    </div>
+                  </div>
+                </div>
+
+                <div className={`agent-flow-card ${jobProgress >= 90 ? (jobProgress >= 100 ? "done" : "running") : "pending"}`}>
+                  <div className="agent-card-icon">
+                    <Bot size={18} />
+                  </div>
+                  <div className="agent-card-body">
+                    <div className="agent-card-name">5. EWAC Meta-Agent</div>
+                    <div className="agent-card-desc">Hiệu chuẩn trọng số bằng chứng & tổng hợp phán quyết</div>
+                    <div className="agent-card-status">
+                      {jobProgress >= 100 ? "✓ Hoàn thành" : jobProgress >= 90 ? "Đang hiệu chuẩn đồng thuận..." : "Chờ kích hoạt"}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
