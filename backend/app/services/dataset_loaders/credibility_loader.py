@@ -68,6 +68,17 @@ class CredibilityLoader:
                 "ownership_transparency": "Thành Đoàn TP. Hồ Chí Minh",
                 "methodology_disclosures": "Điều tra báo chí và phóng viên hiện trường.",
             },
+            "sggp.org.vn": {
+                "source_name": "Báo Sài Gòn Giải Phóng",
+                "credibility_class": "RELIABLE",
+                "credibility_score": 0.89,
+                "transparency_score": 0.90,
+                "citation_quality_score": 0.88,
+                "factual_reporting": "HIGH",
+                "bias_rating": "MAINSTREAM_STATE",
+                "ownership_transparency": "Đảng bộ Đảng Cộng sản Việt Nam TP. Hồ Chí Minh",
+                "methodology_disclosures": "Cơ quan báo chí chính luận chính thống, dẫn nguồn cơ quan chuyên môn.",
+            },
             "thanhnien.vn": {
                 "source_name": "Báo Thanh Niên",
                 "credibility_class": "RELIABLE",
