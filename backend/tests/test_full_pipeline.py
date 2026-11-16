@@ -1,7 +1,10 @@
 """Comprehensive pipeline tests for News Analyzer, Multi-Agent, Security, and Analytics."""
 
 import time
+from unittest.mock import MagicMock, patch
+
 from fastapi.testclient import TestClient
+import httpx
 
 
 def test_ssrf_protection_rejects_internal_urls(client: TestClient) -> None:
@@ -95,4 +98,41 @@ def test_news_analyzer_and_analytics_pipeline(client: TestClient) -> None:
     rep_resp = client.get(f"/api/v1/reports/{job_id}/export", params={"format": "json"})
     assert rep_resp.status_code == 200
     assert rep_resp.json()["report_id"] == job_id
+
+
+def test_url_extraction_ssl_verification_fallback() -> None:
+    from app.services.url_extractor import fetch_and_extract_article
+
+    call_count = 0
+
+    def mock_get(url: str, headers: dict[str, str]) -> MagicMock:
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise httpx.ConnectError("[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1010)")
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.is_redirect = False
+        mock_resp.headers = {"content-type": "text/html; charset=utf-8"}
+        mock_resp.content = (
+            b"<html><head><title>Test Academic Article</title></head>"
+            b"<body><h1>Tap chi Khoa hoc Ngoai ngu so 78</h1>"
+            b"<p>Day la doan van thu nhat cua bai bao nghien cuu ngon ngu rat chi tiet.</p>"
+            b"<p>Day la doan van thu hai mo ta phuong phap giang day va ket qua thuc nghiem.</p></body></html>"
+        )
+        mock_resp.text = mock_resp.content.decode("utf-8")
+        mock_resp.encoding = "utf-8"
+        return mock_resp
+
+    with patch("httpx.Client") as mock_client_cls:
+        client_instance = MagicMock()
+        client_instance.get.side_effect = mock_get
+        mock_client_cls.return_value.__enter__.return_value = client_instance
+
+        with patch("app.services.url_extractor.validate_url_safe", return_value="https://tapchikhoahoc.hanu.edu.vn/article/78"):
+            title, body = fetch_and_extract_article("https://tapchikhoahoc.hanu.edu.vn/article/78")
+            assert call_count == 2
+            assert "Tap chi Khoa hoc Ngoai ngu so 78" in title
+            assert len(body) > 50
+
 

@@ -59,6 +59,41 @@ def validate_url_safe(url: str) -> str:
     return url
 
 
+def _fetch_with_ssl_fallback(url: str, headers: dict[str, str], timeout: float) -> httpx.Response:
+    """
+    Fetch URL with SSL fallback.
+    Tries strict CA verification first (using certifi if available).
+    If verification fails due to missing intermediate certificate or local CA store mismatch,
+    retries with verify=False so public media / academic / gov websites can still be parsed.
+    """
+    try:
+        import certifi
+        ca_bundle: str | bool = certifi.where()
+    except Exception:
+        ca_bundle = True
+
+    try:
+        with httpx.Client(timeout=timeout, follow_redirects=False, verify=ca_bundle) as client:
+            return client.get(url, headers=headers)
+    except (httpx.ConnectError, httpx.RequestError) as exc:
+        err_str = str(exc).lower()
+        if (
+            "certificate verify failed" in err_str
+            or "unable to get local issuer certificate" in err_str
+            or "self-signed certificate" in err_str
+            or "certificate" in err_str
+            or "ssl" in err_str
+        ):
+            logger.warning(
+                "SSL certificate verification failed for %s (%s). Falling back to unverified SSL connection.",
+                url,
+                exc,
+            )
+            with httpx.Client(timeout=timeout, follow_redirects=False, verify=False) as client:
+                return client.get(url, headers=headers)
+        raise
+
+
 def fetch_and_extract_article(url: str) -> tuple[str, str]:
     """
     Safely download and extract article title and body text.
@@ -76,32 +111,49 @@ def fetch_and_extract_article(url: str) -> tuple[str, str]:
     }
 
     try:
-        with httpx.Client(timeout=FETCH_TIMEOUT, follow_redirects=False) as client:
-            resp = client.get(validated_url, headers=headers)
+        resp = _fetch_with_ssl_fallback(validated_url, headers, FETCH_TIMEOUT)
 
-            # Check redirect targets safely
-            redirect_count = 0
-            while resp.is_redirect and redirect_count < 5:
-                redirect_count += 1
-                redirect_url = resp.headers.get("location")
-                if not redirect_url:
-                    break
-                if redirect_url.startswith("/"):
-                    parsed_orig = urlparse(validated_url)
-                    redirect_url = f"{parsed_orig.scheme}://{parsed_orig.netloc}{redirect_url}"
-                validate_url_safe(redirect_url)
-                resp = client.get(redirect_url, headers=headers)
+        # Check redirect targets safely
+        redirect_count = 0
+        current_url = validated_url
+        while resp.is_redirect and redirect_count < 5:
+            redirect_count += 1
+            redirect_url = resp.headers.get("location")
+            if not redirect_url:
+                break
+            if redirect_url.startswith("/"):
+                parsed_orig = urlparse(current_url)
+                redirect_url = f"{parsed_orig.scheme}://{parsed_orig.netloc}{redirect_url}"
+            elif not redirect_url.startswith("http://") and not redirect_url.startswith("https://"):
+                parsed_orig = urlparse(current_url)
+                redirect_url = f"{parsed_orig.scheme}://{parsed_orig.netloc}/{redirect_url.lstrip('/')}"
 
-            if resp.status_code != 200:
-                raise ValueError(f"Remote server responded with HTTP status {resp.status_code}")
+            validate_url_safe(redirect_url)
+            current_url = redirect_url
+            resp = _fetch_with_ssl_fallback(current_url, headers, FETCH_TIMEOUT)
 
-            content_type = resp.headers.get("content-type", "")
-            if "text/html" not in content_type and "application/xhtml+xml" not in content_type and "text/plain" not in content_type:
-                raise ValueError(f"Unsupported content type: {content_type}. Only HTML articles are accepted.")
+        if resp.status_code != 200:
+            raise ValueError(f"Remote server responded with HTTP status {resp.status_code}")
 
-            if len(resp.content) > MAX_ARTICLE_BYTES:
-                raise ValueError("Article size exceeds the 4MB limit.")
+        content_type = resp.headers.get("content-type", "").lower()
+        if (
+            "text/html" not in content_type
+            and "application/xhtml+xml" not in content_type
+            and "text/plain" not in content_type
+            and "<html" not in resp.text[:500].lower()
+        ):
+            raise ValueError(f"Unsupported content type: {content_type}. Only HTML articles are accepted.")
 
+        if len(resp.content) > MAX_ARTICLE_BYTES:
+            raise ValueError("Article size exceeds the 4MB limit.")
+
+        # Ensure correct text decoding for Vietnamese news/journals
+        if resp.encoding in (None, "iso-8859-1", "ascii"):
+            try:
+                html_text = resp.content.decode("utf-8")
+            except UnicodeDecodeError:
+                html_text = resp.text
+        else:
             html_text = resp.text
 
     except httpx.TimeoutException as e:
