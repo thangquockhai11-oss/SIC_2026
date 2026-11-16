@@ -29,6 +29,7 @@ npm-debug.log*
 *.sqlite3
 *.db
 !trustmedia.db
+!backend/trustmedia.db
 .idea/
 .vscode/
 .DS_Store
