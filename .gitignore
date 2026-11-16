@@ -28,6 +28,7 @@ npm-debug.log*
 # Local files and IDE
 *.sqlite3
 *.db
+!trustmedia.db
 .idea/
 .vscode/
 .DS_Store
@@ -36,6 +37,7 @@ Thumbs.db
 # Dataset caches and temporary raw archives
 **/.cache/
 *.tar.bz2
+!datasets/raw/pheme/PHEME_veracity.tar.bz2
 *.tar.gz
 *.zip
 datasets/extracted/
