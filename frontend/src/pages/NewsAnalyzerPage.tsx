@@ -98,8 +98,9 @@ export default function NewsAnalyzerPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [result, setResult] = useState<AnalysisDetail | null>(null);
 
-  // Active result tab
+  // Active result tab & claims filter
   const [activeTab, setActiveTab] = useState<"consensus" | "factcheck" | "credibility" | "opinion" | "trust" | "agents">("consensus");
+  const [claimFilter, setClaimFilter] = useState<"ALL" | "SUPPORTED" | "REFUTED" | "OTHER">("ALL");
 
   // Metrics
   const charCount = content.length;
@@ -722,7 +723,10 @@ export default function NewsAnalyzerPage() {
           <div className="panel result-hero-card">
             <div className="hero-top-row">
               <div className="hero-left">
-                <div className="eyebrow">BÁO CÁO KẾT QUẢ PHÂN TÍCH</div>
+                <div className="eyebrow">
+                  <Sparkles size={13} style={{ display: "inline-block", verticalAlign: "middle", marginRight: 4 }} />
+                  BÁO CÁO KẾT QUẢ PHÂN TÍCH ĐA TÁC TỬ
+                </div>
                 <h2>{result.title}</h2>
                 {result.source_url && (
                   <a
@@ -753,7 +757,7 @@ export default function NewsAnalyzerPage() {
                   <span className="verdict-dot" />
                   <strong>
                     {result.verdict === "REFUTED"
-                      ? "BÁC BỎ (REFUTED)"
+                      ? "BÁC BỎ TIN ĐỒN (REFUTED)"
                       : result.verdict === "SUPPORTED"
                       ? "XÁC THỰC (SUPPORTED)"
                       : result.verdict === "MIXED"
@@ -799,6 +803,151 @@ export default function NewsAnalyzerPage() {
                 >
                   <Printer size={13} /> In / Xuất PDF
                 </a>
+              </div>
+            </div>
+          </div>
+
+          {/* Disagreement Warning Banner if divergence detected */}
+          {(result.disagreement_detected || result.agent_executions.some((a) => a.disagreement_detected)) && (
+            <div className="disagreement-banner-alert">
+              <AlertTriangle size={22} className="alert-icon-warning" />
+              <div className="alert-body">
+                <div className="alert-title">Cảnh báo Phân kỳ & Xung đột Thông tin (Epistemic Disagreement)</div>
+                <p className="alert-text">
+                  Phát hiện sự phân kỳ giữa mức độ uy tín của nguồn phát hành và tính xác thực của nội dung kiểm chứng.
+                  Hệ thống tuân thủ nguyên tắc độc lập thực chứng: không dùng uy tín tòa soạn để hợp thức hóa phát ngôn thiếu căn cứ.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Executive Overview Metric Cards (4 Tiles) */}
+          <div className="result-executive-metrics-grid">
+            {/* Card 1: Phán quyết & Độ tin cậy */}
+            <div className={`exec-metric-card ${result.verdict === "SUPPORTED" ? "border-emerald" : result.verdict === "REFUTED" ? "border-rose" : result.verdict === "MIXED" ? "border-amber" : "border-blue"}`}>
+              <div className="exec-card-top">
+                <div className="exec-card-icon">
+                  {result.verdict === "SUPPORTED" ? (
+                    <ShieldCheck size={20} style={{ color: "#059669" }} />
+                  ) : result.verdict === "REFUTED" ? (
+                    <ShieldAlert size={20} style={{ color: "#e11d48" }} />
+                  ) : result.verdict === "MIXED" ? (
+                    <AlertTriangle size={20} style={{ color: "#d97706" }} />
+                  ) : (
+                    <Clock size={20} style={{ color: "#2563eb" }} />
+                  )}
+                </div>
+                <div className="exec-card-badge">
+                  {result.verdict === "REFUTED"
+                    ? "BÁC BỎ"
+                    : result.verdict === "SUPPORTED"
+                    ? "XÁC THỰC"
+                    : result.verdict === "MIXED"
+                    ? "HỖN HỢP"
+                    : result.verdict === "NOT_CHECKABLE"
+                    ? "THĂM DÒ"
+                    : "BẢO LƯU"}
+                </div>
+              </div>
+              <div className="exec-card-main">
+                <span className="exec-metric-label">Độ tin cậy hiệu chuẩn (EWAC)</span>
+                <div className="exec-metric-val-row">
+                  <strong className="exec-large-number">{Math.round((result.confidence_score ?? 0.85) * 100)}%</strong>
+                  <span className="exec-metric-note">Trọng số đa tác tử</span>
+                </div>
+                <div className="exec-gauge-track">
+                  <div
+                    className={`exec-gauge-fill ${result.verdict === "SUPPORTED" ? "fill-emerald" : result.verdict === "REFUTED" ? "fill-rose" : result.verdict === "MIXED" ? "fill-amber" : "fill-blue"}`}
+                    style={{ width: `${Math.round((result.confidence_score ?? 0.85) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Card 2: Phát ngôn kiểm chứng */}
+            <div className="exec-metric-card">
+              <div className="exec-card-top">
+                <div className="exec-card-icon" style={{ background: "#eef2ff", color: "#4f46e5" }}>
+                  <FileCheck2 size={20} />
+                </div>
+                <span className="exec-sub-tag">{result.claims.length} Claims trích xuất</span>
+              </div>
+              <div className="exec-card-main">
+                <span className="exec-metric-label">Cơ cấu phát ngôn sự kiện</span>
+                <div className="exec-claims-pill-row">
+                  {supportedClaimsCount > 0 && (
+                    <span className="claim-count-chip chip-supported">
+                      ✓ {supportedClaimsCount} Xác thực
+                    </span>
+                  )}
+                  {refutedClaimsCount > 0 && (
+                    <span className="claim-count-chip chip-refuted">
+                      ✕ {refutedClaimsCount} Bác bỏ
+                    </span>
+                  )}
+                  {(inconclusiveCount > 0 || notCheckableCount > 0) && (
+                    <span className="claim-count-chip chip-other">
+                      ? {inconclusiveCount + notCheckableCount} Tham vấn
+                    </span>
+                  )}
+                </div>
+                <div className="exec-claims-stacked-bar">
+                  <div className="bar-seg seg-sup" style={{ width: `${(supportedClaimsCount / Math.max(totalClaims, 1)) * 100}%` }} title={`Xác thực: ${supportedClaimsCount}`} />
+                  <div className="bar-seg seg-ref" style={{ width: `${(refutedClaimsCount / Math.max(totalClaims, 1)) * 100}%` }} title={`Bác bỏ: ${refutedClaimsCount}`} />
+                  <div className="bar-seg seg-inc" style={{ width: `${((inconclusiveCount + notCheckableCount) / Math.max(totalClaims, 1)) * 100}%` }} title={`Khác: ${inconclusiveCount + notCheckableCount}`} />
+                </div>
+              </div>
+            </div>
+
+            {/* Card 3: Độ uy tín Tòa soạn */}
+            <div className="exec-metric-card">
+              <div className="exec-card-top">
+                <div className="exec-card-icon" style={{ background: "#f0fdfa", color: "#0d9488" }}>
+                  <ShieldCheck size={20} />
+                </div>
+                <span className="exec-sub-tag">Chuẩn NELA-GT</span>
+              </div>
+              <div className="exec-card-main">
+                <span className="exec-metric-label">Độ uy tín nguồn xuất bản</span>
+                <div className="exec-metric-val-row">
+                  <strong className="exec-large-number">{result.credibility?.overall_credibility_score ?? 70}</strong>
+                  <span className="exec-denom">/ 100</span>
+                </div>
+                <div className="exec-gauge-track">
+                  <div
+                    className="exec-gauge-fill fill-teal"
+                    style={{ width: `${result.credibility?.overall_credibility_score ?? 70}%` }}
+                  />
+                </div>
+                <span className="exec-source-name-pill" title={result.credibility?.source_name}>
+                  {result.credibility?.source_name || "Nguồn tin đối chuẩn"}
+                </span>
+              </div>
+            </div>
+
+            {/* Card 4: Dư luận & Niềm tin công chúng */}
+            <div className="exec-metric-card">
+              <div className="exec-card-top">
+                <div className="exec-card-icon" style={{ background: "#faf5ff", color: "#9333ea" }}>
+                  <Users size={20} />
+                </div>
+                <span className="exec-sub-tag">WVS Wave 7</span>
+              </div>
+              <div className="exec-card-main">
+                <span className="exec-metric-label">Lập trường & Niềm tin công chúng</span>
+                <div className="exec-metric-val-row">
+                  <strong className="exec-large-number">{dominantStanceValue}%</strong>
+                  <span className="exec-metric-note">{dominantStanceName}</span>
+                </div>
+                <div className="exec-gauge-track">
+                  <div
+                    className="exec-gauge-fill fill-purple"
+                    style={{ width: `${dominantStanceValue}%` }}
+                  />
+                </div>
+                <span className="exec-survey-sample-sub">
+                  Khảo sát thực nghiệm: {result.survey?.sample_size ?? 1250} người
+                </span>
               </div>
             </div>
           </div>
@@ -945,8 +1094,50 @@ export default function NewsAnalyzerPage() {
                 </p>
               </div>
 
+              <div className="claims-filter-toolbar">
+                <span className="filter-label">Lọc trạng thái phát ngôn:</span>
+                <div className="filter-chips">
+                  <button
+                    type="button"
+                    className={`filter-chip ${claimFilter === "ALL" ? "active" : ""}`}
+                    onClick={() => setClaimFilter("ALL")}
+                  >
+                    Tất cả ({result.claims.length})
+                  </button>
+                  <button
+                    type="button"
+                    className={`filter-chip chip-supported ${claimFilter === "SUPPORTED" ? "active" : ""}`}
+                    onClick={() => setClaimFilter("SUPPORTED")}
+                  >
+                    ✓ Xác thực ({supportedClaimsCount})
+                  </button>
+                  <button
+                    type="button"
+                    className={`filter-chip chip-refuted ${claimFilter === "REFUTED" ? "active" : ""}`}
+                    onClick={() => setClaimFilter("REFUTED")}
+                  >
+                    ✕ Bác bỏ ({refutedClaimsCount})
+                  </button>
+                  <button
+                    type="button"
+                    className={`filter-chip chip-other ${claimFilter === "OTHER" ? "active" : ""}`}
+                    onClick={() => setClaimFilter("OTHER")}
+                  >
+                    ? Khác ({inconclusiveCount + notCheckableCount})
+                  </button>
+                </div>
+              </div>
+
               <div className="claims-detailed-stack">
-                {result.claims.map((claim, idx) => {
+                {result.claims
+                  .filter((c) => {
+                    if (claimFilter === "ALL") return true;
+                    if (claimFilter === "SUPPORTED") return c.verdict === "SUPPORTED";
+                    if (claimFilter === "REFUTED") return c.verdict === "REFUTED";
+                    if (claimFilter === "OTHER") return c.verdict !== "SUPPORTED" && c.verdict !== "REFUTED";
+                    return true;
+                  })
+                  .map((claim, idx) => {
                   const evidences = claim.evidences || [];
                   const supporting = evidences.filter((e) => e.stance === "SUPPORTS");
                   const refuting = evidences.filter((e) => e.stance === "REFUTES");

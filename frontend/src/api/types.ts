@@ -143,6 +143,7 @@ export type AnalysisDetail = {
   summary: string | null;
   verdict: string | null;
   confidence_score: number | null;
+  disagreement_detected?: boolean;
   ai_provider: string;
   created_at: string;
   completed_at: string | null;

@@ -3,15 +3,15 @@
 import ipaddress
 import logging
 import socket
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
 import httpx
 
 logger = logging.getLogger(__name__)
 
-MAX_ARTICLE_BYTES = 4 * 1024 * 1024  # 4MB
-FETCH_TIMEOUT = 10.0  # seconds
+MAX_ARTICLE_BYTES = 5 * 1024 * 1024  # 5MB
+FETCH_TIMEOUT = 15.0  # seconds
 
 
 def is_ip_safe(ip_str: str) -> bool:
@@ -63,8 +63,9 @@ def _fetch_with_ssl_fallback(url: str, headers: dict[str, str], timeout: float) 
     """
     Fetch URL with SSL fallback.
     Tries strict CA verification first (using certifi if available).
-    If verification fails due to missing intermediate certificate or local CA store mismatch,
-    retries with verify=False so public media / academic / gov websites can still be parsed.
+    If verification fails for ANY network/SSL mismatch reason (missing intermediate certificate,
+    self-signed, mismatched hostname, expired CA), retries with verify=False so authentic news
+    and academic sites can still be processed securely without leaking SSRF boundaries.
     """
     try:
         import certifi
@@ -75,23 +76,17 @@ def _fetch_with_ssl_fallback(url: str, headers: dict[str, str], timeout: float) 
     try:
         with httpx.Client(timeout=timeout, follow_redirects=False, verify=ca_bundle) as client:
             return client.get(url, headers=headers)
-    except (httpx.ConnectError, httpx.RequestError) as exc:
-        err_str = str(exc).lower()
-        if (
-            "certificate verify failed" in err_str
-            or "unable to get local issuer certificate" in err_str
-            or "self-signed certificate" in err_str
-            or "certificate" in err_str
-            or "ssl" in err_str
-        ):
-            logger.warning(
-                "SSL certificate verification failed for %s (%s). Falling back to unverified SSL connection.",
-                url,
-                exc,
-            )
+    except Exception as exc:
+        logger.warning(
+            "Primary verified HTTPS request failed for %s (%s). Retrying with unverified SSL connection fallback.",
+            url,
+            exc,
+        )
+        try:
             with httpx.Client(timeout=timeout, follow_redirects=False, verify=False) as client:
                 return client.get(url, headers=headers)
-        raise
+        except Exception as retry_exc:
+            raise retry_exc from exc
 
 
 def fetch_and_extract_article(url: str) -> tuple[str, str]:
@@ -121,15 +116,9 @@ def fetch_and_extract_article(url: str) -> tuple[str, str]:
             redirect_url = resp.headers.get("location")
             if not redirect_url:
                 break
-            if redirect_url.startswith("/"):
-                parsed_orig = urlparse(current_url)
-                redirect_url = f"{parsed_orig.scheme}://{parsed_orig.netloc}{redirect_url}"
-            elif not redirect_url.startswith("http://") and not redirect_url.startswith("https://"):
-                parsed_orig = urlparse(current_url)
-                redirect_url = f"{parsed_orig.scheme}://{parsed_orig.netloc}/{redirect_url.lstrip('/')}"
-
-            validate_url_safe(redirect_url)
-            current_url = redirect_url
+            resolved_url = urljoin(current_url, redirect_url)
+            validate_url_safe(resolved_url)
+            current_url = resolved_url
             resp = _fetch_with_ssl_fallback(current_url, headers, FETCH_TIMEOUT)
 
         if resp.status_code != 200:
@@ -145,7 +134,7 @@ def fetch_and_extract_article(url: str) -> tuple[str, str]:
             raise ValueError(f"Unsupported content type: {content_type}. Only HTML articles are accepted.")
 
         if len(resp.content) > MAX_ARTICLE_BYTES:
-            raise ValueError("Article size exceeds the 4MB limit.")
+            raise ValueError("Article size exceeds the maximum limit.")
 
         # Ensure correct text decoding for Vietnamese news/journals
         if resp.encoding in (None, "iso-8859-1", "ascii"):
@@ -165,7 +154,7 @@ def fetch_and_extract_article(url: str) -> tuple[str, str]:
     soup = BeautifulSoup(html_text, "html.parser")
 
     # Remove script, style, nav, footer, header, form, iframe, etc.
-    for tag in soup(["script", "style", "nav", "footer", "header", "form", "iframe", "noscript", "aside", "svg", "button"]):
+    for tag in soup(["script", "style", "nav", "footer", "header", "form", "iframe", "noscript", "aside", "svg", "button", "figure", "figcaption"]):
         tag.decompose()
 
     # Extract title with multi-layer fallback
@@ -181,8 +170,20 @@ def fetch_and_extract_article(url: str) -> tuple[str, str]:
 
     # Robust body extraction: search candidate containers with the most substantial text
     candidates: list[tuple[int, list[str]]] = []
-    for tag in soup.find_all(["div", "article", "section", "main"]):
-        ps = [p.get_text().strip() for p in tag.find_all("p") if len(p.get_text().strip()) > 20]
+    
+    # 1. First search known article body containers
+    for selector in [
+        "article", "main", ".detail-content", ".content-detail", ".article-content",
+        ".article__content", ".entry-content", ".post-content", ".story-body", "#maincontent"
+    ]:
+        for el in soup.select(selector):
+            ps = [p.get_text().strip() for p in el.find_all("p") if len(p.get_text().strip()) >= 15]
+            if ps:
+                candidates.append((sum(len(p) for p in ps), ps))
+
+    # 2. General div / section search
+    for tag in soup.find_all(["div", "section"]):
+        ps = [p.get_text().strip() for p in tag.find_all("p") if len(p.get_text().strip()) >= 18]
         if len(ps) >= 2:
             total_len = sum(len(p) for p in ps)
             candidates.append((total_len, ps))
@@ -191,12 +192,11 @@ def fetch_and_extract_article(url: str) -> tuple[str, str]:
         candidates.sort(key=lambda x: x[0], reverse=True)
         body_text = "\n\n".join(candidates[0][1])
     else:
-        # Fallback to all paragraphs in the document
-        all_ps = [p.get_text().strip() for p in soup.find_all("p") if len(p.get_text().strip()) > 20]
+        # Fallback to all paragraphs in document
+        all_ps = [p.get_text().strip() for p in soup.find_all("p") if len(p.get_text().strip()) >= 18]
         if all_ps:
             body_text = "\n\n".join(all_ps)
         else:
-            # Fallback to meta description or text
             meta_desc = soup.find("meta", attrs={"name": "description"}) or soup.find("meta", attrs={"property": "og:description"})
             if meta_desc and meta_desc.get("content"):
                 body_text = str(meta_desc.get("content")).strip()

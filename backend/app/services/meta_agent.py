@@ -198,8 +198,6 @@ class MetaAgent:
 
         return meta_result, trace
 
-        return meta_result, trace
-
 
 meta_agent = MetaAgent()
 
