@@ -65,8 +65,15 @@ class BGERerankerEngine:
         Evaluates exact keyword co-occurrence, n-gram overlap, semantic entity density,
         and query term coverage.
         """
-        q_tokens = [w.lower() for w in re.findall(r"\w+", query) if len(w) > 1]
-        p_tokens = [w.lower() for w in re.findall(r"\w+", passage) if len(w) > 1]
+        stop_tokens = {
+            "phát", "ngôn", "claim", "bằng", "chứng", "đối", "chiếu", "statement", "evidence", "context",
+            "và", "là", "của", "có", "trong", "cho", "được", "với", "các", "những", "này", "khi",
+            "đã", "sẽ", "đang", "về", "như", "tại", "đến", "từ", "ở", "ra", "lại", "thì", "mà",
+            "một", "hai", "ba", "người", "nhưng", "làm", "đó", "do", "bởi", "vì", "toàn", "bộ",
+            "the", "a", "an", "is", "are", "was", "were", "and", "or", "in", "on", "at", "by", "to", "of",
+        }
+        q_tokens = [w.lower() for w in re.findall(r"\w+", query) if len(w) > 1 and w.lower() not in stop_tokens]
+        p_tokens = [w.lower() for w in re.findall(r"\w+", passage) if len(w) > 1 and w.lower() not in stop_tokens]
 
         if not q_tokens or not p_tokens:
             return 0.0
@@ -85,6 +92,10 @@ class BGERerankerEngine:
         freq_bonus = 0.0
         for t in matched_tokens:
             freq_bonus += min(p_tokens.count(t) * 0.04, 0.20)
+
+        # If coverage is very weak and no bigram match, do not inflate with sigmoid
+        if coverage_ratio < 0.22 and bigram_ratio == 0:
+            return round(coverage_ratio * 0.3, 4)
 
         # Non-linear logistic combination
         raw_score = 0.55 * coverage_ratio + 0.30 * bigram_ratio + 0.15 * min(freq_bonus, 0.40)
@@ -124,9 +135,6 @@ class BGERerankerEngine:
 
         # Filter candidates below threshold
         valid_candidates = [c for c in candidates if c.get("rerank_score", 0.0) >= min_rerank_threshold]
-        if not valid_candidates and candidates:
-            # Fallback to keep top 1 if candidate pool had weak matches
-            valid_candidates = candidates[:1]
 
         valid_candidates.sort(key=lambda x: x.get("rerank_score", 0.0), reverse=True)
         return valid_candidates[:top_k]

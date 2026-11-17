@@ -214,14 +214,19 @@ class DocumentIngestionPipeline:
             if own_session:
                 session.close()
 
-    def seed_baseline_datasets_to_pgvector(self, max_samples_per_dataset: int = 150) -> dict[str, int]:
+    def seed_baseline_datasets_to_pgvector(self, max_samples_per_dataset: int = 150, force: bool = False) -> dict[str, int]:
         """Seed research datasets (ViFactCheck, X-FACT, FEVER) from disk into PostgreSQL."""
         engine = get_engine()
         with Session(engine) as session:
             existing_count = session.query(Document).filter(Document.dataset_id != None).count()
-            if existing_count >= 50:
+            if existing_count >= 50 and not force:
                 logger.info("Knowledge base already contains %d dataset documents. Skipping re-seed.", existing_count)
                 return {"status": "skipped", "existing_documents": existing_count}
+
+            # Retrieve existing record IDs to prevent duplicates
+            existing_records = {
+                f"{r[0]}_{r[1]}" for r in session.query(Document.dataset_id, Document.record_id).filter(Document.record_id != None).all()
+            }
 
             logger.info("Seeding research datasets into PostgreSQL + pgvector (limit %d/dataset)...", max_samples_per_dataset)
             stats = {"ViFactCheck": 0, "X-FACT": 0, "FEVER": 0}
@@ -229,10 +234,15 @@ class DocumentIngestionPipeline:
             # 1. ViFactCheck
             vifactcheck_dir = RAW_DATASETS_DIR / "vifactcheck" / "data"
             if vifactcheck_dir.exists():
+                count_vi = 0
                 for pfile in vifactcheck_dir.glob("*.parquet"):
                     try:
                         df = pd.read_parquet(pfile)
-                        for _, row in df.head(max_samples_per_dataset).iterrows():
+                        for _, row in df.iterrows():
+                            ann_id = str(row.get("annotation_id", ""))
+                            if f"ViFactCheck_{ann_id}" in existing_records:
+                                continue
+
                             stmt = str(row.get("Statement", "")).strip()
                             ev = str(row.get("Evidence", "")).strip()
                             if not ev or ev.lower() == "nan" or ev == "None":
@@ -251,28 +261,37 @@ class DocumentIngestionPipeline:
                                 source_name=str(row.get("Author") or "Báo Chính Phủ / Thông Tấn Xã"),
                                 source_url=str(row.get("Url") or "https://baochinhphu.vn"),
                                 dataset_id="ViFactCheck",
-                                record_id=str(row.get("annotation_id", "")),
+                                record_id=ann_id,
                                 language="vi",
                                 doc_type="fact_check_benchmark",
                                 metadata={"baseline_verdict": verdict, "topic": str(row.get("Topic", "Thời sự"))},
                                 db_session=session,
                             )
-                            stats["ViFactCheck"] += 1
-                        break  # 1 parquet split is sufficient for baseline
+                            existing_records.add(f"ViFactCheck_{ann_id}")
+                            count_vi += 1
+                            if count_vi >= max_samples_per_dataset:
+                                break
+                        if count_vi >= max_samples_per_dataset:
+                            break
                     except Exception as e:
                         logger.warning("ViFactCheck seed error: %s", e)
+                stats["ViFactCheck"] = count_vi
 
             # 2. X-FACT
             xfact_file = RAW_DATASETS_DIR / "xfact" / "all_languages" / "train-00000-of-00001.csv"
             if xfact_file.exists():
                 try:
-                    df_xfact = pd.read_csv(xfact_file, nrows=max_samples_per_dataset * 2)
+                    df_xfact = pd.read_csv(xfact_file, nrows=max_samples_per_dataset * 4)
                     count_xfact = 0
                     for _, row in df_xfact.iterrows():
                         claim = str(row.get("claim", "")).strip()
                         ev = str(row.get("evidence_1", "")).strip()
                         if not claim or not ev or ev.lower() == "nan":
                             continue
+                        cid = str(row.get("claim_id") or f"xf_{abs(hash(claim)) % 10000000}")
+                        if f"X-FACT_{cid}" in existing_records:
+                            continue
+
                         lbl_str = str(row.get("label", "")).lower()
                         verdict = "REFUTED" if any(f in lbl_str for f in ["false", "pants on fire", "incorrect"]) else "SUPPORTED"
 
@@ -283,12 +302,13 @@ class DocumentIngestionPipeline:
                             source_name=str(row.get("site") or "X-FACT International Fact-Checking"),
                             source_url=str(row.get("link_1") or "https://factcheck.org"),
                             dataset_id="X-FACT",
-                            record_id=str(row.get("claim_id", "")),
+                            record_id=cid,
                             language="en",
                             doc_type="multilingual_fact_check",
                             metadata={"baseline_verdict": verdict, "claimant": str(row.get("claimant", ""))},
                             db_session=session,
                         )
+                        existing_records.add(f"X-FACT_{cid}")
                         count_xfact += 1
                         if count_xfact >= max_samples_per_dataset:
                             break
@@ -306,6 +326,10 @@ class DocumentIngestionPipeline:
                             if not line.strip():
                                 continue
                             item = json.loads(line)
+                            fid = str(item.get("id", ""))
+                            if f"FEVER_{fid}" in existing_records:
+                                continue
+
                             claim = item.get("claim", "").strip()
                             label = item.get("label", "NOT ENOUGH INFO")
                             if not claim:
@@ -319,18 +343,26 @@ class DocumentIngestionPipeline:
                                 source_name="FEVER Knowledge Corpus (Wikipedia)",
                                 source_url="https://fever.ai",
                                 dataset_id="FEVER",
-                                record_id=str(item.get("id", "")),
+                                record_id=fid,
                                 language="en",
                                 doc_type="benchmark_corpus",
                                 metadata={"baseline_verdict": verdict},
                                 db_session=session,
                             )
+                            existing_records.add(f"FEVER_{fid}")
                             count_fever += 1
                             if count_fever >= max_samples_per_dataset:
                                 break
                     stats["FEVER"] = count_fever
                 except Exception as e:
                     logger.warning("FEVER seed error: %s", e)
+
+            # Re-index BM25 after seeding
+            try:
+                from app.services.rag.bm25_retriever import bm25_retriever
+                bm25_retriever.reload_index()
+            except Exception as e:
+                logger.warning("Could not reload BM25 index after seeding: %s", e)
 
             return stats
 

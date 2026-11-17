@@ -86,7 +86,25 @@ def _fetch_with_ssl_fallback(url: str, headers: dict[str, str], timeout: float) 
             with httpx.Client(timeout=timeout, follow_redirects=False, verify=False) as client:
                 return client.get(url, headers=headers)
         except Exception as retry_exc:
-            raise retry_exc from exc
+            logger.warning("httpx unverified retry failed for %s (%s). Attempting urllib fallback.", url, retry_exc)
+            try:
+                import ssl
+                import urllib.request
+
+                ctx = ssl._create_unverified_context()
+                req = urllib.request.Request(url, headers=headers)
+                with urllib.request.urlopen(req, context=ctx, timeout=timeout) as u_resp:
+                    raw_content = u_resp.read()
+                    status_code = u_resp.getcode()
+                    content_type = u_resp.headers.get("Content-Type", "text/html")
+                    return httpx.Response(
+                        status_code=status_code,
+                        content=raw_content,
+                        headers={"content-type": content_type},
+                        request=httpx.Request("GET", url),
+                    )
+            except Exception as u_exc:
+                raise retry_exc from u_exc
 
 
 def fetch_and_extract_article(url: str) -> tuple[str, str]:
@@ -153,6 +171,10 @@ def fetch_and_extract_article(url: str) -> tuple[str, str]:
     # Parse and extract
     soup = BeautifulSoup(html_text, "html.parser")
 
+    # Replace line breaks with newlines before removing tags
+    for br in soup.find_all(["br", "br/"]):
+        br.replace_with("\n")
+
     # Remove script, style, nav, footer, header, form, iframe, etc.
     for tag in soup(["script", "style", "nav", "footer", "header", "form", "iframe", "noscript", "aside", "svg", "button", "figure", "figcaption"]):
         tag.decompose()
@@ -174,7 +196,8 @@ def fetch_and_extract_article(url: str) -> tuple[str, str]:
     # 1. First search known article body containers
     for selector in [
         "article", "main", ".detail-content", ".content-detail", ".article-content",
-        ".article__content", ".entry-content", ".post-content", ".story-body", "#maincontent"
+        ".article__content", ".entry-content", ".post-content", ".story-body", "#maincontent",
+        ".content", ".fck_detail", ".cms-body", ".news-content", ".post_content", ".detail__content", ".item-content"
     ]:
         for el in soup.select(selector):
             ps = [p.get_text().strip() for p in el.find_all("p") if len(p.get_text().strip()) >= 15]
@@ -193,7 +216,7 @@ def fetch_and_extract_article(url: str) -> tuple[str, str]:
         body_text = "\n\n".join(candidates[0][1])
     else:
         # Fallback to all paragraphs in document
-        all_ps = [p.get_text().strip() for p in soup.find_all("p") if len(p.get_text().strip()) >= 18]
+        all_ps = [p.get_text().strip() for p in soup.find_all("p") if len(p.get_text().strip()) >= 15]
         if all_ps:
             body_text = "\n\n".join(all_ps)
         else:
@@ -201,9 +224,11 @@ def fetch_and_extract_article(url: str) -> tuple[str, str]:
             if meta_desc and meta_desc.get("content"):
                 body_text = str(meta_desc.get("content")).strip()
             else:
-                body_text = soup.get_text(separator="\n").strip()
+                body_elem = soup.find("body") or soup
+                lines = [line.strip() for line in body_elem.get_text(separator="\n").splitlines() if len(line.strip()) >= 20]
+                body_text = "\n\n".join(lines)
 
-    if len(body_text) < 40:
+    if len(body_text) < 25:
         raise ValueError("Could not extract meaningful text content from the article page.")
 
     return title[:490], body_text[:15000]

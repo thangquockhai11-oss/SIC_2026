@@ -11,6 +11,7 @@ from app.database.models import (
     Analysis,
     Claim,
     Evidence,
+    EvidenceRecord,
     InformationReception,
     MediaCredibility,
     PublicOpinion,
@@ -79,8 +80,9 @@ async def process_analysis_job_async(
                 session.flush()
 
                 for e_data in c_data.get("evidences", []):
+                    ev_id = e_data.get("id") or gen_uuid()
                     evidence = Evidence(
-                        id=e_data.get("id") or gen_uuid(),
+                        id=ev_id,
                         claim_id=claim.id,
                         source_name=e_data["source_name"],
                         source_url=e_data.get("source_url"),
@@ -94,6 +96,27 @@ async def process_analysis_job_async(
                         retrieval_timestamp=e_data.get("retrieval_timestamp", utc_now()),
                     )
                     session.add(evidence)
+
+                    # Also persist into evidence_records for RAG audit and Evidence Explorer
+                    ev_rec = EvidenceRecord(
+                        id=gen_uuid(),
+                        analysis_id=analysis.id,
+                        claim_id=claim.id,
+                        chunk_id=e_data.get("chunk_id"),
+                        claim_text=c_data["claim_text"],
+                        query=c_data["claim_text"],
+                        relevance_score=float(e_data.get("relevance_score", 0.0)),
+                        rerank_score=float(e_data.get("relevance_score", 0.0)),
+                        rrf_score=float(e_data.get("rrf_score", 0.0)),
+                        retrieval_method=e_data.get("retrieval_method", "hybrid_rrf_rerank"),
+                        source_name=e_data["source_name"],
+                        source_url=e_data.get("source_url"),
+                        dataset_source=e_data.get("dataset_source"),
+                        dataset_record_id=e_data.get("dataset_record_id"),
+                        excerpt=e_data["excerpt"],
+                        created_at=utc_now(),
+                    )
+                    session.add(ev_rec)
 
             # Save Media Credibility
             cred_data = result.get("credibility")
