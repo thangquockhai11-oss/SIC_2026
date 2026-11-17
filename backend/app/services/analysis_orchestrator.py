@@ -57,6 +57,7 @@ async def process_analysis_job_async(
             analysis.summary = result["summary"]
             analysis.verdict = result["verdict"]
             analysis.confidence_score = result["confidence_score"]
+            analysis.fact_checking_report = result.get("fact_checking_report")
             analysis.ai_provider = result["ai_provider"]
             analysis.status = "COMPLETED"
             analysis.completed_at = utc_now()
@@ -67,6 +68,17 @@ async def process_analysis_job_async(
                     id=c_data.get("claim_id") or gen_uuid(),
                     analysis_id=analysis.id,
                     claim_text=c_data["claim_text"],
+                    original_text=c_data.get("original_text", c_data["claim_text"]),
+                    normalized_claim=c_data.get("normalized_claim", c_data["claim_text"]),
+                    claim_type=c_data.get("claim_type", "FACTUAL_CLAIM"),
+                    subject=c_data.get("subject"),
+                    predicate=c_data.get("predicate"),
+                    object=c_data.get("object"),
+                    date_or_time_period=c_data.get("date_or_time_period"),
+                    location=c_data.get("location"),
+                    entities=c_data.get("entities", []),
+                    numerical_values=c_data.get("numerical_values", []),
+                    checkability=c_data.get("checkability", True),
                     verdict=c_data["verdict"],
                     confidence=c_data["confidence"],
                     reasoning=c_data["reasoning"],
@@ -80,20 +92,34 @@ async def process_analysis_job_async(
                 session.flush()
 
                 for e_data in c_data.get("evidences", []):
-                    ev_id = e_data.get("id") or gen_uuid()
+                    ev_id = e_data.get("id") or e_data.get("evidence_id") or gen_uuid()
+                    raw_ts = e_data.get("retrieval_timestamp")
+                    if isinstance(raw_ts, str):
+                        try:
+                            ret_ts = datetime.fromisoformat(raw_ts)
+                        except Exception:
+                            ret_ts = utc_now()
+                    elif isinstance(raw_ts, datetime):
+                        ret_ts = raw_ts
+                    else:
+                        ret_ts = utc_now()
+
                     evidence = Evidence(
                         id=ev_id,
                         claim_id=claim.id,
                         source_name=e_data["source_name"],
                         source_url=e_data.get("source_url"),
-                        excerpt=e_data["excerpt"],
+                        excerpt=e_data.get("excerpt") or e_data.get("content", ""),
                         stance=e_data["stance"],
+                        evidence_type=e_data.get("evidence_type", "DIRECT"),
+                        publication_date=e_data.get("publication_date"),
+                        provenance=e_data.get("provenance", {}),
                         reliability_score=e_data["reliability_score"],
                         relevance_score=e_data.get("relevance_score", 0.0),
                         dataset_source=e_data.get("dataset_source"),
                         dataset_record_id=e_data.get("dataset_record_id"),
                         nli_relation=e_data.get("nli_relation"),
-                        retrieval_timestamp=e_data.get("retrieval_timestamp", utc_now()),
+                        retrieval_timestamp=ret_ts,
                     )
                     session.add(evidence)
 

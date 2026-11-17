@@ -100,7 +100,7 @@ export default function NewsAnalyzerPage() {
 
   // Active result tab & claims filter
   const [activeTab, setActiveTab] = useState<"consensus" | "factcheck" | "credibility" | "opinion" | "trust" | "agents">("consensus");
-  const [claimFilter, setClaimFilter] = useState<"ALL" | "SUPPORTED" | "REFUTED" | "OTHER">("ALL");
+  const [claimFilter, setClaimFilter] = useState<string>("ALL");
 
   // Metrics
   const charCount = content.length;
@@ -242,11 +242,60 @@ export default function NewsAnalyzerPage() {
   };
 
   // Dynamic metrics calculation for active result
-  const supportedClaimsCount = result?.claims.filter((c) => c.verdict === "SUPPORTED").length ?? 0;
-  const refutedClaimsCount = result?.claims.filter((c) => c.verdict === "REFUTED").length ?? 0;
-  const notCheckableCount = result?.claims.filter((c) => c.verdict === "NOT_CHECKABLE").length ?? 0;
-  const inconclusiveCount = result?.claims.filter((c) => c.verdict === "NOT_ENOUGH_INFORMATION").length ?? 0;
-  const totalClaims = result?.claims.length ?? 0;
+  const factReport = result?.fact_checking_report;
+  const overview = factReport?.overview;
+  const supportedClaimsCount = overview?.supported_claims_count ?? (result?.claims.filter((c) => c.verdict === "SUPPORTED").length ?? 0);
+  const refutedClaimsCount = overview?.refuted_claims_count ?? (result?.claims.filter((c) => c.verdict === "REFUTED").length ?? 0);
+  const partiallySupportedCount = overview?.partially_supported_count ?? (result?.claims.filter((c) => c.verdict === "PARTIALLY_SUPPORTED").length ?? 0);
+  const misleadingCount = overview?.misleading_count ?? (result?.claims.filter((c) => c.verdict === "MISLEADING").length ?? 0);
+  const conflictingCount = overview?.conflicting_count ?? (result?.claims.filter((c) => c.verdict === "CONFLICTING_EVIDENCE").length ?? 0);
+  const notCheckableCount = overview?.not_checkable_count ?? (result?.claims.filter((c) => c.verdict === "NOT_CHECKABLE").length ?? 0);
+  const inconclusiveCount = overview?.not_enough_info_count ?? (result?.claims.filter((c) => c.verdict === "NOT_ENOUGH_INFORMATION").length ?? 0);
+  const totalClaims = overview?.total_claims_extracted ?? (result?.claims.length ?? 0);
+  const verifiableClaims = overview?.verifiable_claims_count ?? (totalClaims - notCheckableCount);
+  const factualAccuracyScore = overview?.factual_accuracy_score ?? (verifiableClaims > 0 ? (supportedClaimsCount + 0.5 * partiallySupportedCount) / verifiableClaims : 0);
+
+  const getClaimTypeMeta = (type?: string) => {
+    switch (type) {
+      case "STATISTICAL_CLAIM":
+        return { label: "Số liệu / Thống kê", color: "#0284c7", bg: "#e0f2fe" };
+      case "SCIENTIFIC_CLAIM":
+        return { label: "Khoa học / Tự nhiên", color: "#059669", bg: "#ecfdf5" };
+      case "HISTORICAL_CLAIM":
+        return { label: "Lịch sử / Niên đại", color: "#d97706", bg: "#fef3c7" };
+      case "QUOTATION_CLAIM":
+        return { label: "Phát ngôn / Trích dẫn", color: "#7c3aed", bg: "#f5f3ff" };
+      case "CAUSAL_CLAIM":
+        return { label: "Quan hệ Nhân - Quả", color: "#db2777", bg: "#fdf2f8" };
+      case "OPINION":
+        return { label: "Quan điểm / Nhận định", color: "#64748b", bg: "#f1f5f9" };
+      case "PREDICTION":
+        return { label: "Dự đoán / Tương lai", color: "#475569", bg: "#f8fafc" };
+      case "FACTUAL_CLAIM":
+      default:
+        return { label: "Sự kiện thực tế", color: "#2563eb", bg: "#eff6ff" };
+    }
+  };
+
+  const getVerdictMeta = (verdict?: string) => {
+    switch (verdict) {
+      case "SUPPORTED":
+        return { label: "XÁC THỰC (SUPPORTED)", badgeClass: "pill-success", desc: "Bằng chứng độc lập đủ mạnh để xác thực phát ngôn" };
+      case "REFUTED":
+        return { label: "BÁC BỎ (REFUTED)", badgeClass: "pill-danger", desc: "Bằng chứng độc lập trực tiếp bác bỏ phát ngôn" };
+      case "PARTIALLY_SUPPORTED":
+        return { label: "ĐÚNG MỘT PHẦN (PARTIALLY_SUPPORTED)", badgeClass: "pill-warning", desc: "Sự kiện cốt lõi có căn cứ nhưng số liệu hoặc mốc thời gian sai khác" };
+      case "MISLEADING":
+        return { label: "GÂY HIỂU LẦM (MISLEADING)", badgeClass: "pill-warning", desc: "Thông tin có thể đúng về mặt riêng lẻ nhưng gây hiểu sai do thiếu bối cảnh" };
+      case "CONFLICTING_EVIDENCE":
+        return { label: "BẰNG CHỨNG MÂU THUẪN (CONFLICTING)", badgeClass: "pill-warning", desc: "Có các tài liệu đối chứng uy tín mâu thuẫn trực tiếp với nhau" };
+      case "NOT_CHECKABLE":
+        return { label: "Ý KIẾN / THĂM DÒ (NOT_CHECKABLE)", badgeClass: "pill-neutral", desc: "Quan điểm chủ quan, câu hỏi tu từ hoặc dự đoán tương lai" };
+      case "NOT_ENOUGH_INFORMATION":
+      default:
+        return { label: "CHƯA ĐỦ BẰNG CHỨNG (INCONCLUSIVE)", badgeClass: "pill-neutral", desc: "Chưa có tài liệu đối soát độc lập trong cơ sở tri thức đối chuẩn" };
+    }
+  };
 
   // Stance analysis
   const stanceOppose = result?.opinion?.stance_oppose ?? 0;
@@ -1088,21 +1137,79 @@ export default function NewsAnalyzerPage() {
           {activeTab === "factcheck" && (
             <div className="panel tab-panel-body">
               <div className="section-title-box">
-                <h3>Các phát ngôn được kiểm chứng (Extracted Claims)</h3>
+                <h3>Báo cáo Giám định & Kiểm chứng Phát ngôn (Article Fact-Checking Report)</h3>
                 <p>
-                  Các claim được tách biệt từ văn bản gốc, phân loại phán quyết và đối chiếu với bằng chứng kiểm chứng số.
+                  Đọc toàn bộ bài báo, trích xuất các tuyên bố độc lập theo 8 phân loại taxonomy, đối chiếu bằng chứng đa nguồn từ Hybrid RAG và xác định 7 phán quyết chuẩn tắc.
                 </p>
+              </div>
+
+              {/* SECTION 9: ARTICLE FACT-CHECKING REPORT OVERVIEW */}
+              <div className="fact-report-overview-box" style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 12, padding: "16px 20px", marginBottom: 20 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, borderBottom: "1px solid #e2e8f0", paddingBottom: 12, marginBottom: 14 }}>
+                  <div>
+                    <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", color: "#64748b", fontWeight: 700 }}>
+                      Tổng quan Kiểm chứng Toàn bài
+                    </span>
+                    <h4 style={{ margin: "2px 0 0 0", fontSize: 16, color: "#0f172a" }}>{result.title}</h4>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <span style={{ fontSize: 11, color: "#64748b" }}>Tỷ lệ khẳng định có căn cứ:</span>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: factualAccuracyScore >= 0.7 ? "#059669" : factualAccuracyScore >= 0.4 ? "#d97706" : "#e11d48" }}>
+                      {Math.round(factualAccuracyScore * 100)}%
+                    </div>
+                  </div>
+                </div>
+
+                {/* 7 Counter Tiles */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 8, marginBottom: 12 }}>
+                  <div style={{ background: "#ffffff", padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", textAlign: "center" }}>
+                    <div style={{ fontSize: 11, color: "#64748b" }}>Tổng trích xuất</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: "#1e293b" }}>{totalClaims}</div>
+                  </div>
+                  <div style={{ background: "#ecfdf5", padding: "8px 12px", borderRadius: 8, border: "1px solid #a7f3d0", textAlign: "center" }}>
+                    <div style={{ fontSize: 11, color: "#047857" }}>✓ Xác thực</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: "#065f46" }}>{supportedClaimsCount}</div>
+                  </div>
+                  <div style={{ background: "#fef2f2", padding: "8px 12px", borderRadius: 8, border: "1px solid #fecaca", textAlign: "center" }}>
+                    <div style={{ fontSize: 11, color: "#b91c1c" }}>✕ Bác bỏ</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: "#991b1b" }}>{refutedClaimsCount}</div>
+                  </div>
+                  <div style={{ background: "#fffbeb", padding: "8px 12px", borderRadius: 8, border: "1px solid #fde68a", textAlign: "center" }}>
+                    <div style={{ fontSize: 11, color: "#b45309" }}>◒ Đúng 1 phần</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: "#92400e" }}>{partiallySupportedCount}</div>
+                  </div>
+                  <div style={{ background: "#fdf4ff", padding: "8px 12px", borderRadius: 8, border: "1px solid #f5d0fe", textAlign: "center" }}>
+                    <div style={{ fontSize: 11, color: "#a21caf" }}>⚠ Hiểu lầm</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: "#86198f" }}>{misleadingCount}</div>
+                  </div>
+                  <div style={{ background: "#fff7ed", padding: "8px 12px", borderRadius: 8, border: "1px solid #ffedd5", textAlign: "center" }}>
+                    <div style={{ fontSize: 11, color: "#c2410c" }}>⚡ Mâu thuẫn</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: "#9a3412" }}>{conflictingCount}</div>
+                  </div>
+                  <div style={{ background: "#f8fafc", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", textAlign: "center" }}>
+                    <div style={{ fontSize: 11, color: "#475569" }}>? Thiếu căn cứ</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: "#334155" }}>{inconclusiveCount}</div>
+                  </div>
+                  <div style={{ background: "#f1f5f9", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", textAlign: "center" }}>
+                    <div style={{ fontSize: 11, color: "#475569" }}>💬 Ý kiến/Dự đoán</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: "#334155" }}>{notCheckableCount}</div>
+                  </div>
+                </div>
+
+                <div style={{ fontSize: 11, color: "#64748b", fontStyle: "italic", background: "#f1f5f9", padding: "6px 12px", borderRadius: 6 }}>
+                  📐 <strong>Công thức tính:</strong> {overview?.accuracy_formula || "(SUPPORTED + 0.5 * PARTIALLY) / (Tổng số claim có thể kiểm chứng)"}. {overview?.accuracy_note || "Tỷ lệ này đo lường các khẳng định sự kiện có chứng cứ đối soát đạt chuẩn, KHÔNG phải xác suất toàn bài báo đúng."}
+                </div>
               </div>
 
               <div className="claims-filter-toolbar">
                 <span className="filter-label">Lọc trạng thái phát ngôn:</span>
-                <div className="filter-chips">
+                <div className="filter-chips" style={{ flexWrap: "wrap", gap: 6 }}>
                   <button
                     type="button"
                     className={`filter-chip ${claimFilter === "ALL" ? "active" : ""}`}
                     onClick={() => setClaimFilter("ALL")}
                   >
-                    Tất cả ({result.claims.length})
+                    Tất cả ({totalClaims})
                   </button>
                   <button
                     type="button"
@@ -1118,13 +1225,51 @@ export default function NewsAnalyzerPage() {
                   >
                     ✕ Bác bỏ ({refutedClaimsCount})
                   </button>
-                  <button
-                    type="button"
-                    className={`filter-chip chip-other ${claimFilter === "OTHER" ? "active" : ""}`}
-                    onClick={() => setClaimFilter("OTHER")}
-                  >
-                    ? Khác ({inconclusiveCount + notCheckableCount})
-                  </button>
+                  {partiallySupportedCount > 0 && (
+                    <button
+                      type="button"
+                      className={`filter-chip chip-other ${claimFilter === "PARTIALLY_SUPPORTED" ? "active" : ""}`}
+                      onClick={() => setClaimFilter("PARTIALLY_SUPPORTED")}
+                    >
+                      ◒ Đúng 1 phần ({partiallySupportedCount})
+                    </button>
+                  )}
+                  {misleadingCount > 0 && (
+                    <button
+                      type="button"
+                      className={`filter-chip chip-other ${claimFilter === "MISLEADING" ? "active" : ""}`}
+                      onClick={() => setClaimFilter("MISLEADING")}
+                    >
+                      ⚠ Hiểu lầm ({misleadingCount})
+                    </button>
+                  )}
+                  {conflictingCount > 0 && (
+                    <button
+                      type="button"
+                      className={`filter-chip chip-other ${claimFilter === "CONFLICTING_EVIDENCE" ? "active" : ""}`}
+                      onClick={() => setClaimFilter("CONFLICTING_EVIDENCE")}
+                    >
+                      ⚡ Mâu thuẫn ({conflictingCount})
+                    </button>
+                  )}
+                  {inconclusiveCount > 0 && (
+                    <button
+                      type="button"
+                      className={`filter-chip chip-other ${claimFilter === "NOT_ENOUGH_INFORMATION" ? "active" : ""}`}
+                      onClick={() => setClaimFilter("NOT_ENOUGH_INFORMATION")}
+                    >
+                      ? Thiếu căn cứ ({inconclusiveCount})
+                    </button>
+                  )}
+                  {notCheckableCount > 0 && (
+                    <button
+                      type="button"
+                      className={`filter-chip chip-other ${claimFilter === "NOT_CHECKABLE" ? "active" : ""}`}
+                      onClick={() => setClaimFilter("NOT_CHECKABLE")}
+                    >
+                      💬 Ý kiến ({notCheckableCount})
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -1132,24 +1277,37 @@ export default function NewsAnalyzerPage() {
                 {result.claims
                   .filter((c) => {
                     if (claimFilter === "ALL") return true;
-                    if (claimFilter === "SUPPORTED") return c.verdict === "SUPPORTED";
-                    if (claimFilter === "REFUTED") return c.verdict === "REFUTED";
-                    if (claimFilter === "OTHER") return c.verdict !== "SUPPORTED" && c.verdict !== "REFUTED";
-                    return true;
+                    return c.verdict === claimFilter;
                   })
                   .map((claim, idx) => {
                   const evidences = claim.evidences || [];
                   const supporting = evidences.filter((e) => e.stance === "SUPPORTS");
                   const refuting = evidences.filter((e) => e.stance === "REFUTES");
                   const others = evidences.filter((e) => e.stance !== "SUPPORTS" && e.stance !== "REFUTES");
+                  const cTypeMeta = getClaimTypeMeta(claim.claim_type);
+                  const vMeta = getVerdictMeta(claim.verdict);
 
                   return (
                     <div key={claim.id} className="claim-card">
                       <div className="claim-card-top" style={{ flexWrap: "wrap", gap: "8px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                           <div className="claim-badge-num">Claim #{idx + 1}</div>
+                          <span
+                            className="claim-type-chip"
+                            style={{
+                              padding: "2px 8px",
+                              borderRadius: 6,
+                              fontSize: 11,
+                              fontWeight: 600,
+                              background: cTypeMeta.bg,
+                              color: cTypeMeta.color,
+                              border: `1px solid ${cTypeMeta.color}30`,
+                            }}
+                          >
+                            {cTypeMeta.label}
+                          </span>
                           <span className="model-badge">
-                            <Cpu size={11} /> {claim.model_name || "TrustMedia-NLI-HybridVerifier"} v{claim.model_version || "1.2"}
+                            <Cpu size={11} /> {claim.model_name || "TrustMedia-NLI-HybridVerifier"} v{claim.model_version || "2.0"}
                           </span>
                           <span
                             className={`verification-status-badge ${
@@ -1160,21 +1318,43 @@ export default function NewsAnalyzerPage() {
                           </span>
                         </div>
                         <span
-                          className={`claim-verdict-badge ${
-                            claim.verdict === "REFUTED"
-                              ? "pill-danger"
-                              : claim.verdict === "SUPPORTED"
-                              ? "pill-success"
-                              : "pill-warning"
-                          }`}
+                          className={`claim-verdict-badge ${vMeta.badgeClass}`}
+                          title={vMeta.desc}
                         >
-                          {claim.verdict}
+                          {vMeta.label}
                         </span>
                       </div>
+
+                      {/* Structural Syntax & Entity Slots */}
+                      {(claim.subject || claim.predicate || claim.object || claim.date_or_time_period || claim.location || (claim.entities && claim.entities.length > 0) || (claim.numerical_values && claim.numerical_values.length > 0)) && (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", margin: "10px 0 6px 0", fontSize: "11px", background: "#f8fafc", padding: "6px 10px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                          {claim.subject && <span style={{ color: "#1e293b" }}><strong>Chủ ngữ:</strong> {claim.subject}</span>}
+                          {claim.predicate && <span style={{ color: "#1e293b" }}><strong>Vị ngữ:</strong> {claim.predicate}</span>}
+                          {claim.object && <span style={{ color: "#1e293b" }}><strong>Tân ngữ:</strong> {claim.object}</span>}
+                          {claim.date_or_time_period && <span style={{ color: "#0284c7" }}><strong>Thời gian:</strong> {claim.date_or_time_period}</span>}
+                          {claim.location && <span style={{ color: "#059669" }}><strong>Địa điểm:</strong> {claim.location}</span>}
+                          {claim.entities && claim.entities.length > 0 && (
+                            <span style={{ color: "#7c3aed" }}>
+                              <strong>Thực thể:</strong> {claim.entities.map((e: any) => typeof e === "string" ? e : e.raw || JSON.stringify(e)).join(", ")}
+                            </span>
+                          )}
+                          {claim.numerical_values && claim.numerical_values.length > 0 && (
+                            <span style={{ color: "#d97706" }}>
+                              <strong>Số liệu:</strong> {claim.numerical_values.map((n: any) => typeof n === "string" ? n : n.raw || JSON.stringify(n)).join(", ")}
+                            </span>
+                          )}
+                        </div>
+                      )}
 
                       <div className="claim-text-highlight" style={{ marginTop: 8 }}>
                         "{claim.claim_text}"
                       </div>
+
+                      {claim.original_text && claim.original_text !== claim.claim_text && (
+                        <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>
+                          <em>Văn bản ngữ cảnh gốc:</em> "{claim.original_text}"
+                        </div>
+                      )}
 
                       <div style={{ margin: "6px 0" }}>
                         <span className="calibrated-conf-badge">
@@ -1184,7 +1364,7 @@ export default function NewsAnalyzerPage() {
                       </div>
 
                       <div className="claim-reasoning">
-                        <strong>Cơ sở đánh giá:</strong> {claim.reasoning}
+                        <strong>Cơ sở đánh giá & đối chiếu:</strong> {claim.reasoning}
                       </div>
 
                       {claim.limitations && (
@@ -1328,6 +1508,41 @@ export default function NewsAnalyzerPage() {
                 <p>
                   Đánh giá các thuộc tính nguồn, quy trình biên tập và chất lượng dẫn chứng độc lập với bài viết cụ thể.
                 </p>
+              </div>
+
+              {/* SECTION 10: MEDIA CREDIBILITY ISOLATED MODULE */}
+              <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "12px 16px", marginBottom: 18, display: "flex", gap: 12, alignItems: "flex-start" }}>
+                <ShieldCheck size={20} color="#16a34a" style={{ flexShrink: 0, marginTop: 2 }} />
+                <div style={{ fontSize: 13, color: "#15803d" }}>
+                  <strong>Quy tắc độc lập thực chứng:</strong> Chỉ số Media Credibility đánh giá tính minh bạch và chuẩn mực báo chí của tòa soạn/domain, <strong>KHÔNG</strong> can thiệp hoặc thay thế cho kết quả kiểm chứng từng phát ngôn (Claim Verdict). Một bài báo từ nguồn uy tín vẫn có thể chứa thông tin sai lệch, và một bài báo từ nguồn chưa được xếp hạng vẫn có thể chứa sự thật được kiểm chứng.
+                </div>
+              </div>
+
+              {/* 5-Item Transparency Checklist */}
+              <div className="card-bordered" style={{ marginBottom: 20 }}>
+                <h4 style={{ margin: "0 0 10px 0", fontSize: 14, color: "#1e293b" }}>Bộ tiêu chí kiểm tra Minh bạch Nguồn tin</h4>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}>
+                    <CheckCircle2 size={16} color="#059669" />
+                    <span>Nguồn có tên miền & xuất xứ rõ ràng</span>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}>
+                    <CheckCircle2 size={16} color="#059669" />
+                    <span>Có công khai tác giả / Ban biên tập</span>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}>
+                    <CheckCircle2 size={16} color="#059669" />
+                    <span>Có dẫn nguồn tài liệu tham chiếu</span>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}>
+                    <CheckCircle2 size={16} color="#059669" />
+                    <span>Có quy chuẩn đính chính & sửa lỗi</span>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}>
+                    <CheckCircle2 size={16} color="#059669" />
+                    <span>Có thông tin sở hữu và liên hệ</span>
+                  </div>
+                </div>
               </div>
 
               {result.credibility ? (

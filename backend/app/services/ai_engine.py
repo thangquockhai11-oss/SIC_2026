@@ -108,6 +108,7 @@ async def run_multi_agent_analysis(
         "summary": meta_result["summary"],
         "verdict": meta_result["verdict"],
         "confidence_score": meta_result["confidence_score"],
+        "fact_checking_report": meta_result.get("fact_checking_report"),
         "ai_provider": ai_provider,
         "claims": claims,
         "credibility": credibility_data,

@@ -61,18 +61,23 @@ def validate_url_safe(url: str) -> str:
 
 def _fetch_with_ssl_fallback(url: str, headers: dict[str, str], timeout: float) -> httpx.Response:
     """
-    Fetch URL with SSL fallback.
+    Fetch URL with robust multi-stage SSL fallback.
     Tries strict CA verification first (using certifi if available).
     If verification fails for ANY network/SSL mismatch reason (missing intermediate certificate,
-    self-signed, mismatched hostname, expired CA), retries with verify=False so authentic news
-    and academic sites can still be processed securely without leaking SSRF boundaries.
+    self-signed, mismatched hostname, expired CA), retries with verify=False and unverified SSL context
+    so authentic news, university, and academic sites can still be processed securely without leaking SSRF boundaries.
     """
+    import ssl
+    import urllib.request
+    import urllib.error
+
     try:
         import certifi
         ca_bundle: str | bool = certifi.where()
     except Exception:
         ca_bundle = True
 
+    # Attempt 1: Strict CA verification via httpx
     try:
         with httpx.Client(timeout=timeout, follow_redirects=False, verify=ca_bundle) as client:
             return client.get(url, headers=headers)
@@ -82,29 +87,39 @@ def _fetch_with_ssl_fallback(url: str, headers: dict[str, str], timeout: float) 
             url,
             exc,
         )
-        try:
-            with httpx.Client(timeout=timeout, follow_redirects=False, verify=False) as client:
-                return client.get(url, headers=headers)
-        except Exception as retry_exc:
-            logger.warning("httpx unverified retry failed for %s (%s). Attempting urllib fallback.", url, retry_exc)
-            try:
-                import ssl
-                import urllib.request
 
-                ctx = ssl._create_unverified_context()
-                req = urllib.request.Request(url, headers=headers)
-                with urllib.request.urlopen(req, context=ctx, timeout=timeout) as u_resp:
-                    raw_content = u_resp.read()
-                    status_code = u_resp.getcode()
-                    content_type = u_resp.headers.get("Content-Type", "text/html")
-                    return httpx.Response(
-                        status_code=status_code,
-                        content=raw_content,
-                        headers={"content-type": content_type},
-                        request=httpx.Request("GET", url),
-                    )
-            except Exception as u_exc:
-                raise retry_exc from u_exc
+    # Attempt 2: Unverified SSL via httpx
+    try:
+        with httpx.Client(timeout=timeout, follow_redirects=False, verify=False) as client:
+            return client.get(url, headers=headers)
+    except Exception as retry_exc:
+        logger.warning("httpx unverified retry failed for %s (%s). Attempting urllib unverified fallback.", url, retry_exc)
+
+    # Attempt 3: Explicit unverified SSL context via urllib
+    try:
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, context=ctx, timeout=timeout) as u_resp:
+            raw_content = u_resp.read()
+            status_code = u_resp.getcode()
+            content_type = u_resp.headers.get("Content-Type", "text/html")
+            return httpx.Response(
+                status_code=status_code,
+                content=raw_content,
+                headers={"content-type": content_type},
+                request=httpx.Request("GET", url),
+            )
+    except urllib.error.HTTPError as h_err:
+        return httpx.Response(
+            status_code=h_err.code,
+            content=h_err.read(),
+            headers={"content-type": h_err.headers.get("Content-Type", "text/html")},
+            request=httpx.Request("GET", url),
+        )
+    except Exception as final_exc:
+        raise ValueError(f"Không thể kết nối tới nguồn tin trực tuyến: {final_exc}") from final_exc
 
 
 def fetch_and_extract_article(url: str) -> tuple[str, str]:

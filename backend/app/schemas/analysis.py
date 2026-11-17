@@ -28,6 +28,9 @@ class EvidenceResponse(BaseModel):
     source_url: str | None = None
     excerpt: str
     stance: str
+    evidence_type: str | None = "DIRECT"
+    publication_date: str | None = None
+    provenance: dict | None = None
     reliability_score: float
     relevance_score: float = 0.0
     dataset_source: str | None = None
@@ -39,6 +42,17 @@ class EvidenceResponse(BaseModel):
 class ClaimResponse(BaseModel):
     id: str
     claim_text: str
+    original_text: str | None = None
+    normalized_claim: str | None = None
+    claim_type: str = "FACTUAL_CLAIM"
+    subject: str | None = None
+    predicate: str | None = None
+    object: str | None = None
+    date_or_time_period: str | None = None
+    location: str | None = None
+    entities: list[str] | list[dict] | None = None
+    numerical_values: list[str] | list[dict] | None = None
+    checkability: bool = True
     verdict: str
     confidence: float
     reasoning: str
@@ -147,6 +161,7 @@ class AnalysisDetailResponse(BaseModel):
     summary: str | None = None
     verdict: str | None = None
     confidence_score: float | None = None
+    fact_checking_report: dict | None = None
     ai_provider: str
     created_at: datetime
     completed_at: datetime | None = None

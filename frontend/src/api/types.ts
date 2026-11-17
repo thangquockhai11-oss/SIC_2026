@@ -21,10 +21,16 @@ export type TokenResponse = {
 
 export type Evidence = {
   id: string;
+  evidence_id?: string;
   source_name: string;
   source_url: string | null;
   excerpt: string;
-  stance: "SUPPORTS" | "REFUTES" | "NEUTRAL";
+  content?: string;
+  stance: "SUPPORTS" | "REFUTES" | "NEUTRAL" | "DISCUSSES" | "CONFLICTING" | string;
+  evidence_type?: "DIRECT" | "INDIRECT" | "PRIMARY" | "SECONDARY" | "CONTEXTUAL" | string;
+  publication_date?: string | null;
+  retrieval_date?: string | null;
+  provenance?: Record<string, any> | null;
   reliability_score: number;
   relevance_score?: number;
   dataset_source?: string | null;
@@ -35,8 +41,20 @@ export type Evidence = {
 
 export type Claim = {
   id: string;
+  claim_id?: string;
   claim_text: string;
-  verdict: "SUPPORTED" | "REFUTED" | "NOT_ENOUGH_INFORMATION" | "NOT_CHECKABLE";
+  original_text?: string | null;
+  normalized_claim?: string | null;
+  claim_type?: "FACTUAL_CLAIM" | "STATISTICAL_CLAIM" | "HISTORICAL_CLAIM" | "SCIENTIFIC_CLAIM" | "QUOTATION_CLAIM" | "CAUSAL_CLAIM" | "OPINION" | "PREDICTION" | string;
+  subject?: string | null;
+  predicate?: string | null;
+  object?: string | null;
+  date_or_time_period?: string | null;
+  location?: string | null;
+  entities?: Array<string | Record<string, any>> | null;
+  numerical_values?: Array<string | Record<string, any>> | null;
+  checkability?: boolean;
+  verdict: "SUPPORTED" | "REFUTED" | "PARTIALLY_SUPPORTED" | "MISLEADING" | "CONFLICTING_EVIDENCE" | "NOT_ENOUGH_INFORMATION" | "NOT_CHECKABLE" | string;
   confidence: number;
   reasoning: string;
   limitations: string | null;
@@ -45,6 +63,9 @@ export type Claim = {
   confidence_metric_type?: string;
   verification_status?: string;
   evidences: Evidence[];
+  supporting_evidences?: Evidence[];
+  refuting_evidences?: Evidence[];
+  other_evidences?: Evidence[];
 };
 
 export type MediaCredibility = {
@@ -144,6 +165,47 @@ export type AnalysisDetail = {
   verdict: string | null;
   confidence_score: number | null;
   disagreement_detected?: boolean;
+  fact_checking_report?: {
+    overview: {
+      article_title: string;
+      total_claims_extracted: number;
+      total_claims_verified: number;
+      supported_claims_count: number;
+      refuted_claims_count: number;
+      partially_supported_count: number;
+      misleading_count: number;
+      conflicting_count: number;
+      not_enough_info_count: number;
+      not_checkable_count: number;
+      verifiable_claims_count: number;
+      factual_accuracy_score: number;
+      accuracy_formula: string;
+      accuracy_note: string;
+    };
+    claim_breakdown: any[];
+    overall_synthesis: {
+      summary: string;
+      cross_claim_conflicts: string[];
+      opinion_vs_fact_summary: string;
+      context_gaps: string[];
+    };
+    media_credibility_isolated: {
+      source_name: string;
+      domain: string | null;
+      transparency_score: number;
+      citation_score: number;
+      evidence_score: number;
+      journalistic_standard_score: number;
+      overall_credibility_score: number;
+      transparency_checklist: {
+        clear_byline_author: boolean;
+        sources_cited: boolean;
+        corrections_policy: boolean;
+        contact_ownership: boolean;
+      };
+      disclaimer: string;
+    };
+  } | null;
   ai_provider: string;
   created_at: string;
   completed_at: string | null;

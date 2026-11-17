@@ -61,6 +61,7 @@ class Analysis(Base):
     summary = Column(Text, nullable=True)
     verdict = Column(String(50), nullable=True)  # SUPPORTED, REFUTED, MIXED, INSUFFICIENT_INFORMATION, CONTROVERSIAL
     confidence_score = Column(Float, nullable=True)
+    fact_checking_report = Column(JSON, nullable=True, default=dict)
     ai_provider = Column(String(100), nullable=False, default="TrustMedia Baseline Engine")
     created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)
     completed_at = Column(DateTime(timezone=True), nullable=True)
@@ -80,7 +81,18 @@ class Claim(Base):
     id = Column(String(36), primary_key=True, default=gen_uuid)
     analysis_id = Column(String(36), ForeignKey("analyses.id", ondelete="CASCADE"), nullable=False, index=True)
     claim_text = Column(Text, nullable=False)
-    verdict = Column(String(50), nullable=False)  # SUPPORTED, REFUTED, NOT_ENOUGH_INFORMATION, NOT_CHECKABLE
+    original_text = Column(Text, nullable=True)
+    normalized_claim = Column(Text, nullable=True)
+    claim_type = Column(String(50), nullable=False, default="FACTUAL_CLAIM")  # FACTUAL_CLAIM, STATISTICAL_CLAIM, HISTORICAL_CLAIM, SCIENTIFIC_CLAIM, QUOTATION_CLAIM, CAUSAL_CLAIM, OPINION, PREDICTION
+    subject = Column(String(255), nullable=True)
+    predicate = Column(String(255), nullable=True)
+    object = Column(String(255), nullable=True)
+    date_or_time_period = Column(String(255), nullable=True)
+    location = Column(String(255), nullable=True)
+    entities = Column(JSON, nullable=True, default=list)
+    numerical_values = Column(JSON, nullable=True, default=list)
+    checkability = Column(Boolean, nullable=False, default=True)
+    verdict = Column(String(50), nullable=False)  # SUPPORTED, REFUTED, PARTIALLY_SUPPORTED, MISLEADING, CONFLICTING_EVIDENCE, NOT_ENOUGH_INFORMATION, NOT_CHECKABLE
     confidence = Column(Float, nullable=False, default=0.0)
     reasoning = Column(Text, nullable=False)
     limitations = Column(Text, nullable=True)
@@ -102,7 +114,10 @@ class Evidence(Base):
     source_name = Column(String(255), nullable=False)
     source_url = Column(String(2000), nullable=True)
     excerpt = Column(Text, nullable=False)
-    stance = Column(String(30), nullable=False)  # SUPPORTS, REFUTES, NEUTRAL
+    stance = Column(String(30), nullable=False)  # SUPPORTS, REFUTES, DISCUSSES, CONFLICTING
+    evidence_type = Column(String(50), nullable=True, default="DIRECT")  # DIRECT, INDIRECT, PRIMARY, SECONDARY, CONTEXTUAL
+    publication_date = Column(String(100), nullable=True)
+    provenance = Column(JSON, nullable=True, default=dict)
     reliability_score = Column(Float, nullable=False, default=0.0)
     relevance_score = Column(Float, nullable=False, default=0.0)
     dataset_source = Column(String(100), nullable=True)

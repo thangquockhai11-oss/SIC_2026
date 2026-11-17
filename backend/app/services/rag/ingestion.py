@@ -284,14 +284,14 @@ class DocumentIngestionPipeline:
                     df_xfact = pd.read_csv(xfact_file, nrows=max_samples_per_dataset * 4)
                     count_xfact = 0
                     for _, row in df_xfact.iterrows():
+                        cid = str(row.get("claim_id", ""))
+                        if f"X-FACT_{cid}" in existing_records:
+                            continue
+
                         claim = str(row.get("claim", "")).strip()
                         ev = str(row.get("evidence_1", "")).strip()
                         if not claim or not ev or ev.lower() == "nan":
                             continue
-                        cid = str(row.get("claim_id") or f"xf_{abs(hash(claim)) % 10000000}")
-                        if f"X-FACT_{cid}" in existing_records:
-                            continue
-
                         lbl_str = str(row.get("label", "")).lower()
                         verdict = "REFUTED" if any(f in lbl_str for f in ["false", "pants on fire", "incorrect"]) else "SUPPORTED"
 
