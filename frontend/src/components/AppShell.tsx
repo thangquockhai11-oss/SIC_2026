@@ -17,6 +17,7 @@ import {
   Sparkles,
   Users,
   X,
+  Settings,
 } from "lucide-react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import AuthModal from "./AuthModal";
@@ -38,35 +39,35 @@ interface NavSection {
 
 const navSections: NavSection[] = [
   {
-    title: "TỔNG QUAN",
+    title: "TỔNG QUAN HỆ THỐNG",
     items: [
-      { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
+      { to: "/", label: "Tổng quan", icon: LayoutDashboard, end: true },
     ],
   },
   {
     title: "TRUNG TÂM PHÂN TÍCH AI",
     items: [
-      { to: "/analyzer", label: "News Analyzer", icon: Newspaper, badge: "AI Core" },
-      { to: "/fact-checking", label: "Fact-checking", icon: FileCheck2 },
-      { to: "/agents", label: "Multi-Agent Monitor", icon: Bot, badge: "Live" },
+      { to: "/analyzer", label: "Phân tích bài báo", icon: Newspaper, badge: "Cốt lõi AI" },
+      { to: "/fact-checking", label: "Kiểm chứng thông tin", icon: FileCheck2 },
+      { to: "/agents", label: "Giám sát AI", icon: Bot, badge: "Trực tiếp" },
     ],
   },
   {
     title: "CÁC CHIỀU ĐÁNH GIÁ CHUYÊN SÂU",
     items: [
-      { to: "/credibility", label: "Media Credibility", icon: ShieldAlert },
-      { to: "/opinion", label: "Public Opinion", icon: MessageSquareQuote },
-      { to: "/trust", label: "Public Trust", icon: Users },
-      { to: "/reception", label: "Information Reception", icon: BrainCircuit },
+      { to: "/credibility", label: "Phân tích truyền thông", icon: ShieldAlert },
+      { to: "/opinion", label: "Phân tích dư luận", icon: MessageSquareQuote },
+      { to: "/trust", label: "Niềm tin công chúng", icon: Users },
+      { to: "/reception", label: "Tiếp nhận thông tin", icon: BrainCircuit },
     ],
   },
   {
     title: "TRI THỨC & BÁO CÁO",
     items: [
-      { to: "/evidence", label: "Evidence Explorer", icon: Search },
+      { to: "/evidence", label: "Kho bằng chứng", icon: Search },
       { to: "/history", label: "Lịch sử phân tích", icon: History },
-      { to: "/reports", label: "Xuất báo cáo", icon: FileText },
-      { to: "/datasets", label: "Cơ sở Dataset", icon: Database },
+      { to: "/datasets", label: "Quản lý dữ liệu", icon: Database },
+      { to: "/reports", label: "Báo cáo", icon: FileText },
     ],
   },
 ];
@@ -100,11 +101,12 @@ export default function AppShell() {
           </div>
           <div className="brand-text">
             <strong>TrustMedia AI</strong>
-            <span>Digital Media Platform</span>
+            <span>Nền tảng kiểm chứng truyền thông số</span>
           </div>
           <button
             className="mobile-close-btn"
             onClick={() => setMobileMenuOpen(false)}
+            aria-label="Đóng thanh điều hướng"
           >
             <X size={18} />
           </button>
@@ -133,17 +135,34 @@ export default function AppShell() {
               </nav>
             </div>
           ))}
+
+          <div className="nav-group">
+            <div className="nav-caption">HỆ THỐNG</div>
+            <nav className="main-nav">
+              <button
+                type="button"
+                className="nav-link w-full text-left"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  setIsProfileOpen(true);
+                }}
+              >
+                <Settings size={18} className="nav-icon" />
+                <span className="nav-label">Cài đặt & Tài khoản</span>
+              </button>
+            </nav>
+          </div>
         </div>
 
         <div className="sidebar-bottom">
           <div className="engine-card">
             <div className="engine-header">
               <span className="status-dot live" />
-              <strong>Multi-Agent EWAC</strong>
+              <strong>Đa tác nhân EWAC</strong>
             </div>
-            <p>Hệ thống AI kiểm chứng, phân tích lập trường & hiệu chuẩn đồng thuận.</p>
+            <p>Hệ sinh thái AI kiểm chứng, đối chiếu bằng chứng & hiệu chuẩn đồng thuận.</p>
             <div className="engine-footer">
-              <span className="version-pill">v2.0 • Real Dataset</span>
+              <span className="version-pill">v2.0 • Dữ liệu thực nghiệm</span>
             </div>
           </div>
         </div>
@@ -156,7 +175,7 @@ export default function AppShell() {
             <button
               className="hamburger-btn"
               onClick={() => setMobileMenuOpen(true)}
-              aria-label="Toggle menu"
+              aria-label="Mở trình đơn di động"
             >
               <Menu size={20} />
             </button>
@@ -164,7 +183,7 @@ export default function AppShell() {
               <span className="context-root">TrustMedia</span>
               <span className="context-divider">/</span>
               <strong className="context-current">
-                {currentNav?.label || "Workspace"}
+                {currentNav?.label || "Không gian làm việc"}
               </strong>
             </div>
           </div>
@@ -180,7 +199,7 @@ export default function AppShell() {
 
             <div className="system-status-chip">
               <span className="topbar-dot" />
-              <span>Multi-Agent Ready</span>
+              <span>Hệ thống Đa tác nhân sẵn sàng</span>
             </div>
 
             {user ? (
@@ -188,7 +207,7 @@ export default function AppShell() {
                 type="button"
                 className="user-profile-btn"
                 onClick={() => setIsProfileOpen(true)}
-                title="Quản lý hồ sơ"
+                title="Quản lý hồ sơ cá nhân"
               >
                 <div className="topbar-avatar">
                   {user.full_name ? user.full_name.charAt(0).toUpperCase() : "U"}

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
+import { formatDateTime, formatPercentage, formatStance, formatVerdict } from "../utils/i18n";
 
 export default function FactCheckingPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -37,9 +38,9 @@ export default function FactCheckingPage() {
       <section className="welcome-row">
         <div>
           <div className="eyebrow">XÁC MINH SỰ THẬT & CƠ SỞ TRI THỨC</div>
-          <h1>Fact-Checking — Kiểm chứng Thông tin Thực nghiệm</h1>
+          <h1>Kiểm chứng Thông tin — Cơ sở Tri thức Thực nghiệm</h1>
           <p className="page-subtitle">
-            Trích xuất phát ngôn (claims), truy vấn bằng chứng đối chứng đa nguồn (ViFactCheck, X-FACT, FEVER) và phân loại độ chính xác bằng mô hình NLI hiệu chuẩn.
+            Trích xuất tuyên bố (Claims), truy xuất bằng chứng đối chiếu đa nguồn qua Hybrid RAG và phân loại độ chính xác bằng mô hình NLI hiệu chuẩn.
           </p>
         </div>
         <Link to="/analyzer" className="button button-primary">
@@ -54,21 +55,24 @@ export default function FactCheckingPage() {
             <Search size={15} />
             <input
               type="text"
-              placeholder="Tìm kiếm claim, nội dung hoặc bằng chứng..."
+              placeholder="Tìm kiếm tuyên bố, nội dung hoặc bằng chứng..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
           <select value={verdictFilter} onChange={(e) => setVerdictFilter(e.target.value)}>
-            <option value="">Tất cả phán quyết</option>
-            <option value="REFUTED">Bác bỏ (Refuted)</option>
-            <option value="SUPPORTED">Xác thực (Supported)</option>
-            <option value="NOT_ENOUGH_INFORMATION">Thiếu thông tin (Inconclusive)</option>
+            <option value="">Tất cả kết luận kiểm chứng</option>
+            <option value="SUPPORTED">Được bằng chứng hỗ trợ</option>
+            <option value="REFUTED">Bị bằng chứng bác bỏ</option>
+            <option value="PARTIALLY_SUPPORTED">Đúng một phần</option>
+            <option value="MISLEADING">Gây hiểu lầm</option>
+            <option value="CONFLICTING_EVIDENCE">Bằng chứng mâu thuẫn</option>
+            <option value="NOT_ENOUGH_INFORMATION">Chưa đủ bằng chứng</option>
             <option value="NOT_CHECKABLE">Không thể kiểm chứng</option>
           </select>
 
-          <span className="result-count">Tổng cộng: {data?.total ?? 0} phát ngôn đã lưu</span>
+          <span className="result-count">Tổng cộng: {data?.total ?? 0} tuyên bố đã lưu</span>
         </div>
 
         {isLoading ? (
@@ -84,8 +88,8 @@ export default function FactCheckingPage() {
           <div className="registry-state">
             <div className="empty-state">
               <FileCheck2 size={32} />
-              <strong>Chưa tìm thấy phát ngôn phù hợp</strong>
-              <span>Hãy điều chỉnh bộ lọc hoặc gửi một bài viết mới qua News Analyzer.</span>
+              <strong>Chưa tìm thấy tuyên bố phù hợp</strong>
+              <span>Hãy điều chỉnh bộ lọc hoặc gửi một bài viết mới qua phân hệ Phân tích bài báo.</span>
             </div>
           </div>
         ) : (
@@ -106,10 +110,10 @@ export default function FactCheckingPage() {
                       Bài viết: <strong>{claim.analysis_title}</strong>
                     </div>
 
-                    <div style={{ display: "flex", gap: "6px", alignItems: "center", marginLeft: "auto" }}>
+                    <div style={{ display: "flex", gap: "6px", alignItems: "center", marginLeft: "auto", flexWrap: "wrap" }}>
                       {/* Model Badge */}
                       <span className="model-badge">
-                        <Cpu size={12} /> {claim.model_name || "TrustMedia-NLI-HybridVerifier"} v{claim.model_version || "1.2"}
+                        <Cpu size={12} /> {claim.model_name || "TrustMedia-NLI-HybridVerifier"} v{claim.model_version || "2.0"}
                       </span>
 
                       {/* Verification Status Badge */}
@@ -120,7 +124,7 @@ export default function FactCheckingPage() {
                             : "verified"
                         }`}
                       >
-                        {claim.verification_status || (claim.verdict === "NOT_ENOUGH_INFORMATION" ? "INSUFFICIENT_EVIDENCE" : "VERIFIED")}
+                        {claim.verdict === "NOT_ENOUGH_INFORMATION" ? "Chưa đủ căn cứ" : "Đã đối soát"}
                       </span>
 
                       {/* Verdict Badge */}
@@ -136,7 +140,7 @@ export default function FactCheckingPage() {
                         {claim.verdict === "REFUTED" && <XCircle size={13} style={{ marginRight: 4, verticalAlign: "middle" }} />}
                         {claim.verdict === "SUPPORTED" && <CheckCircle2 size={13} style={{ marginRight: 4, verticalAlign: "middle" }} />}
                         {claim.verdict === "NOT_ENOUGH_INFORMATION" && <HelpCircle size={13} style={{ marginRight: 4, verticalAlign: "middle" }} />}
-                        {claim.verdict}
+                        {formatVerdict(claim.verdict)}
                       </span>
                     </div>
                   </div>
@@ -150,7 +154,7 @@ export default function FactCheckingPage() {
                   <div style={{ margin: "8px 0" }}>
                     <span className="calibrated-conf-badge">
                       <ShieldCheck size={14} />
-                      Độ tin cậy hiệu chuẩn: <strong>{Math.round(claim.confidence * 100)}%</strong> ({claim.confidence_metric_type || "Calibrated Posterior"})
+                      Độ tin cậy hiệu chuẩn: <strong>{formatPercentage(claim.confidence)}</strong>
                     </span>
                   </div>
 
@@ -174,7 +178,7 @@ export default function FactCheckingPage() {
                         <div>
                           <strong>Không tìm thấy bằng chứng đối chứng nào</strong> trong cơ sở tri thức đạt ngưỡng liên quan tối thiểu (≥ 0.22).
                           <div style={{ marginTop: 2, fontSize: 10, opacity: 0.9 }}>
-                            Kết luận: <em>Chưa đủ thông tin để thẩm định (NOT_ENOUGH_INFORMATION)</em>. Hệ thống minh bạch không tự tạo bằng chứng giả định.
+                            Kết luận: <em>Chưa đủ bằng chứng để kiểm chứng (NOT_ENOUGH_INFORMATION)</em>. Hệ thống minh bạch không tự tạo bằng chứng giả định.
                           </div>
                         </div>
                       </div>
@@ -184,7 +188,7 @@ export default function FactCheckingPage() {
                         {refutingEvs.length > 0 && (
                           <div className="evidence-group" style={{ borderColor: "#fecaca" }}>
                             <div className="evidence-group-title" style={{ color: "#b91c1c" }}>
-                              <ShieldAlert size={14} /> Bằng chứng Bác bỏ phát ngôn ({refutingEvs.length})
+                              <ShieldAlert size={14} /> Bằng chứng Bác bỏ tuyên bố ({refutingEvs.length})
                             </div>
                             <div className="ev-cards-list">
                               {refutingEvs.map((ev: any) => (
@@ -198,7 +202,7 @@ export default function FactCheckingPage() {
                         {supportingEvs.length > 0 && (
                           <div className="evidence-group" style={{ borderColor: "#a7f3d0" }}>
                             <div className="evidence-group-title" style={{ color: "#047857" }}>
-                              <ShieldCheck size={14} /> Bằng chứng Xác thực phát ngôn ({supportingEvs.length})
+                              <ShieldCheck size={14} /> Bằng chứng Hỗ trợ tuyên bố ({supportingEvs.length})
                             </div>
                             <div className="ev-cards-list">
                               {supportingEvs.map((ev: any) => (
@@ -254,7 +258,7 @@ function EvidenceCard({ ev }: { ev: any }) {
               : "stance-neutral"
           }`}
         >
-          {ev.stance} ({Math.round(ev.reliability_score * 100)}%)
+          {formatStance(ev.stance)} ({formatPercentage(ev.reliability_score)})
         </span>
       </div>
 
@@ -271,7 +275,7 @@ function EvidenceCard({ ev }: { ev: any }) {
         )}
         {ev.relevance_score !== undefined && ev.relevance_score !== null && (
           <span className="ev-meta-tag">
-            Độ liên quan: <strong>{Math.round(ev.relevance_score * 100)}%</strong>
+            Độ liên quan: <strong>{formatPercentage(ev.relevance_score)}</strong>
           </span>
         )}
         {ev.nli_relation && (
@@ -281,7 +285,7 @@ function EvidenceCard({ ev }: { ev: any }) {
         )}
         {ev.retrieval_timestamp && (
           <span className="ev-meta-tag">
-            Thời điểm: {new Date(ev.retrieval_timestamp).toLocaleString("vi-VN")}
+            Thời điểm: {formatDateTime(ev.retrieval_timestamp)}
           </span>
         )}
         {ev.source_url && (

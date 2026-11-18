@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
+import { formatDateTime, formatPercentage, formatVerdict } from "../utils/i18n";
 
 export default function HistoryPage() {
   const queryClient = useQueryClient();
@@ -50,9 +51,9 @@ export default function HistoryPage() {
       <section className="welcome-row">
         <div>
           <div className="eyebrow">NHẬT KÝ NGHIÊN CỨU</div>
-          <h1>Analysis History — Lịch sử Phân tích</h1>
+          <h1>Lịch sử Phân tích — Nhật ký Nghiên cứu</h1>
           <p className="page-subtitle">
-            Toàn bộ các phiên phân tích tin tức và kiểm chứng đa tác tử đã được thực thi và lưu trữ trong cơ sở dữ liệu.
+            Toàn bộ các phiên phân tích tin tức và kiểm chứng đa tác nhân đã được thực thi và lưu trữ trong cơ sở dữ liệu.
           </p>
         </div>
         <Link to="/analyzer" className="button button-primary">
@@ -75,9 +76,9 @@ export default function HistoryPage() {
 
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="">Tất cả trạng thái</option>
-            <option value="COMPLETED">Hoàn thành (COMPLETED)</option>
-            <option value="PROCESSING">Đang xử lý (PROCESSING)</option>
-            <option value="FAILED">Thất bại (FAILED)</option>
+            <option value="COMPLETED">Hoàn thành</option>
+            <option value="PROCESSING">Đang xử lý</option>
+            <option value="FAILED">Thất bại</option>
           </select>
 
           <span className="result-count">Tổng số: {data?.total || 0} bài</span>
@@ -90,7 +91,7 @@ export default function HistoryPage() {
             <div className="empty-state">
               <History size={32} />
               <strong>Chưa có bản ghi lịch sử nào</strong>
-              <span>Hãy phân tích bài báo đầu tiên qua News Analyzer.</span>
+              <span>Hãy phân tích bài báo đầu tiên qua phân hệ Phân tích bài báo.</span>
             </div>
           </div>
         ) : (
@@ -101,8 +102,8 @@ export default function HistoryPage() {
                   <th>TIÊU ĐỀ BÀI VIẾT</th>
                   <th>KẾT LUẬN</th>
                   <th>ĐỘ TIN CẬY</th>
-                  <th>SỐ CLAIMS</th>
-                  <th>AI ENGINE</th>
+                  <th>SỐ TUYÊN BỐ</th>
+                  <th>HỆ THỐNG AI</th>
                   <th>THỜI GIAN</th>
                   <th>THAO TÁC</th>
                 </tr>
@@ -127,37 +128,35 @@ export default function HistoryPage() {
                         }
                       >
                         <span />
-                        {item.verdict || "Chưa có"}
+                        {formatVerdict(item.verdict)}
                       </span>
                     </td>
                     <td>
-                      <strong>{Math.round((item.confidence_score ?? 0.8) * 100)}%</strong>
+                      <strong>{formatPercentage(item.confidence_score)}</strong>
                     </td>
                     <td>
-                      <span className="category-tag">{item.claims_count} claims</span>
+                      <span className="category-tag">{item.claims_count} tuyên bố</span>
                     </td>
                     <td>
                       <span className="ai-short-tag">{item.ai_provider}</span>
                     </td>
                     <td>
-                      <span className="time-sub">
-                        {new Date(item.created_at).toLocaleString("vi-VN")}
-                      </span>
+                      <span className="time-sub">{formatDateTime(item.created_at)}</span>
                     </td>
                     <td>
                       <div className="table-actions-row">
                         <Link
                           to={`/analyzer?id=${item.id}`}
                           className="button button-sm button-outline"
-                          title="Xem chi tiết báo cáo"
+                          title="Xem chi tiết kết quả"
                         >
                           <Eye size={13} /> Xem
                         </Link>
                         <button
                           type="button"
-                          className="button button-sm button-outline-danger icon-only-btn"
+                          className="icon-btn-ghost text-danger"
+                          title="Xóa bản ghi này"
                           onClick={() => setDeleteTargetId(item.id)}
-                          title="Xóa bản ghi"
                         >
                           <Trash2 size={13} />
                         </button>
@@ -177,21 +176,27 @@ export default function HistoryPage() {
           <div className="modal-card auth-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 440 }}>
             <div className="modal-header">
               <div className="modal-title-row">
-                <div className="modal-icon" style={{ background: "#fed7d7", color: "#e53e3e" }}>
+                <div className="modal-icon" style={{ background: "#fef2f2", color: "#e11d48" }}>
                   <AlertTriangle size={20} />
                 </div>
                 <div>
-                  <h3>Xác nhận xóa bản ghi</h3>
-                  <p>Hành động này sẽ xóa vĩnh viễn phân tích và các claims liên quan khỏi cơ sở dữ liệu.</p>
+                  <h3>Xác nhận xóa bài phân tích</h3>
+                  <p>Mã phiên: {deleteTargetId}</p>
                 </div>
               </div>
-              <button className="icon-btn-ghost" onClick={() => setDeleteTargetId(null)}><X size={18} /></button>
+              <button className="icon-btn-ghost" onClick={() => setDeleteTargetId(null)}>
+                <X size={18} />
+              </button>
             </div>
+
+            <p style={{ fontSize: 13, color: "#475569", lineHeight: 1.5, margin: "16px 0" }}>
+              Bạn có chắc chắn muốn xóa bản ghi phân tích này không? Thao tác này sẽ xóa vĩnh viễn các tuyên bố và bằng chứng liên quan khỏi cơ sở dữ liệu.
+            </p>
 
             <div className="modal-actions-between" style={{ marginTop: 20 }}>
               <button
                 type="button"
-                className="button button-outline"
+                className="button button-ghost"
                 onClick={() => setDeleteTargetId(null)}
               >
                 Hủy bỏ
@@ -199,10 +204,10 @@ export default function HistoryPage() {
               <button
                 type="button"
                 className="button button-danger"
-                onClick={() => deleteMutation.mutate(deleteTargetId)}
                 disabled={deleteMutation.isPending}
+                onClick={() => deleteMutation.mutate(deleteTargetId)}
               >
-                {deleteMutation.isPending ? "Đang xóa..." : "Xác nhận Xóa"}
+                {deleteMutation.isPending ? "Đang xóa..." : "Xác nhận xóa"}
               </button>
             </div>
           </div>

@@ -31,6 +31,15 @@ import {
 } from "lucide-react";
 import { api } from "../api/client";
 import type { AnalysisDetail } from "../api/types";
+import {
+  formatClaimType,
+  formatDateTime,
+  formatPercentage,
+  formatStance,
+  formatStatus,
+  formatVerdict,
+  formatAgentName,
+} from "../utils/i18n";
 
 // Realistic Presets for 1-Click Verification Testing
 const SAMPLE_PRESETS = [
@@ -222,7 +231,7 @@ export default function NewsAnalyzerPage() {
         setTimeout(() => setPastedStatus(false), 2000);
       }
     } catch {
-      // Browser permission denied or not supported
+      // Browser permission denied
     }
   };
 
@@ -256,44 +265,45 @@ export default function NewsAnalyzerPage() {
   const factualAccuracyScore = overview?.factual_accuracy_score ?? (verifiableClaims > 0 ? (supportedClaimsCount + 0.5 * partiallySupportedCount) / verifiableClaims : 0);
 
   const getClaimTypeMeta = (type?: string) => {
+    const label = formatClaimType(type);
     switch (type) {
       case "STATISTICAL_CLAIM":
-        return { label: "Số liệu / Thống kê", color: "#0284c7", bg: "#e0f2fe" };
+        return { label, color: "#0284c7", bg: "#e0f2fe" };
       case "SCIENTIFIC_CLAIM":
-        return { label: "Khoa học / Tự nhiên", color: "#059669", bg: "#ecfdf5" };
+        return { label, color: "#059669", bg: "#ecfdf5" };
       case "HISTORICAL_CLAIM":
-        return { label: "Lịch sử / Niên đại", color: "#d97706", bg: "#fef3c7" };
+        return { label, color: "#d97706", bg: "#fef3c7" };
       case "QUOTATION_CLAIM":
-        return { label: "Phát ngôn / Trích dẫn", color: "#7c3aed", bg: "#f5f3ff" };
+        return { label, color: "#7c3aed", bg: "#f5f3ff" };
       case "CAUSAL_CLAIM":
-        return { label: "Quan hệ Nhân - Quả", color: "#db2777", bg: "#fdf2f8" };
+        return { label, color: "#db2777", bg: "#fdf2f8" };
       case "OPINION":
-        return { label: "Quan điểm / Nhận định", color: "#64748b", bg: "#f1f5f9" };
+        return { label, color: "#64748b", bg: "#f1f5f9" };
       case "PREDICTION":
-        return { label: "Dự đoán / Tương lai", color: "#475569", bg: "#f8fafc" };
+        return { label, color: "#475569", bg: "#f8fafc" };
       case "FACTUAL_CLAIM":
       default:
-        return { label: "Sự kiện thực tế", color: "#2563eb", bg: "#eff6ff" };
+        return { label, color: "#2563eb", bg: "#eff6ff" };
     }
   };
 
   const getVerdictMeta = (verdict?: string) => {
     switch (verdict) {
       case "SUPPORTED":
-        return { label: "XÁC THỰC (SUPPORTED)", badgeClass: "pill-success", desc: "Bằng chứng độc lập đủ mạnh để xác thực phát ngôn" };
+        return { label: "ĐƯỢC BẰNG CHỨNG HỖ TRỢ", badgeClass: "pill-success", desc: "Bằng chứng độc lập đủ mạnh để hỗ trợ tuyên bố" };
       case "REFUTED":
-        return { label: "BÁC BỎ (REFUTED)", badgeClass: "pill-danger", desc: "Bằng chứng độc lập trực tiếp bác bỏ phát ngôn" };
+        return { label: "BỊ BẰNG CHỨNG BÁC BỎ", badgeClass: "pill-danger", desc: "Bằng chứng độc lập trực tiếp bác bỏ tuyên bố" };
       case "PARTIALLY_SUPPORTED":
-        return { label: "ĐÚNG MỘT PHẦN (PARTIALLY_SUPPORTED)", badgeClass: "pill-warning", desc: "Sự kiện cốt lõi có căn cứ nhưng số liệu hoặc mốc thời gian sai khác" };
+        return { label: "ĐÚNG MỘT PHẦN", badgeClass: "pill-warning", desc: "Sự kiện cốt lõi có căn cứ nhưng số liệu hoặc mốc thời gian sai khác" };
       case "MISLEADING":
-        return { label: "GÂY HIỂU LẦM (MISLEADING)", badgeClass: "pill-warning", desc: "Thông tin có thể đúng về mặt riêng lẻ nhưng gây hiểu sai do thiếu bối cảnh" };
+        return { label: "GÂY HIỂU LẦM", badgeClass: "pill-warning", desc: "Thông tin có thể đúng về mặt riêng lẻ nhưng gây hiểu sai do thiếu bối cảnh" };
       case "CONFLICTING_EVIDENCE":
-        return { label: "BẰNG CHỨNG MÂU THUẪN (CONFLICTING)", badgeClass: "pill-warning", desc: "Có các tài liệu đối chứng uy tín mâu thuẫn trực tiếp với nhau" };
+        return { label: "BẰNG CHỨNG MÂU THUẪN", badgeClass: "pill-warning", desc: "Có các tài liệu đối chứng uy tín mâu thuẫn trực tiếp với nhau" };
       case "NOT_CHECKABLE":
-        return { label: "Ý KIẾN / THĂM DÒ (NOT_CHECKABLE)", badgeClass: "pill-neutral", desc: "Quan điểm chủ quan, câu hỏi tu từ hoặc dự đoán tương lai" };
+        return { label: "KHÔNG THỂ KIỂM CHỨNG", badgeClass: "pill-neutral", desc: "Quan điểm chủ quan, câu hỏi tu từ hoặc dự đoán tương lai" };
       case "NOT_ENOUGH_INFORMATION":
       default:
-        return { label: "CHƯA ĐỦ BẰNG CHỨNG (INCONCLUSIVE)", badgeClass: "pill-neutral", desc: "Chưa có tài liệu đối soát độc lập trong cơ sở tri thức đối chuẩn" };
+        return { label: "CHƯA ĐỦ BẰNG CHỨNG", badgeClass: "pill-neutral", desc: "Chưa có tài liệu đối soát độc lập trong cơ sở tri thức đối chuẩn" };
     }
   };
 
@@ -312,8 +322,8 @@ export default function NewsAnalyzerPage() {
   // Dynamic calibration criteria
   const metaExec = result?.agent_executions.find((a) => a.agent_name === "MetaSynthesisAgent");
   const dynamicCriteria: string[] = (metaExec?.output as any)?.calibration_criteria || [
-    `Thẩm định ${totalClaims} phát ngôn cốt lõi: Ghi nhận ${supportedClaimsCount} claim xác thực có căn cứ, ${refutedClaimsCount} claim bị bác bỏ và ${inconclusiveCount + notCheckableCount} claim cần phúc tra hoặc mang tính thảo luận xã hội.`,
-    `Đánh giá độc lập nguồn tin: Nguồn '${result?.credibility?.source_name || "Nguồn tin"}' đạt ${result?.credibility?.overall_credibility_score ?? 70}/100 theo chuẩn đối chuẩn NELA-GT; tách biệt uy tín cơ quan báo chí với tính xác thực của từng phát biểu.`,
+    `Thẩm định ${totalClaims} tuyên bố cốt lõi: Ghi nhận ${supportedClaimsCount} tuyên bố được hỗ trợ, ${refutedClaimsCount} tuyên bố bị bác bỏ và ${inconclusiveCount + notCheckableCount} tuyên bố cần phúc tra hoặc mang tính thảo luận xã hội.`,
+    `Đánh giá độc lập nguồn tin: Nguồn '${result?.credibility?.source_name || "Nguồn tin"}' đạt ${result?.credibility?.overall_credibility_score ?? 70}/100 theo chuẩn NELA-GT; tách biệt uy tín cơ quan báo chí với tính xác thực của từng phát biểu.`,
     `Đồng thuận dư luận & khảo sát thực chứng: Luồng thảo luận công chúng nghiêng về '${dominantStanceName}' (${dominantStanceValue}%); điểm khảo sát niềm tin đạt ${result?.survey?.trust_source_score ?? 80}/100 và tỷ lệ tiếp nhận kiểm chứng đạt ${result?.reception?.verify_before_sharing_rate ?? 70}%.`,
   ];
 
@@ -324,13 +334,13 @@ export default function NewsAnalyzerPage() {
         <div className="analyzer-header-content">
           <div className="analyzer-badge-chip">
             <Sparkles size={13} className="sparkle-svg" />
-            <span>HỆ ĐIỀU PHỐI ĐA TÁC TỬ • MULTI-AGENT VERIFICATION</span>
+            <span>HỆ ĐIỀU PHỐI ĐA TÁC NHÂN • KIỂM CHỨNG TỔNG HỢP</span>
           </div>
           <h1 className="analyzer-main-title">
-            News Analyzer <span className="title-gradient">— Giám định & Phân tích Tin tức Số</span>
+            Phân tích Bài báo <span className="title-gradient">— Giám định & Kiểm chứng Thông tin</span>
           </h1>
           <p className="analyzer-header-subtitle">
-            Hệ sinh thái AI phối hợp đa tác tử: Trích xuất phát ngôn cốt lõi (Claims), đối chiếu bằng chứng đa nguồn qua Hybrid RAG (FEVER & ViFactCheck), thẩm định độ tin cậy tòa soạn (NELA-GT) và hiệu chuẩn đồng thuận (EWAC).
+            Hệ sinh thái AI phối hợp đa tác nhân: Trích xuất phát ngôn cốt lõi (Claims), đối chiếu bằng chứng đa nguồn qua Hybrid RAG (FEVER & ViFactCheck), thẩm định độ tin cậy tòa soạn (NELA-GT) và hiệu chuẩn đồng thuận (EWAC).
           </p>
         </div>
         {result && (
@@ -442,7 +452,7 @@ export default function NewsAnalyzerPage() {
                   <label htmlFor="source-url" className="field-main-label">
                     URL bài báo trực tuyến cần thẩm định <span className="required-star">*</span>
                   </label>
-                  <span className="field-badge-security">SSRF Shield Active</span>
+                  <span className="field-badge-security">Bảo vệ Chống SSRF kích hoạt</span>
                 </div>
 
                 <div className="input-modern-wrapper">
@@ -562,7 +572,7 @@ export default function NewsAnalyzerPage() {
                 <div className="textarea-bottom-bar">
                   <div className="bar-left-info">
                     <span className="rag-indicator">
-                      <Database size={12} /> Hybrid RAG Active: <strong>FEVER</strong> • <strong>ViFactCheck</strong> • <strong>X-FACT</strong>
+                      <Database size={12} /> Hybrid RAG kích hoạt: <strong>FEVER</strong> • <strong>ViFactCheck</strong> • <strong>X-FACT</strong>
                     </span>
                   </div>
                   <div className="bar-right-hint">
@@ -578,7 +588,7 @@ export default function NewsAnalyzerPage() {
                 <div className="setting-card-header">
                   <Globe size={16} className="setting-icon text-blue" />
                   <div>
-                    <label htmlFor="analysis-lang" className="setting-title">Ngôn ngữ xử lý (Language)</label>
+                    <label htmlFor="analysis-lang" className="setting-title">Ngôn ngữ xử lý</label>
                     <span className="setting-subtitle">Tối ưu hóa tokenizer và mô hình NLI tương ứng</span>
                   </div>
                 </div>
@@ -589,8 +599,8 @@ export default function NewsAnalyzerPage() {
                   onChange={(e) => setLanguage(e.target.value)}
                   disabled={submitting}
                 >
-                  <option value="vi">🇻🇳 Tiếng Việt (Vietnamese — PhoBERT / ViHate / ViNLI)</option>
-                  <option value="en">🇬🇧 English (Tiếng Anh — RoBERTa / DeBERTa NLI)</option>
+                  <option value="vi">🇻🇳 Tiếng Việt (PhoBERT / ViHate / ViNLI)</option>
+                  <option value="en">🇬🇧 Tiếng Anh (RoBERTa / DeBERTa NLI)</option>
                 </select>
               </div>
 
@@ -598,8 +608,8 @@ export default function NewsAnalyzerPage() {
                 <div className="setting-card-header">
                   <Sliders size={16} className="setting-icon text-emerald" />
                   <div>
-                    <label htmlFor="analysis-scope" className="setting-title">Phạm vi phân tích (Scope)</label>
-                    <span className="setting-subtitle">Lựa chọn các tác tử chuyên biệt cùng phối hợp</span>
+                    <label htmlFor="analysis-scope" className="setting-title">Phạm vi phân tích</label>
+                    <span className="setting-subtitle">Lựa chọn các tác nhân chuyên biệt cùng phối hợp</span>
                   </div>
                 </div>
                 <select
@@ -609,10 +619,10 @@ export default function NewsAnalyzerPage() {
                   onChange={(e) => setScope(e.target.value)}
                   disabled={submitting}
                 >
-                  <option value="full">🚀 Toàn diện (Fact-checking + Media + Opinion + Public Trust + Meta-Agent)</option>
-                  <option value="fact_checking">🔍 Chỉ Fact-checking (Trích xuất Claims & Bằng chứng RAG)</option>
-                  <option value="media_credibility">📰 Chỉ Media Credibility (Độ tin cậy & Tôn chỉ Tòa soạn NELA-GT)</option>
-                  <option value="public_opinion">💬 Chỉ Public Opinion (Lập trường & Cảm xúc dư luận TweetEval / UIT-VSFC)</option>
+                  <option value="full">🚀 Toàn diện (Kiểm chứng + Nguồn tin + Dư luận + Niềm tin + Tổng hợp)</option>
+                  <option value="fact_checking">🔍 Chỉ Kiểm chứng (Trích xuất Tuyên bố & Bằng chứng RAG)</option>
+                  <option value="media_credibility">📰 Chỉ Nguồn truyền thông (Độ tin cậy & Tôn chỉ Tòa soạn NELA-GT)</option>
+                  <option value="public_opinion">💬 Chỉ Dư luận (Lập trường & Cảm xúc dư luận TweetEval / UIT-VSFC)</option>
                 </select>
               </div>
             </div>
@@ -628,16 +638,16 @@ export default function NewsAnalyzerPage() {
                   <>
                     <RefreshCw size={18} className="spin-icon" />
                     <div className="btn-text-block">
-                      <span className="btn-main-label">Đang điều phối các Tác tử AI...</span>
-                      <span className="btn-sub-label">LangGraph Multi-Agent Execution</span>
+                      <span className="btn-main-label">Đang điều phối các Tác nhân AI...</span>
+                      <span className="btn-sub-label">Thực thi Điều phối Đa tác nhân</span>
                     </div>
                   </>
                 ) : (
                   <>
                     <Sparkles size={18} className="glow-icon" />
                     <div className="btn-text-block">
-                      <span className="btn-main-label">Bắt đầu phân tích Đa tác tử</span>
-                      <span className="btn-sub-label">Multi-Agent Consensus Verification</span>
+                      <span className="btn-main-label">Bắt đầu phân tích Đa tác nhân</span>
+                      <span className="btn-sub-label">Kiểm chứng Đồng thuận Đa tác nhân</span>
                     </div>
                   </>
                 )}
@@ -656,10 +666,10 @@ export default function NewsAnalyzerPage() {
 
               <div className="submit-meta-info">
                 <span className="meta-tag">
-                  <Database size={11} /> pgvector RAG Active
+                  <Database size={11} /> pgvector RAG Kích hoạt
                 </span>
                 <span className="meta-tag">
-                  <Bot size={11} /> 5 AI Agents Ready
+                  <Bot size={11} /> 5 Tác nhân AI sẵn sàng
                 </span>
               </div>
             </div>
@@ -673,10 +683,10 @@ export default function NewsAnalyzerPage() {
                   <div className="pulse-indicator-dot" />
                   <div>
                     <div className="pipeline-title">
-                      Hệ điều phối Đa tác tử đang hoạt động (LangGraph Pipeline)
+                      Hệ điều phối Đa tác nhân đang hoạt động (LangGraph Pipeline)
                     </div>
                     <div className="pipeline-status-text">
-                      Trạng thái hiện tại: <strong>{jobStatus || "PROCESSING"}</strong>
+                      Trạng thái hiện tại: <strong>{formatStatus(jobStatus) || "Đang xử lý"}</strong>
                     </div>
                   </div>
                 </div>
@@ -700,7 +710,7 @@ export default function NewsAnalyzerPage() {
                     <ShieldCheck size={18} />
                   </div>
                   <div className="agent-card-body">
-                    <div className="agent-card-name">1. Ingestion & Guard Agent</div>
+                    <div className="agent-card-name">1. Tác nhân Tiếp nhận & Bảo vệ</div>
                     <div className="agent-card-desc">Làm sạch văn bản, chuẩn hóa tiếng Việt & chống SSRF</div>
                     <div className="agent-card-status">
                       {jobProgress >= 30 ? "✓ Hoàn thành" : jobProgress >= 15 ? "Đang xử lý..." : "Chờ kích hoạt"}
@@ -713,8 +723,8 @@ export default function NewsAnalyzerPage() {
                     <FileCheck2 size={18} />
                   </div>
                   <div className="agent-card-body">
-                    <div className="agent-card-name">2. Fact-Checking Agent</div>
-                    <div className="agent-card-desc">Trích xuất Claims & Hybrid RAG (FEVER, ViFactCheck)</div>
+                    <div className="agent-card-name">2. Tác nhân Kiểm chứng Thông tin</div>
+                    <div className="agent-card-desc">Trích xuất Tuyên bố & Truy xuất Hybrid RAG</div>
                     <div className="agent-card-status">
                       {jobProgress >= 60 ? "✓ Hoàn thành" : jobProgress >= 30 ? "Đang truy xuất tri thức..." : "Chờ kích hoạt"}
                     </div>
@@ -726,8 +736,8 @@ export default function NewsAnalyzerPage() {
                     <ShieldAlert size={18} />
                   </div>
                   <div className="agent-card-body">
-                    <div className="agent-card-name">3. Media Credibility Agent</div>
-                    <div className="agent-card-desc">Đánh giá tôn chỉ, quy trình biên tập NELA-GT</div>
+                    <div className="agent-card-name">3. Tác nhân Đánh giá Nguồn Truyền thông</div>
+                    <div className="agent-card-desc">Đánh giá tôn chỉ, quy trình biên tập theo chuẩn NELA-GT</div>
                     <div className="agent-card-status">
                       {jobProgress >= 80 ? "✓ Hoàn thành" : jobProgress >= 60 ? "Đang thẩm định tòa soạn..." : "Chờ kích hoạt"}
                     </div>
@@ -739,8 +749,8 @@ export default function NewsAnalyzerPage() {
                     <MessageSquareQuote size={18} />
                   </div>
                   <div className="agent-card-body">
-                    <div className="agent-card-name">4. Public Opinion & Stance</div>
-                    <div className="agent-card-desc">Phân tích lập trường dư luận TweetEval & UIT-VSFC</div>
+                    <div className="agent-card-name">4. Tác nhân Phân tích Dư luận & Lập trường</div>
+                    <div className="agent-card-desc">Phân tích lập trường dư luận theo TweetEval & UIT-VSFC</div>
                     <div className="agent-card-status">
                       {jobProgress >= 90 ? "✓ Hoàn thành" : jobProgress >= 80 ? "Đang tính toán cảm xúc..." : "Chờ kích hoạt"}
                     </div>
@@ -752,7 +762,7 @@ export default function NewsAnalyzerPage() {
                     <Bot size={18} />
                   </div>
                   <div className="agent-card-body">
-                    <div className="agent-card-name">5. EWAC Meta-Agent</div>
+                    <div className="agent-card-name">5. Tác nhân Tổng hợp & Điều phối (EWAC)</div>
                     <div className="agent-card-desc">Hiệu chuẩn trọng số bằng chứng & tổng hợp phán quyết</div>
                     <div className="agent-card-status">
                       {jobProgress >= 100 ? "✓ Hoàn thành" : jobProgress >= 90 ? "Đang hiệu chuẩn đồng thuận..." : "Chờ kích hoạt"}
@@ -774,7 +784,7 @@ export default function NewsAnalyzerPage() {
               <div className="hero-left">
                 <div className="eyebrow">
                   <Sparkles size={13} style={{ display: "inline-block", verticalAlign: "middle", marginRight: 4 }} />
-                  BÁO CÁO KẾT QUẢ PHÂN TÍCH ĐA TÁC TỬ
+                  BÁO CÁO KẾT QUẢ PHÂN TÍCH ĐA TÁC NHÂN
                 </div>
                 <h2>{result.title}</h2>
                 {result.source_url && (
@@ -796,30 +806,16 @@ export default function NewsAnalyzerPage() {
                       ? "pill-danger"
                       : result.verdict === "SUPPORTED"
                       ? "pill-success"
-                      : result.verdict === "MIXED"
-                      ? "pill-warning"
-                      : result.verdict === "NOT_CHECKABLE"
-                      ? "pill-neutral"
                       : "pill-warning"
                   }`}
                 >
                   <span className="verdict-dot" />
-                  <strong>
-                    {result.verdict === "REFUTED"
-                      ? "BÁC BỎ TIN ĐỒN (REFUTED)"
-                      : result.verdict === "SUPPORTED"
-                      ? "XÁC THỰC (SUPPORTED)"
-                      : result.verdict === "MIXED"
-                      ? "HỖN HỢP (MIXED)"
-                      : result.verdict === "NOT_CHECKABLE"
-                      ? "THĂM DÒ / Ý KIẾN (OPINION)"
-                      : "THIẾU DỮ LIỆU (INCONCLUSIVE)"}
-                  </strong>
+                  <strong>{formatVerdict(result.verdict)}</strong>
                 </div>
 
                 <div className="confidence-pill">
                   <span>Độ tin cậy hiệu chuẩn:</span>
-                  <strong>{Math.round((result.confidence_score ?? 0.85) * 100)}%</strong>
+                  <strong>{formatPercentage(result.confidence_score)}</strong>
                 </div>
               </div>
             </div>
@@ -828,7 +824,7 @@ export default function NewsAnalyzerPage() {
               <span className="ai-tag">
                 <Sparkles size={12} /> {result.ai_provider}
               </span>
-              <span>Thời gian hoàn tất: {new Date(result.created_at).toLocaleString("vi-VN")}</span>
+              <span>Thời gian hoàn tất: {formatDateTime(result.created_at)}</span>
               <div className="export-actions">
                 <a
                   href={api.reports.exportJsonUrl(result.id)}
@@ -861,7 +857,7 @@ export default function NewsAnalyzerPage() {
             <div className="disagreement-banner-alert">
               <AlertTriangle size={22} className="alert-icon-warning" />
               <div className="alert-body">
-                <div className="alert-title">Cảnh báo Phân kỳ & Xung đột Thông tin (Epistemic Disagreement)</div>
+                <div className="alert-title">Cảnh báo Phân kỳ & Xung đột Thông tin</div>
                 <p className="alert-text">
                   Phát hiện sự phân kỳ giữa mức độ uy tín của nguồn phát hành và tính xác thực của nội dung kiểm chứng.
                   Hệ thống tuân thủ nguyên tắc độc lập thực chứng: không dùng uy tín tòa soạn để hợp thức hóa phát ngôn thiếu căn cứ.
@@ -873,40 +869,30 @@ export default function NewsAnalyzerPage() {
           {/* Executive Overview Metric Cards (4 Tiles) */}
           <div className="result-executive-metrics-grid">
             {/* Card 1: Phán quyết & Độ tin cậy */}
-            <div className={`exec-metric-card ${result.verdict === "SUPPORTED" ? "border-emerald" : result.verdict === "REFUTED" ? "border-rose" : result.verdict === "MIXED" ? "border-amber" : "border-blue"}`}>
+            <div className={`exec-metric-card ${result.verdict === "SUPPORTED" ? "border-emerald" : result.verdict === "REFUTED" ? "border-rose" : "border-amber"}`}>
               <div className="exec-card-top">
                 <div className="exec-card-icon">
                   {result.verdict === "SUPPORTED" ? (
                     <ShieldCheck size={20} style={{ color: "#059669" }} />
                   ) : result.verdict === "REFUTED" ? (
                     <ShieldAlert size={20} style={{ color: "#e11d48" }} />
-                  ) : result.verdict === "MIXED" ? (
-                    <AlertTriangle size={20} style={{ color: "#d97706" }} />
                   ) : (
-                    <Clock size={20} style={{ color: "#2563eb" }} />
+                    <AlertTriangle size={20} style={{ color: "#d97706" }} />
                   )}
                 </div>
                 <div className="exec-card-badge">
-                  {result.verdict === "REFUTED"
-                    ? "BÁC BỎ"
-                    : result.verdict === "SUPPORTED"
-                    ? "XÁC THỰC"
-                    : result.verdict === "MIXED"
-                    ? "HỖN HỢP"
-                    : result.verdict === "NOT_CHECKABLE"
-                    ? "THĂM DÒ"
-                    : "BẢO LƯU"}
+                  {formatVerdict(result.verdict)}
                 </div>
               </div>
               <div className="exec-card-main">
                 <span className="exec-metric-label">Độ tin cậy hiệu chuẩn (EWAC)</span>
                 <div className="exec-metric-val-row">
-                  <strong className="exec-large-number">{Math.round((result.confidence_score ?? 0.85) * 100)}%</strong>
-                  <span className="exec-metric-note">Trọng số đa tác tử</span>
+                  <strong className="exec-large-number">{formatPercentage(result.confidence_score)}</strong>
+                  <span className="exec-metric-note">Trọng số đa tác nhân</span>
                 </div>
                 <div className="exec-gauge-track">
                   <div
-                    className={`exec-gauge-fill ${result.verdict === "SUPPORTED" ? "fill-emerald" : result.verdict === "REFUTED" ? "fill-rose" : result.verdict === "MIXED" ? "fill-amber" : "fill-blue"}`}
+                    className={`exec-gauge-fill ${result.verdict === "SUPPORTED" ? "fill-emerald" : result.verdict === "REFUTED" ? "fill-rose" : "fill-amber"}`}
                     style={{ width: `${Math.round((result.confidence_score ?? 0.85) * 100)}%` }}
                   />
                 </div>
@@ -919,14 +905,14 @@ export default function NewsAnalyzerPage() {
                 <div className="exec-card-icon" style={{ background: "#eef2ff", color: "#4f46e5" }}>
                   <FileCheck2 size={20} />
                 </div>
-                <span className="exec-sub-tag">{result.claims.length} Claims trích xuất</span>
+                <span className="exec-sub-tag">{result.claims.length} Tuyên bố trích xuất</span>
               </div>
               <div className="exec-card-main">
-                <span className="exec-metric-label">Cơ cấu phát ngôn sự kiện</span>
+                <span className="exec-metric-label">Cơ cấu tuyên bố sự kiện</span>
                 <div className="exec-claims-pill-row">
                   {supportedClaimsCount > 0 && (
                     <span className="claim-count-chip chip-supported">
-                      ✓ {supportedClaimsCount} Xác thực
+                      ✓ {supportedClaimsCount} Hỗ trợ
                     </span>
                   )}
                   {refutedClaimsCount > 0 && (
@@ -936,12 +922,12 @@ export default function NewsAnalyzerPage() {
                   )}
                   {(inconclusiveCount > 0 || notCheckableCount > 0) && (
                     <span className="claim-count-chip chip-other">
-                      ? {inconclusiveCount + notCheckableCount} Tham vấn
+                      ? {inconclusiveCount + notCheckableCount} Cần đối chiếu
                     </span>
                   )}
                 </div>
                 <div className="exec-claims-stacked-bar">
-                  <div className="bar-seg seg-sup" style={{ width: `${(supportedClaimsCount / Math.max(totalClaims, 1)) * 100}%` }} title={`Xác thực: ${supportedClaimsCount}`} />
+                  <div className="bar-seg seg-sup" style={{ width: `${(supportedClaimsCount / Math.max(totalClaims, 1)) * 100}%` }} title={`Hỗ trợ: ${supportedClaimsCount}`} />
                   <div className="bar-seg seg-ref" style={{ width: `${(refutedClaimsCount / Math.max(totalClaims, 1)) * 100}%` }} title={`Bác bỏ: ${refutedClaimsCount}`} />
                   <div className="bar-seg seg-inc" style={{ width: `${((inconclusiveCount + notCheckableCount) / Math.max(totalClaims, 1)) * 100}%` }} title={`Khác: ${inconclusiveCount + notCheckableCount}`} />
                 </div>
@@ -1007,13 +993,13 @@ export default function NewsAnalyzerPage() {
               className={`result-tab-btn ${activeTab === "consensus" ? "active" : ""}`}
               onClick={() => setActiveTab("consensus")}
             >
-              <Bot size={15} /> Tổng hợp Meta-Agent
+              <Bot size={15} /> Tổng hợp Điều phối ({result.claims.length})
             </button>
             <button
               className={`result-tab-btn ${activeTab === "factcheck" ? "active" : ""}`}
               onClick={() => setActiveTab("factcheck")}
             >
-              <FileCheck2 size={15} /> Kiểm chứng Claims ({result.claims.length})
+              <FileCheck2 size={15} /> Kiểm chứng Tuyên bố ({result.claims.length})
             </button>
             <button
               className={`result-tab-btn ${activeTab === "credibility" ? "active" : ""}`}
@@ -1037,7 +1023,7 @@ export default function NewsAnalyzerPage() {
               className={`result-tab-btn ${activeTab === "agents" ? "active" : ""}`}
               onClick={() => setActiveTab("agents")}
             >
-              <Layers size={15} /> Giám sát Đa tác tử ({result.agent_executions.length})
+              <Layers size={15} /> Giám sát Đa tác nhân ({result.agent_executions.length})
             </button>
           </div>
 
@@ -1045,9 +1031,9 @@ export default function NewsAnalyzerPage() {
           {activeTab === "consensus" && (
             <div className="panel tab-panel-body">
               <div className="section-title-box">
-                <h3>Kết luận Hiệu chuẩn Đồng thuận từ Meta-Agent</h3>
+                <h3>Kết luận Hiệu chuẩn Đồng thuận từ Tác nhân Điều phối (Meta-Agent)</h3>
                 <p>
-                  Được tổng hợp độc lập từ kết quả của các Agent thành phần dựa trên nguyên lý trọng số bằng chứng EWAC và phát hiện xung đột thông tin.
+                  Được tổng hợp độc lập từ kết quả của các Tác nhân thành phần dựa trên nguyên lý trọng số bằng chứng EWAC và phát hiện xung đột thông tin.
                 </p>
               </div>
 
@@ -1137,13 +1123,13 @@ export default function NewsAnalyzerPage() {
           {activeTab === "factcheck" && (
             <div className="panel tab-panel-body">
               <div className="section-title-box">
-                <h3>Báo cáo Giám định & Kiểm chứng Phát ngôn (Article Fact-Checking Report)</h3>
+                <h3>Báo cáo Giám định & Kiểm chứng Tuyên bố (Article Fact-Checking Report)</h3>
                 <p>
                   Đọc toàn bộ bài báo, trích xuất các tuyên bố độc lập theo 8 phân loại taxonomy, đối chiếu bằng chứng đa nguồn từ Hybrid RAG và xác định 7 phán quyết chuẩn tắc.
                 </p>
               </div>
 
-              {/* SECTION 9: ARTICLE FACT-CHECKING REPORT OVERVIEW */}
+              {/* ARTICLE FACT-CHECKING REPORT OVERVIEW */}
               <div className="fact-report-overview-box" style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 12, padding: "16px 20px", marginBottom: 20 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, borderBottom: "1px solid #e2e8f0", paddingBottom: 12, marginBottom: 14 }}>
                   <div>
@@ -1167,11 +1153,11 @@ export default function NewsAnalyzerPage() {
                     <div style={{ fontSize: 16, fontWeight: 700, color: "#1e293b" }}>{totalClaims}</div>
                   </div>
                   <div style={{ background: "#ecfdf5", padding: "8px 12px", borderRadius: 8, border: "1px solid #a7f3d0", textAlign: "center" }}>
-                    <div style={{ fontSize: 11, color: "#047857" }}>✓ Xác thực</div>
+                    <div style={{ fontSize: 11, color: "#047857" }}>✓ Được hỗ trợ</div>
                     <div style={{ fontSize: 16, fontWeight: 700, color: "#065f46" }}>{supportedClaimsCount}</div>
                   </div>
                   <div style={{ background: "#fef2f2", padding: "8px 12px", borderRadius: 8, border: "1px solid #fecaca", textAlign: "center" }}>
-                    <div style={{ fontSize: 11, color: "#b91c1c" }}>✕ Bác bỏ</div>
+                    <div style={{ fontSize: 11, color: "#b91c1c" }}>✕ Bị bác bỏ</div>
                     <div style={{ fontSize: 16, fontWeight: 700, color: "#991b1b" }}>{refutedClaimsCount}</div>
                   </div>
                   <div style={{ background: "#fffbeb", padding: "8px 12px", borderRadius: 8, border: "1px solid #fde68a", textAlign: "center" }}>
@@ -1179,7 +1165,7 @@ export default function NewsAnalyzerPage() {
                     <div style={{ fontSize: 16, fontWeight: 700, color: "#92400e" }}>{partiallySupportedCount}</div>
                   </div>
                   <div style={{ background: "#fdf4ff", padding: "8px 12px", borderRadius: 8, border: "1px solid #f5d0fe", textAlign: "center" }}>
-                    <div style={{ fontSize: 11, color: "#a21caf" }}>⚠ Hiểu lầm</div>
+                    <div style={{ fontSize: 11, color: "#a21caf" }}>⚠ Gây hiểu lầm</div>
                     <div style={{ fontSize: 16, fontWeight: 700, color: "#86198f" }}>{misleadingCount}</div>
                   </div>
                   <div style={{ background: "#fff7ed", padding: "8px 12px", borderRadius: 8, border: "1px solid #ffedd5", textAlign: "center" }}>
@@ -1187,11 +1173,11 @@ export default function NewsAnalyzerPage() {
                     <div style={{ fontSize: 16, fontWeight: 700, color: "#9a3412" }}>{conflictingCount}</div>
                   </div>
                   <div style={{ background: "#f8fafc", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", textAlign: "center" }}>
-                    <div style={{ fontSize: 11, color: "#475569" }}>? Thiếu căn cứ</div>
+                    <div style={{ fontSize: 11, color: "#475569" }}>? Chưa đủ căn cứ</div>
                     <div style={{ fontSize: 16, fontWeight: 700, color: "#334155" }}>{inconclusiveCount}</div>
                   </div>
                   <div style={{ background: "#f1f5f9", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", textAlign: "center" }}>
-                    <div style={{ fontSize: 11, color: "#475569" }}>💬 Ý kiến/Dự đoán</div>
+                    <div style={{ fontSize: 11, color: "#475569" }}>💬 Ý kiến / Dự đoán</div>
                     <div style={{ fontSize: 16, fontWeight: 700, color: "#334155" }}>{notCheckableCount}</div>
                   </div>
                 </div>
@@ -1202,7 +1188,7 @@ export default function NewsAnalyzerPage() {
               </div>
 
               <div className="claims-filter-toolbar">
-                <span className="filter-label">Lọc trạng thái phát ngôn:</span>
+                <span className="filter-label">Lọc trạng thái tuyên bố:</span>
                 <div className="filter-chips" style={{ flexWrap: "wrap", gap: 6 }}>
                   <button
                     type="button"
@@ -1216,14 +1202,14 @@ export default function NewsAnalyzerPage() {
                     className={`filter-chip chip-supported ${claimFilter === "SUPPORTED" ? "active" : ""}`}
                     onClick={() => setClaimFilter("SUPPORTED")}
                   >
-                    ✓ Xác thực ({supportedClaimsCount})
+                    ✓ Được hỗ trợ ({supportedClaimsCount})
                   </button>
                   <button
                     type="button"
                     className={`filter-chip chip-refuted ${claimFilter === "REFUTED" ? "active" : ""}`}
                     onClick={() => setClaimFilter("REFUTED")}
                   >
-                    ✕ Bác bỏ ({refutedClaimsCount})
+                    ✕ Bị bác bỏ ({refutedClaimsCount})
                   </button>
                   {partiallySupportedCount > 0 && (
                     <button
@@ -1240,7 +1226,7 @@ export default function NewsAnalyzerPage() {
                       className={`filter-chip chip-other ${claimFilter === "MISLEADING" ? "active" : ""}`}
                       onClick={() => setClaimFilter("MISLEADING")}
                     >
-                      ⚠ Hiểu lầm ({misleadingCount})
+                      ⚠ Gây hiểu lầm ({misleadingCount})
                     </button>
                   )}
                   {conflictingCount > 0 && (
@@ -1249,7 +1235,7 @@ export default function NewsAnalyzerPage() {
                       className={`filter-chip chip-other ${claimFilter === "CONFLICTING_EVIDENCE" ? "active" : ""}`}
                       onClick={() => setClaimFilter("CONFLICTING_EVIDENCE")}
                     >
-                      ⚡ Mâu thuẫn ({conflictingCount})
+                      ⚡ Bằng chứng mâu thuẫn ({conflictingCount})
                     </button>
                   )}
                   {inconclusiveCount > 0 && (
@@ -1258,7 +1244,7 @@ export default function NewsAnalyzerPage() {
                       className={`filter-chip chip-other ${claimFilter === "NOT_ENOUGH_INFORMATION" ? "active" : ""}`}
                       onClick={() => setClaimFilter("NOT_ENOUGH_INFORMATION")}
                     >
-                      ? Thiếu căn cứ ({inconclusiveCount})
+                      ? Chưa đủ bằng chứng ({inconclusiveCount})
                     </button>
                   )}
                   {notCheckableCount > 0 && (
@@ -1291,7 +1277,7 @@ export default function NewsAnalyzerPage() {
                     <div key={claim.id} className="claim-card">
                       <div className="claim-card-top" style={{ flexWrap: "wrap", gap: "8px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                          <div className="claim-badge-num">Claim #{idx + 1}</div>
+                          <div className="claim-badge-num">Tuyên bố #{idx + 1}</div>
                           <span
                             className="claim-type-chip"
                             style={{
@@ -1314,7 +1300,7 @@ export default function NewsAnalyzerPage() {
                               claim.verdict === "NOT_ENOUGH_INFORMATION" ? "insufficient" : "verified"
                             }`}
                           >
-                            {claim.verification_status || (claim.verdict === "NOT_ENOUGH_INFORMATION" ? "INSUFFICIENT_EVIDENCE" : "VERIFIED")}
+                            {claim.verdict === "NOT_ENOUGH_INFORMATION" ? "Chưa đủ bằng chứng" : "Đã đối soát"}
                           </span>
                         </div>
                         <span
@@ -1359,7 +1345,7 @@ export default function NewsAnalyzerPage() {
                       <div style={{ margin: "6px 0" }}>
                         <span className="calibrated-conf-badge">
                           <ShieldCheck size={13} />
-                          Độ tin cậy hiệu chuẩn: <strong>{Math.round(claim.confidence * 100)}%</strong> ({claim.confidence_metric_type || "Calibrated Posterior"})
+                          Độ tin cậy hiệu chuẩn: <strong>{formatPercentage(claim.confidence)}</strong> (Độ tin cậy hậu nghiệm)
                         </span>
                       </div>
 
@@ -1386,7 +1372,7 @@ export default function NewsAnalyzerPage() {
                             <div>
                               <strong>Không tìm thấy bằng chứng đối chứng nào</strong> trong cơ sở tri thức đạt ngưỡng liên quan tối thiểu (≥ 0.22).
                               <div style={{ fontSize: 10, marginTop: 2 }}>
-                                Kết luận: <em>Chưa đủ thông tin để thẩm định (NOT_ENOUGH_INFORMATION)</em>. Hệ thống không tạo bằng chứng giả định.
+                                Kết luận: <em>Chưa đủ thông tin để kiểm chứng (NOT_ENOUGH_INFORMATION)</em>. Hệ thống không tạo bằng chứng giả định.
                               </div>
                             </div>
                           </div>
@@ -1395,7 +1381,7 @@ export default function NewsAnalyzerPage() {
                             {refuting.length > 0 && (
                               <div className="evidence-group" style={{ borderColor: "#fecaca" }}>
                                 <div className="evidence-group-title" style={{ color: "#b91c1c" }}>
-                                  <ShieldAlert size={13} /> Bằng chứng Bác bỏ phát ngôn ({refuting.length})
+                                  <ShieldAlert size={13} /> Bằng chứng Bác bỏ tuyên bố ({refuting.length})
                                 </div>
                                 <div className="evidence-grid">
                                   {refuting.map((ev) => (
@@ -1403,7 +1389,7 @@ export default function NewsAnalyzerPage() {
                                       <div className="ev-box-header">
                                         <span className="ev-source">{ev.source_name}</span>
                                         <span className="ev-stance-tag stance-refute">
-                                          {ev.stance} ({Math.round(ev.reliability_score * 100)}%)
+                                          {formatStance(ev.stance)} ({formatPercentage(ev.reliability_score)})
                                         </span>
                                       </div>
                                       <p className="ev-excerpt">"{ev.excerpt}"</p>
@@ -1413,7 +1399,7 @@ export default function NewsAnalyzerPage() {
                                           {ev.dataset_source || "Tri thức kiểm chứng"}
                                         </span>
                                         {ev.relevance_score !== undefined && ev.relevance_score !== null && (
-                                          <span className="ev-meta-tag">Độ khớp: {Math.round(ev.relevance_score * 100)}%</span>
+                                          <span className="ev-meta-tag">Độ khớp: {formatPercentage(ev.relevance_score)}</span>
                                         )}
                                         {ev.source_url && (
                                           <a href={ev.source_url} target="_blank" rel="noopener noreferrer" className="ev-link" style={{ marginLeft: "auto" }}>
@@ -1430,7 +1416,7 @@ export default function NewsAnalyzerPage() {
                             {supporting.length > 0 && (
                               <div className="evidence-group" style={{ borderColor: "#a7f3d0" }}>
                                 <div className="evidence-group-title" style={{ color: "#047857" }}>
-                                  <ShieldCheck size={13} /> Bằng chứng Xác thực phát ngôn ({supporting.length})
+                                  <ShieldCheck size={13} /> Bằng chứng Hỗ trợ tuyên bố ({supporting.length})
                                 </div>
                                 <div className="evidence-grid">
                                   {supporting.map((ev) => (
@@ -1438,7 +1424,7 @@ export default function NewsAnalyzerPage() {
                                       <div className="ev-box-header">
                                         <span className="ev-source">{ev.source_name}</span>
                                         <span className="ev-stance-tag stance-support">
-                                          {ev.stance} ({Math.round(ev.reliability_score * 100)}%)
+                                          {formatStance(ev.stance)} ({formatPercentage(ev.reliability_score)})
                                         </span>
                                       </div>
                                       <p className="ev-excerpt">"{ev.excerpt}"</p>
@@ -1448,7 +1434,7 @@ export default function NewsAnalyzerPage() {
                                           {ev.dataset_source || "Tri thức kiểm chứng"}
                                         </span>
                                         {ev.relevance_score !== undefined && ev.relevance_score !== null && (
-                                          <span className="ev-meta-tag">Độ khớp: {Math.round(ev.relevance_score * 100)}%</span>
+                                          <span className="ev-meta-tag">Độ khớp: {formatPercentage(ev.relevance_score)}</span>
                                         )}
                                         {ev.source_url && (
                                           <a href={ev.source_url} target="_blank" rel="noopener noreferrer" className="ev-link" style={{ marginLeft: "auto" }}>
@@ -1473,7 +1459,7 @@ export default function NewsAnalyzerPage() {
                                       <div className="ev-box-header">
                                         <span className="ev-source">{ev.source_name}</span>
                                         <span className="ev-stance-tag stance-neutral">
-                                          {ev.stance} ({Math.round(ev.reliability_score * 100)}%)
+                                          {formatStance(ev.stance)} ({formatPercentage(ev.reliability_score)})
                                         </span>
                                       </div>
                                       <p className="ev-excerpt">"{ev.excerpt}"</p>
@@ -1510,7 +1496,7 @@ export default function NewsAnalyzerPage() {
                 </p>
               </div>
 
-              {/* SECTION 10: MEDIA CREDIBILITY ISOLATED MODULE */}
+              {/* MEDIA CREDIBILITY ISOLATED MODULE */}
               <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "12px 16px", marginBottom: 18, display: "flex", gap: 12, alignItems: "flex-start" }}>
                 <ShieldCheck size={20} color="#16a34a" style={{ flexShrink: 0, marginTop: 2 }} />
                 <div style={{ fontSize: 13, color: "#15803d" }}>
@@ -1649,16 +1635,16 @@ export default function NewsAnalyzerPage() {
                       <div className="dist-list">
                         <div className="dist-item">
                           <span>Tích cực:</span>
-                          <strong>{Math.round(result.opinion.sentiment_positive * 100)}%</strong>
+                          <strong>{formatPercentage(result.opinion.sentiment_positive)}</strong>
                         </div>
                         <div className="dist-item">
                           <span>Trung lập:</span>
-                          <strong>{Math.round(result.opinion.sentiment_neutral * 100)}%</strong>
+                          <strong>{formatPercentage(result.opinion.sentiment_neutral)}</strong>
                         </div>
                         <div className="dist-item">
                           <span>Tiêu cực / Lo sợ:</span>
                           <strong style={{ color: "#e05252" }}>
-                            {Math.round(result.opinion.sentiment_negative * 100)}%
+                            {formatPercentage(result.opinion.sentiment_negative)}
                           </strong>
                         </div>
                       </div>
@@ -1670,17 +1656,17 @@ export default function NewsAnalyzerPage() {
                       <div className="dist-list">
                         <div className="dist-item">
                           <span>Ủng hộ tin tức:</span>
-                          <strong>{Math.round(result.opinion.stance_support * 100)}%</strong>
+                          <strong>{formatPercentage(result.opinion.stance_support)}</strong>
                         </div>
                         <div className="dist-item">
                           <span>Phản đối / Bác bỏ:</span>
                           <strong style={{ color: "#168077" }}>
-                            {Math.round(result.opinion.stance_oppose * 100)}%
+                            {formatPercentage(result.opinion.stance_oppose)}
                           </strong>
                         </div>
                         <div className="dist-item">
                           <span>Thảo luận tìm hiểu:</span>
-                          <strong>{Math.round(result.opinion.stance_discuss * 100)}%</strong>
+                          <strong>{formatPercentage(result.opinion.stance_discuss)}</strong>
                         </div>
                       </div>
                     </div>
@@ -1774,9 +1760,9 @@ export default function NewsAnalyzerPage() {
           {activeTab === "agents" && (
             <div className="panel tab-panel-body">
               <div className="section-title-box">
-                <h3>Bảng Giám sát Các Tác tử AI (Multi-Agent Monitor)</h3>
+                <h3>Bảng Giám sát Các Tác nhân AI (Multi-Agent Monitor)</h3>
                 <p>
-                  Theo dõi trạng thái thời gian thực, độ trễ xử lý (ms), phát hiện xung đột và nhật ký hoạt động của từng Agent.
+                  Theo dõi trạng thái thời gian thực, độ trễ xử lý (ms), phát hiện xung đột và nhật ký hoạt động của từng Tác nhân.
                 </p>
               </div>
 
@@ -1787,12 +1773,12 @@ export default function NewsAnalyzerPage() {
                       <div className="agent-name-role">
                         <Bot size={17} className="text-teal" />
                         <div>
-                          <strong>{ag.agent_name}</strong>
+                          <strong>{formatAgentName(ag.agent_name)}</strong>
                           <span>{ag.agent_role}</span>
                         </div>
                       </div>
                       <span className={`agent-status-badge ${ag.status === "COMPLETED" ? "completed" : ""}`}>
-                        <span /> {ag.status}
+                        <span /> {formatStatus(ag.status)}
                       </span>
                     </div>
 

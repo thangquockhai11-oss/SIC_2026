@@ -14,6 +14,7 @@ import {
   Zap,
 } from "lucide-react";
 import { api } from "../api/client";
+import { formatAgentName, formatStatus } from "../utils/i18n";
 
 export default function MultiAgentMonitorPage() {
   const [activeTab, setActiveTab] = useState<"traces" | "models">("traces");
@@ -58,10 +59,10 @@ export default function MultiAgentMonitorPage() {
     <div className="page-stack">
       <section className="welcome-row">
         <div>
-          <div className="eyebrow">ĐIỀU PHỐI ĐA TÁC TỬ & TRUY NGUYÊN NGUỒN GỐC</div>
-          <h1>Multi-Agent Monitor — Giám sát & Truy vết Hệ thống Tác tử</h1>
+          <div className="eyebrow">ĐIỀU PHỐI ĐA TÁC NHÂN & TRUY NGUYÊN NGUỒN GỐC</div>
+          <h1>Giám sát AI — Theo dõi & Truy vết Hệ thống Tác nhân</h1>
           <p className="page-subtitle">
-            Theo dõi thời gian thực quy trình tương tác, độ trễ xử lý (ms), mô hình NLP phục vụ, tập dữ liệu gắn kết và hiệu chuẩn đồng thuận EWAC.
+            Theo dõi thời gian thực quy trình tương tác, độ trễ xử lý (ms), mô hình AI phục vụ, tập dữ liệu gắn kết và hiệu chuẩn đồng thuận EWAC.
           </p>
         </div>
         <div style={{ display: "flex", gap: "8px" }}>
@@ -85,7 +86,7 @@ export default function MultiAgentMonitorPage() {
         <div className="panel-heading">
           <div>
             <div className="eyebrow">MÔ HÌNH ĐỒ THỊ ĐIỀU PHỐI</div>
-            <h2>Kiến trúc Đa tác tử Độc lập & Tổng hợp Đồng thuận (EWAC)</h2>
+            <h2>Kiến trúc Đa tác nhân Độc lập & Tổng hợp Đồng thuận (EWAC)</h2>
           </div>
           <Network size={18} className="text-teal" />
         </div>
@@ -94,17 +95,17 @@ export default function MultiAgentMonitorPage() {
           <div className="diag-step">
             <div className="diag-box">
               <Cpu size={16} />
-              <span>Input Ingestion</span>
+              <span>Tiếp nhận đầu vào</span>
             </div>
             <div className="diag-arrow">→</div>
           </div>
 
           <div className="diag-step">
             <div className="diag-box diag-parallel">
-              <div className="diag-sub-agent">ClaimExtractor</div>
-              <div className="diag-sub-agent">MediaCredibility</div>
-              <div className="diag-sub-agent">PublicOpinion</div>
-              <div className="diag-sub-agent">Trust & Reception</div>
+              <div className="diag-sub-agent">Tác nhân kiểm chứng</div>
+              <div className="diag-sub-agent">Đánh giá nguồn tin</div>
+              <div className="diag-sub-agent">Phân tích dư luận</div>
+              <div className="diag-sub-agent">Niềm tin & Tiếp nhận</div>
             </div>
             <div className="diag-arrow">→</div>
           </div>
@@ -112,7 +113,7 @@ export default function MultiAgentMonitorPage() {
           <div className="diag-step">
             <div className="diag-box diag-meta">
               <Bot size={16} />
-              <span>Meta-Agent Consensus (EWAC)</span>
+              <span>Đồng thuận Đa tác nhân (EWAC)</span>
             </div>
             <div className="diag-arrow">→</div>
           </div>
@@ -120,13 +121,13 @@ export default function MultiAgentMonitorPage() {
           <div className="diag-step">
             <div className="diag-box diag-output">
               <CheckCircle2 size={16} />
-              <span>Calibrated Verdict</span>
+              <span>Phán quyết hiệu chuẩn</span>
             </div>
           </div>
         </div>
 
         <div className="panel-footnote">
-          Mỗi tác tử hoạt động độc lập trong miền chuyên môn riêng; Agent không được biểu quyết chéo sang tác vụ của Agent khác.
+          Mỗi tác nhân hoạt động độc lập trong miền chuyên môn riêng; Tác nhân không được biểu quyết chéo sang tác vụ của tác nhân khác.
         </div>
       </section>
 
@@ -135,16 +136,16 @@ export default function MultiAgentMonitorPage() {
         <div className="metric-card">
           <div className="metric-top">
             <div className="metric-icon green"><Zap size={16} /></div>
-            <span className="metric-label">Tác tử trong Phiên</span>
+            <span className="metric-label">Tác nhân trong Phiên</span>
           </div>
-          <strong className="metric-value">{traces.length > 0 ? traces.length : 6} Agents</strong>
+          <strong className="metric-value">{traces.length > 0 ? traces.length : 6} Tác nhân</strong>
           <span className="metric-note">Trạng thái: 100% Hoạt động thực tế</span>
         </div>
 
         <div className="metric-card">
           <div className="metric-top">
             <div className="metric-icon blue"><Clock size={16} /></div>
-            <span className="metric-label">Tổng thời gian xử lý đa tác tử</span>
+            <span className="metric-label">Tổng thời gian xử lý đa tác nhân</span>
           </div>
           <strong className="metric-value">{totalLatency} ms</strong>
           <span className="metric-note">Thực thi song song qua Event Loop</span>
@@ -176,7 +177,7 @@ export default function MultiAgentMonitorPage() {
         <section className="panel registry-panel">
           <div className="registry-toolbar" style={{ flexWrap: "wrap", gap: "10px" }}>
             <div>
-              <h2 style={{ fontSize: 13, margin: 0 }}>Nhật ký Thực thi Từng Tác tử (Agent Execution Traces)</h2>
+              <h2 style={{ fontSize: 13, margin: 0 }}>Nhật ký Thực thi Từng Tác nhân (Execution Trace)</h2>
               <span className="result-count">Truy nguyên nguồn gốc mô hình, thời gian và tập dữ liệu phục vụ</span>
             </div>
 
@@ -205,7 +206,7 @@ export default function MultiAgentMonitorPage() {
 
           {traceLoading || historyLoading ? (
             <div className="loading-line" style={{ padding: "40px 20px" }}>
-              <span /> Đang tải dữ liệu vết thực thi tác tử...
+              <span /> Đang tải dữ liệu vết thực thi tác nhân...
             </div>
           ) : traces.length === 0 ? (
             <div className="registry-state">
@@ -219,12 +220,12 @@ export default function MultiAgentMonitorPage() {
             <div className="agents-monitor-list">
               {traces.map((agent: any, idx: number) => (
                 <div key={agent.id || agent.execution_id || idx} className="agent-detail-row" style={{ alignItems: "flex-start" }}>
-                  <div className="agent-left-col" style={{ width: 220 }}>
+                  <div className="agent-left-col" style={{ width: 230 }}>
                     <div className="agent-avatar-icon">
                       <Bot size={18} />
                     </div>
                     <div>
-                      <h4 style={{ margin: 0 }}>{agent.agent_name}</h4>
+                      <h4 style={{ margin: 0 }}>{formatAgentName(agent.agent_name)}</h4>
                       <span className="agent-role-caption">{agent.agent_role}</span>
                       <div style={{ marginTop: 4 }}>
                         <span className="model-badge">
@@ -256,7 +257,7 @@ export default function MultiAgentMonitorPage() {
                       </span>
                       {agent.execution_id && (
                         <span className="ev-meta-tag" style={{ fontFamily: "monospace" }}>
-                          Exec ID: {agent.execution_id.slice(0, 8)}...
+                          Mã thực thi: {agent.execution_id.slice(0, 8)}...
                         </span>
                       )}
                     </div>
@@ -276,7 +277,7 @@ export default function MultiAgentMonitorPage() {
                       }`}
                       style={{ padding: "3px 8px" }}
                     >
-                      <span /> {agent.status}
+                      <span /> {formatStatus(agent.status)}
                     </span>
                   </div>
                 </div>
@@ -319,7 +320,7 @@ export default function MultiAgentMonitorPage() {
                           : "insufficient"
                       }`}
                     >
-                      {m.loading_status}
+                      {m.loading_status === "LOADED" ? "Đã nạp vào bộ nhớ" : m.loading_status === "BASELINE_CALIBRATED" ? "Đã hiệu chuẩn" : "Chờ kích hoạt"}
                     </span>
                   </div>
 

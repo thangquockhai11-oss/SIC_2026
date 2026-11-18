@@ -22,6 +22,7 @@ import {
   YAxis,
 } from "recharts";
 import { api } from "../api/client";
+import { formatDateTime, formatPercentage, formatStatus, formatVerdict } from "../utils/i18n";
 
 export default function DashboardPage() {
   const statsQuery = useQuery({
@@ -45,7 +46,7 @@ export default function DashboardPage() {
           <div className="eyebrow">TỔNG QUAN HỆ THỐNG</div>
           <h1>Trung tâm Điều hành & Phân tích Truyền thông</h1>
           <p className="page-subtitle">
-            Hệ thống đa tác tử AI kiểm chứng thông tin, đánh giá độ tin cậy nguồn tin, lập trường dư luận và niềm tin công chúng.
+            Hệ sinh thái AI kiểm chứng thông tin, đánh giá độ tin cậy nguồn tin, lập trường dư luận và niềm tin công chúng.
           </p>
         </div>
         <div className="action-buttons-group">
@@ -64,12 +65,12 @@ export default function DashboardPage() {
         <div className="banner-copy">
           <strong>Nguyên tắc liêm chính học thuật & Ranh giới khoa học</strong>
           <span>
-            Hệ thống độc lập tách bạch giữa kiểm chứng claim, uy tín nguồn tin, phân tích thảo luận mạng xã hội và chỉ số niềm tin khảo sát thực địa.
+            Hệ thống độc lập tách bạch giữa kiểm chứng tuyên bố (Claims), uy tín nguồn tin, phân tích thảo luận mạng xã hội và chỉ số niềm tin khảo sát thực địa.
           </span>
         </div>
         <span className={healthQuery.isError ? "api-pill api-down" : "api-pill"}>
           <span />
-          {healthQuery.isPending ? "Đang kết nối API..." : healthQuery.isError ? "API ngoại tuyến" : "API hoạt động ổn định"}
+          {healthQuery.isPending ? "Đang kết nối máy chủ API..." : healthQuery.isError ? "Máy chủ API ngoại tuyến" : "Máy chủ API hoạt động ổn định"}
         </span>
       </section>
 
@@ -80,7 +81,7 @@ export default function DashboardPage() {
             <Newspaper size={20} />
           </div>
           <div>
-            <strong>Phân tích Bài Báo Mới</strong>
+            <strong>Phân tích Bài báo Mới</strong>
             <span>Kiểm chứng phát ngôn, đánh giá nguồn và lập trường AI</span>
           </div>
           <ArrowRight size={16} className="shortcut-arrow" />
@@ -91,8 +92,8 @@ export default function DashboardPage() {
             <FileCheck size={20} />
           </div>
           <div>
-            <strong>Cơ sở Kiểm chứng Claims</strong>
-            <span>Tra cứu các phát ngôn đã đối soát qua ViFactCheck & X-FACT</span>
+            <strong>Cơ sở Kiểm chứng Tuyên bố</strong>
+            <span>Tra cứu các tuyên bố đã đối soát qua ViFactCheck & X-FACT</span>
           </div>
           <ArrowRight size={16} className="shortcut-arrow" />
         </Link>
@@ -102,8 +103,8 @@ export default function DashboardPage() {
             <Bot size={20} />
           </div>
           <div>
-            <strong>Giám sát Đa Tác tử (EWAC)</strong>
-            <span>Xem thời gian thực nhật ký thực thi và mô hình NLP</span>
+            <strong>Giám sát Đa tác nhân (EWAC)</strong>
+            <span>Xem thời gian thực nhật ký thực thi và các mô hình AI</span>
           </div>
           <ArrowRight size={16} className="shortcut-arrow" />
         </Link>
@@ -127,7 +128,7 @@ export default function DashboardPage() {
         <div className="metric-card">
           <div className="metric-top">
             <div className="metric-icon green"><FileCheck size={16} /></div>
-            <span className="metric-label">Phát ngôn đã kiểm chứng</span>
+            <span className="metric-label">Tuyên bố đã kiểm chứng</span>
           </div>
           <strong className="metric-value">
             {statsQuery.isLoading ? "..." : stats?.total_claims ?? 0}
@@ -141,9 +142,9 @@ export default function DashboardPage() {
             <span className="metric-label">Độ tin cậy hiệu chuẩn (EWAC)</span>
           </div>
           <strong className="metric-value">
-            {statsQuery.isLoading ? "..." : `${Math.round((stats?.average_confidence ?? 0.85) * 100)}%`}
+            {statsQuery.isLoading ? "..." : formatPercentage(stats?.average_confidence ?? 0.85)}
           </strong>
-          <span className="metric-note">Đồng thuận giữa các Agent độc lập</span>
+          <span className="metric-note">Đồng thuận giữa các Tác nhân độc lập</span>
         </div>
       </section>
 
@@ -154,7 +155,7 @@ export default function DashboardPage() {
           <div className="panel-heading">
             <div>
               <div className="eyebrow">KẾT QUẢ KIỂM CHỨNG</div>
-              <h2>Phân bố Kết luận Xác thực (Claims Verdicts)</h2>
+              <h2>Phân bố Kết luận Xác thực</h2>
             </div>
             <div className="panel-icon"><BarChart3 size={16} /></div>
           </div>
@@ -170,6 +171,8 @@ export default function DashboardPage() {
                   <YAxis tick={{ fontSize: 10, fill: "#718096" }} allowDecimals={false} />
                   <Tooltip
                     contentStyle={{ borderRadius: 8, fontSize: 11, border: "1px solid #e2e8f0" }}
+                    formatter={(val: any) => [val, "Số lượng"]}
+                    labelFormatter={(label: any) => formatVerdict(label)}
                   />
                   <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                     {stats.chart_data.map((entry, index) => (
@@ -187,7 +190,7 @@ export default function DashboardPage() {
             )}
           </div>
           <div className="panel-footnote">
-            Phân loại: Bác bỏ (Refuted), Xác thực (Supported), Thiếu dữ liệu (Inconclusive) & Không thể kiểm chứng.
+            Phân loại: Được bằng chứng hỗ trợ, Bị bằng chứng bác bỏ, Đúng một phần, Gây hiểu lầm, Bằng chứng mâu thuẫn, Chưa đủ bằng chứng.
           </div>
         </section>
 
@@ -202,7 +205,7 @@ export default function DashboardPage() {
           <div className="domain-list">
             <div className="domain-row">
               <span className="domain-label">
-                <span className="domain-dot" /> Phản đối tin đồn (Stance)
+                <span className="domain-dot" /> Phản đối tin đồn (Lập trường)
               </span>
               <div className="domain-track">
                 <span style={{ width: `${stats?.stance_distribution["Phản đối (Oppose)"] ?? 62}%` }} />
@@ -212,7 +215,7 @@ export default function DashboardPage() {
 
             <div className="domain-row">
               <span className="domain-label">
-                <span className="domain-dot dot-public_opinion" /> Cảm xúc lo ngại (Sentiment)
+                <span className="domain-dot dot-public_opinion" /> Cảm xúc lo ngại (Cảm xúc)
               </span>
               <div className="domain-track">
                 <span
@@ -278,7 +281,7 @@ export default function DashboardPage() {
                   <tr key={item.id}>
                     <td>
                       <div className="dataset-name">{item.title}</div>
-                      <div className="dataset-id">ID: {item.id}</div>
+                      <div className="dataset-id">Mã: {item.id}</div>
                     </td>
                     <td>
                       <span
@@ -291,17 +294,17 @@ export default function DashboardPage() {
                         }
                       >
                         <span />
-                        {item.verdict}
+                        {formatVerdict(item.verdict)}
                       </span>
                     </td>
                     <td>
-                      <span className="category-tag">{item.status}</span>
+                      <span className="category-tag">{formatStatus(item.status)}</span>
                     </td>
                     <td>
-                      <strong>{Math.round(item.confidence * 100)}%</strong>
+                      <strong>{formatPercentage(item.confidence)}</strong>
                     </td>
                     <td>
-                      <span className="time-sub">{new Date(item.created_at).toLocaleString("vi-VN")}</span>
+                      <span className="time-sub">{formatDateTime(item.created_at)}</span>
                     </td>
                     <td>
                       <Link to={`/analyzer?id=${item.id}`} className="button button-sm button-outline">

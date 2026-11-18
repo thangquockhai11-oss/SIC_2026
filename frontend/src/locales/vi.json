@@ -1,0 +1,123 @@
+{
+  "app": {
+    "title": "TrustMedia AI",
+    "subtitle": "Nền tảng kiểm chứng truyền thông số",
+    "workspace": "Không gian làm việc",
+    "ready": "Hệ thống Đa tác nhân sẵn sàng",
+    "engine_desc": "Hệ sinh thái AI kiểm chứng, đối chiếu bằng chứng & hiệu chuẩn đồng thuận.",
+    "dataset_info": "v2.0 • Dữ liệu thực nghiệm"
+  },
+  "nav": {
+    "dashboard": "Tổng quan",
+    "analyzer": "Phân tích bài báo",
+    "fact_checking": "Kiểm chứng thông tin",
+    "credibility": "Phân tích truyền thông",
+    "opinion": "Phân tích dư luận",
+    "trust": "Niềm tin công chúng",
+    "reception": "Tiếp nhận thông tin",
+    "agents": "Giám sát AI",
+    "evidence": "Kho bằng chứng",
+    "history": "Lịch sử phân tích",
+    "datasets": "Quản lý dữ liệu",
+    "reports": "Báo cáo",
+    "settings": "Cài đặt"
+  },
+  "sections": {
+    "overview": "TỔNG QUAN",
+    "ai_core": "TRUNG TÂM PHÂN TÍCH AI",
+    "deep_analysis": "CÁC CHIỀU ĐÁNH GIÁ CHUYÊN SÂU",
+    "knowledge_reports": "TRI THỨC & BÁO CÁO"
+  },
+  "verdicts": {
+    "SUPPORTED": "Được bằng chứng hỗ trợ",
+    "REFUTED": "Bị bằng chứng bác bỏ",
+    "PARTIALLY_SUPPORTED": "Đúng một phần",
+    "MISLEADING": "Gây hiểu lầm",
+    "CONFLICTING_EVIDENCE": "Bằng chứng mâu thuẫn",
+    "NOT_ENOUGH_INFORMATION": "Chưa đủ bằng chứng",
+    "NOT_CHECKABLE": "Không thể kiểm chứng",
+    "ABSTAIN": "Từ chối kết luận do thiếu căn cứ",
+    "UNRESOLVED": "Chưa giải quyết được"
+  },
+  "statuses": {
+    "PROCESSING": "Đang xử lý",
+    "COMPLETED": "Hoàn thành",
+    "FAILED": "Thất bại",
+    "PENDING": "Đang chờ",
+    "QUEUED": "Đang chờ xử lý",
+    "RUNNING": "Đang thực thi",
+    "IDLE": "Sẵn sàng"
+  },
+  "agents": {
+    "fact_checking": "Tác nhân kiểm chứng thông tin",
+    "media_credibility": "Tác nhân đánh giá nguồn truyền thông",
+    "public_opinion": "Tác nhân phân tích dư luận",
+    "public_trust": "Tác nhân phân tích niềm tin công chúng",
+    "information_reception": "Tác nhân phân tích khả năng tiếp nhận thông tin",
+    "meta_agent": "Tác nhân tổng hợp và điều phối"
+  },
+  "claim_types": {
+    "FACTUAL_CLAIM": "Tuyên bố sự kiện",
+    "STATISTICAL_CLAIM": "Tuyên bố số liệu",
+    "HISTORICAL_CLAIM": "Tuyên bố lịch sử",
+    "SCIENTIFIC_CLAIM": "Tuyên bố khoa học",
+    "QUOTATION_CLAIM": "Tuyên bố phát ngôn",
+    "CAUSAL_CLAIM": "Tuyên bố quan hệ nhân quả",
+    "OPINION": "Quan điểm / Nhận định",
+    "PREDICTION": "Dự đoán tương lai"
+  },
+  "rag": {
+    "title": "Hệ thống truy xuất bằng chứng (RAG)",
+    "document_ingestion": "Tiếp nhận tài liệu",
+    "embedding": "Mã hóa văn bản thành vector",
+    "vector_search": "Tìm kiếm ngữ nghĩa",
+    "bm25": "Tìm kiếm theo từ khóa",
+    "hybrid_retrieval": "Truy xuất kết hợp",
+    "reranker": "Bộ xếp hạng lại bằng chứng",
+    "context_builder": "Bộ xây dựng ngữ cảnh",
+    "evidence_retrieval": "Truy xuất bằng chứng",
+    "execution_trace": "Nhật ký thực thi tác nhân",
+    "knowledge_base": "Cơ sở tri thức",
+    "multi_agent_orchestration": "Điều phối đa tác nhân"
+  },
+  "table_chart": {
+    "claim": "Tuyên bố cần kiểm chứng",
+    "verdict": "Kết luận kiểm chứng",
+    "stance": "Quan điểm đối với tuyên bố",
+    "confidence": "Mức độ tin cậy",
+    "source": "Nguồn tham chiếu",
+    "evidence": "Bằng chứng độc lập",
+    "neutral": "Trung lập",
+    "positive": "Tích cực",
+    "negative": "Tiêu cực",
+    "credibility_score": "Điểm tin cậy nguồn tin",
+    "bias": "Khuynh hướng thiên lệch",
+    "timeline": "Dòng thời gian sự kiện"
+  },
+  "actions": {
+    "analyze_article": "Phân tích bài báo",
+    "check_claims": "Kiểm chứng tuyên bố",
+    "rerun_analysis": "Phân tích lại",
+    "export_report": "Xuất báo cáo",
+    "export_pdf": "Tải báo cáo PDF",
+    "export_json": "Tải dữ liệu JSON",
+    "view_details": "Xem chi tiết",
+    "clear_filters": "Đặt lại bộ lọc",
+    "search": "Tìm kiếm",
+    "cancel": "Hủy bỏ",
+    "save_changes": "Lưu thay đổi",
+    "login": "Đăng nhập",
+    "register": "Đăng ký",
+    "logout": "Đăng xuất",
+    "upload_document": "Tải tài liệu lên",
+    "refresh": "Làm mới",
+    "close": "Đóng"
+  },
+  "messages": {
+    "success": "Phân tích hoàn tất thành công.",
+    "error": "Đã xảy ra lỗi trong quá trình xử lý. Vui lòng thử lại.",
+    "warning": "Một số tuyên bố chưa thể kiểm chứng do thiếu nguồn đối chiếu.",
+    "loading": "Hệ thống đang trích xuất thông tin và đối chiếu bằng chứng...",
+    "empty": "Không có dữ liệu phù hợp với bộ lọc hiện tại."
+  }
+}

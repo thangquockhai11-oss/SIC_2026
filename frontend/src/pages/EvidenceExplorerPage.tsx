@@ -13,6 +13,7 @@ import {
   Zap,
 } from "lucide-react";
 import { api } from "../api/client";
+import { formatDateTime, formatPercentage, formatStance, formatVerdict } from "../utils/i18n";
 
 export default function EvidenceExplorerPage() {
   const [activeTab, setActiveTab] = useState<"evidence" | "rag-monitor">("evidence");
@@ -76,13 +77,13 @@ export default function EvidenceExplorerPage() {
         <div className="analyzer-header-content">
           <div className="analyzer-badge-chip">
             <Database size={13} className="sparkle-svg" />
-            <span>POSTGRESQL + PGVECTOR • ADVANCED HYBRID RAG</span>
+            <span>POSTGRESQL + PGVECTOR • HỆ THỐNG TRUY XUẤT LAI NÂNG CAO</span>
           </div>
           <h1 className="analyzer-main-title">
-            Evidence Explorer <span className="title-gradient">& RAG Monitor</span>
+            Kho Bằng chứng <span className="title-gradient">& Giám sát Truy xuất RAG</span>
           </h1>
           <p className="analyzer-header-subtitle">
-            Khám phá cơ sở dữ liệu bằng chứng đối chứng đa nguồn (ViFactCheck, X-FACT, FEVER, NELA-GT) và giám sát trực tiếp quy trình truy xuất lai: Lexical BM25 + Dense Vector BGE-M3 (1024 chiều) + Xếp hạng lại BGE Reranker v2 M3.
+            Khám phá cơ sở dữ liệu bằng chứng đối chứng đa nguồn (ViFactCheck, X-FACT, FEVER, NELA-GT) và giám sát trực tiếp quy trình truy xuất kết hợp: Tìm kiếm từ khóa BM25 + Vector ngữ nghĩa BGE-M3 (1024 chiều) + Bộ xếp hạng lại BGE Reranker v2 M3.
           </p>
         </div>
       </section>
@@ -94,18 +95,18 @@ export default function EvidenceExplorerPage() {
             <Database size={15} className="text-teal" />
             <span>Kho Dữ liệu pgvector</span>
           </div>
-          <div className="stat-value">{ragStats?.total_chunks ?? 164} chunks</div>
+          <div className="stat-value">{ragStats?.total_chunks ?? 164} phân đoạn</div>
           <div className="stat-hint">{ragStats?.total_documents ?? 151} tài liệu chuẩn hóa • 1024 chiều</div>
         </div>
 
         <div className="stat-card">
           <div className="stat-label">
             <Cpu size={15} className="text-teal" />
-            <span>Mô hình Nhúng & Reranker</span>
+            <span>Mô hình Mã hóa & Xếp hạng lại</span>
           </div>
           <div className="stat-value">BGE-M3 + Reranker v2</div>
           <div className="stat-hint">
-            Trạng thái: <strong className="text-teal">HNSW Active</strong> • Reciprocal Rank Fusion
+            Trạng thái: <strong className="text-teal">HNSW Hoạt động</strong> • Hợp nhất RRF
           </div>
         </div>
 
@@ -116,7 +117,7 @@ export default function EvidenceExplorerPage() {
           </div>
           <div className="stat-value">{ragStats?.avg_retrieval_latency_ms ?? 25.4} ms</div>
           <div className="stat-hint">
-            Trạng thái máy chủ RAG: <strong className="text-teal">{ragHealth?.status ?? "HEALTHY"}</strong>
+            Trạng thái máy chủ RAG: <strong className="text-teal">{ragHealth?.status === "HEALTHY" ? "Hoạt động ổn định" : "Bình thường"}</strong>
           </div>
         </div>
       </section>
@@ -156,7 +157,7 @@ export default function EvidenceExplorerPage() {
               <Search size={15} />
               <input
                 type="text"
-                placeholder="Tìm theo tên nguồn, phát ngôn hoặc nội dung trích dẫn..."
+                placeholder="Tìm theo tên nguồn, tuyên bố hoặc nội dung trích dẫn..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -164,9 +165,9 @@ export default function EvidenceExplorerPage() {
 
             <select value={selectedVerdict} onChange={(e) => setSelectedVerdict(e.target.value)}>
               <option value="">Tất cả lập trường phán quyết</option>
-              <option value="REFUTED">Bác bỏ (REFUTED)</option>
-              <option value="SUPPORTED">Xác thực (SUPPORTED)</option>
-              <option value="NOT_ENOUGH_INFORMATION">Thiếu thông tin</option>
+              <option value="SUPPORTED">Được bằng chứng hỗ trợ</option>
+              <option value="REFUTED">Bị bằng chứng bác bỏ</option>
+              <option value="NOT_ENOUGH_INFORMATION">Chưa đủ bằng chứng</option>
             </select>
 
             <span className="result-count">Tổng cộng: {evidenceData?.total ?? 0} bản ghi</span>
@@ -202,7 +203,7 @@ export default function EvidenceExplorerPage() {
                           : "pill-warning"
                       }`}
                     >
-                      {item.verdict} ({Math.round(item.confidence * 100)}%)
+                      {formatVerdict(item.verdict)} ({formatPercentage(item.confidence)})
                     </span>
                   </div>
 
@@ -220,13 +221,13 @@ export default function EvidenceExplorerPage() {
                                 : "stance-neutral"
                             }`}
                           >
-                            {ev.stance} ({Math.round(ev.reliability_score * 100)}%)
+                            {formatStance(ev.stance)} ({formatPercentage(ev.reliability_score)})
                           </span>
                         </div>
                         <p className="ev-quote-text">"{ev.excerpt}"</p>
                         <div className="ev-provenance-footer">
                           <span className="ev-timestamp">
-                            <Calendar size={12} /> {new Date(ev.retrieval_timestamp).toLocaleString("vi-VN")}
+                            <Calendar size={12} /> {formatDateTime(ev.retrieval_timestamp)}
                           </span>
                           {ev.source_url && (
                             <a
@@ -261,7 +262,7 @@ export default function EvidenceExplorerPage() {
 
           <form onSubmit={handleRunRAGSearch} className="rag-runner-form" style={{ margin: "16px 0" }}>
             <div className="analyzer-field-group">
-              <label className="field-main-label">Câu truy vấn kiểm thử / Claim:</label>
+              <label className="field-main-label">Câu truy vấn kiểm thử / Tuyên bố:</label>
               <div className="input-modern-wrapper">
                 <Search size={16} className="input-left-icon text-teal" />
                 <input
@@ -269,7 +270,7 @@ export default function EvidenceExplorerPage() {
                   className="input-control-modern"
                   value={ragQuery}
                   onChange={(e) => setRagQuery(e.target.value)}
-                  placeholder="Nhập claim hoặc từ khóa cần tra cứu trong cơ sở tri thức..."
+                  placeholder="Nhập tuyên bố hoặc từ khóa cần tra cứu trong cơ sở tri thức..."
                   disabled={ragRunning}
                 />
               </div>
@@ -285,9 +286,9 @@ export default function EvidenceExplorerPage() {
                   className="input-control-modern"
                   style={{ width: "auto", padding: "6px 12px" }}
                 >
-                  <option value="hybrid">Lai ghép (BM25 + pgvector + RRF)</option>
-                  <option value="vector">Chỉ Vector (PostgreSQL pgvector)</option>
-                  <option value="bm25">Chỉ Từ khóa (BM25 Lexical)</option>
+                  <option value="hybrid">Truy xuất kết hợp (BM25 + pgvector + RRF)</option>
+                  <option value="vector">Tìm kiếm ngữ nghĩa (PostgreSQL pgvector)</option>
+                  <option value="bm25">Tìm kiếm theo từ khóa (BM25 Lexical)</option>
                 </select>
               </div>
 
@@ -337,7 +338,7 @@ export default function EvidenceExplorerPage() {
                     <div className="ev-source-row">
                       <strong>{res.source_name || "Kho tri thức đối chuẩn"}</strong>
                       <span className="ev-stance-badge stance-support">
-                        Điểm liên quan: {Math.round(res.relevance_score * 100)}%
+                        Độ khớp: {Math.round(res.relevance_score * 100)}%
                       </span>
                     </div>
 

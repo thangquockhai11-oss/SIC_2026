@@ -9,6 +9,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { api } from "../api/client";
+import { formatDate, formatVerdict } from "../utils/i18n";
 
 export default function ReportsPage() {
   const { data, isLoading } = useQuery({
@@ -26,7 +27,7 @@ export default function ReportsPage() {
       <section className="welcome-row">
         <div>
           <div className="eyebrow">XUẤT BẢN NGHIÊN CỨU</div>
-          <h1>Reports & Export — Trung tâm Báo cáo Nghiên cứu</h1>
+          <h1>Báo cáo & Xuất bản — Trung tâm Báo cáo Nghiên cứu</h1>
           <p className="page-subtitle">
             Trích xuất báo cáo khoa học với đầy đủ trích dẫn, bằng chứng đối chiếu và khuyến cáo giới hạn nghiên cứu sang định dạng JSON, CSV hoặc bản in PDF.
           </p>
@@ -50,12 +51,12 @@ export default function ReportsPage() {
             <div className="empty-state">
               <FileText size={32} />
               <strong>Chưa có bài phân tích nào để xuất báo cáo</strong>
-              <span>Hãy phân tích bài báo đầu tiên qua News Analyzer.</span>
+              <span>Hãy phân tích bài báo đầu tiên qua phân hệ Phân tích bài báo.</span>
             </div>
           </div>
         ) : (
           <div className="reports-selection-layout">
-            <div className="form-field" style={{ maxWidth: 600 }}>
+            <div className="form-field" style={{ maxWidth: 650 }}>
               <label>Danh sách các bài nghiên cứu đã hoàn tất:</label>
               <select
                 value={currentId || ""}
@@ -64,7 +65,7 @@ export default function ReportsPage() {
               >
                 {analyses.map((a) => (
                   <option key={a.id} value={a.id}>
-                    [{a.verdict || "ANALYSIS"}] {a.title} ({new Date(a.created_at).toLocaleDateString("vi-VN")})
+                    [{formatVerdict(a.verdict)}] {a.title} ({formatDate(a.created_at)})
                   </option>
                 ))}
               </select>
@@ -82,21 +83,21 @@ export default function ReportsPage() {
                     className="button button-outline"
                     style={{ width: "100%" }}
                   >
-                    <Download size={14} /> Tải CSV
+                    <Download size={14} /> Tải dữ liệu CSV
                   </a>
                 </div>
 
                 <div className="export-card">
                   <div className="export-icon"><FileText size={24} color="#4299e1" /></div>
                   <h4>Xuất file JSON chuẩn</h4>
-                  <p>Bao gồm đầy đủ schema máy đọc được, metadata và quan hệ Claim-Evidence.</p>
+                  <p>Bao gồm đầy đủ cấu trúc máy đọc được, metadata và quan hệ Tuyên bố - Bằng chứng.</p>
                   <a
                     href={api.reports.exportJsonUrl(currentId)}
                     download
                     className="button button-outline"
                     style={{ width: "100%" }}
                   >
-                    <Download size={14} /> Tải JSON
+                    <Download size={14} /> Tải dữ liệu JSON
                   </a>
                 </div>
 

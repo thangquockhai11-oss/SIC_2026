@@ -15,15 +15,22 @@ import type { DatasetRecord } from "../api/types";
 
 const categories = [
   ["", "Tất cả lĩnh vực"],
-  ["fact_checking", "Fact-checking"],
-  ["media_credibility", "Media credibility"],
-  ["public_opinion", "Public opinion"],
-  ["public_trust", "Public trust"],
-  ["information_reception", "Information reception"],
+  ["fact_checking", "Kiểm chứng thông tin (Fact-checking)"],
+  ["media_credibility", "Độ tin cậy truyền thông (Media credibility)"],
+  ["public_opinion", "Dư luận xã hội (Public opinion)"],
+  ["public_trust", "Niềm tin công chúng (Public trust)"],
+  ["information_reception", "Tiếp nhận thông tin (Information reception)"],
 ];
 
-function titleCase(value: string) {
-  return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+function formatCategory(value: string) {
+  const map: Record<string, string> = {
+    fact_checking: "Kiểm chứng thông tin",
+    media_credibility: "Độ tin cậy truyền thông",
+    public_opinion: "Dư luận xã hội",
+    public_trust: "Niềm tin công chúng",
+    information_reception: "Tiếp nhận thông tin",
+  };
+  return map[value] || value;
 }
 
 export default function DatasetsPage() {
@@ -43,7 +50,7 @@ export default function DatasetsPage() {
     category: "fact_checking",
     source_url: "",
     languages: "vi, en",
-    intended_tasks: "claim verification",
+    intended_tasks: "Kiểm chứng phát ngôn",
     dataset_version: "1.0",
     license: "CC-BY-4.0",
     sample_count: 5000,
@@ -105,7 +112,7 @@ export default function DatasetsPage() {
       category: "fact_checking",
       source_url: "",
       languages: "vi, en",
-      intended_tasks: "claim verification",
+      intended_tasks: "Kiểm chứng phát ngôn",
       dataset_version: "1.0",
       license: "CC-BY-4.0",
       sample_count: 5000,
@@ -151,9 +158,9 @@ export default function DatasetsPage() {
       <section className="welcome-row">
         <div>
           <div className="eyebrow">QUẢN TRỊ DỮ LIỆU HỌC THUẬT</div>
-          <h1>Dataset Management — Bộ Dữ liệu Nghiên cứu</h1>
+          <h1>Quản lý Dữ liệu — Bộ Dữ liệu Nghiên cứu</h1>
           <p className="page-subtitle">
-            Quản lý metadata, giấy phép bản quyền và truy xuất nguồn gốc của 16 dataset nghiên cứu truyền thông số.
+            Quản lý metadata, giấy phép bản quyền và truy xuất nguồn gốc của 16 bộ dữ liệu nghiên cứu truyền thông số.
           </p>
         </div>
         <button className="button button-primary" onClick={() => setIsAddModalOpen(true)}>
@@ -166,7 +173,7 @@ export default function DatasetsPage() {
         <div>
           <strong>Quy chuẩn Xác minh (Data Verification Protocol)</strong>
           <span>
-            Các tập dữ liệu mặc định ở trạng thái UNVERIFIED cho đến khi nhà nghiên cứu hoàn tất đối soát giấy phép bản quyền và lược đồ nhãn (label schema).
+            Các tập dữ liệu mặc định ở trạng thái CHƯA KIỂM ĐỊNH (UNVERIFIED) cho đến khi nhà nghiên cứu hoàn tất đối soát giấy phép bản quyền và lược đồ nhãn (label schema).
           </span>
         </div>
         <span className="unverified-count">{datasets.data?.total ?? "?"} bộ dữ liệu</span>
@@ -177,7 +184,7 @@ export default function DatasetsPage() {
           <div className="filter-search">
             <Search size={17} />
             <input
-              aria-label="Search datasets"
+              aria-label="Tìm kiếm dataset"
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Tìm kiếm dataset, ngôn ngữ hoặc tác vụ..."
               value={search}
@@ -185,7 +192,7 @@ export default function DatasetsPage() {
           </div>
 
           <select
-            aria-label="Filter by research domain"
+            aria-label="Lọc theo lĩnh vực"
             onChange={(e) => setCategory(e.target.value)}
             value={category}
           >
@@ -204,7 +211,7 @@ export default function DatasetsPage() {
             <div className="empty-state">
               <TriangleAlert size={24} />
               <strong>Không thể tải dữ liệu</strong>
-              <span>Kiểm tra backend và kết nối API.</span>
+              <span>Kiểm tra máy chủ backend và kết nối API.</span>
             </div>
           </div>
         ) : datasets.data.items.length === 0 ? (
@@ -236,7 +243,7 @@ export default function DatasetsPage() {
                       <div className="dataset-id">{item.dataset_id}</div>
                     </td>
                     <td>
-                      <span className="category-tag">{titleCase(item.category)}</span>
+                      <span className="category-tag">{formatCategory(item.category)}</span>
                     </td>
                     <td>
                       <span className="language-tag">{item.languages.join(", ") || "n/a"}</span>
@@ -244,13 +251,13 @@ export default function DatasetsPage() {
                     <td>
                       <div className="verification-stack">
                         <span>Giấy phép: {item.license || "Chưa xác minh"}</span>
-                        <span>Lược đồ: {item.schema_status}</span>
+                        <span>Lược đồ: {item.schema_status === "VERIFIED" ? "Đã xác minh" : "Chưa xác minh"}</span>
                       </div>
                     </td>
                     <td>
                       <span className={item.status === "VERIFIED" ? "status-badge badge-success" : "status-badge"}>
                         <span />
-                        {item.status}
+                        {item.status === "VERIFIED" ? "Đã xác minh" : "Chưa xác minh"}
                       </span>
                     </td>
                     <td>
@@ -339,11 +346,11 @@ export default function DatasetsPage() {
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                   >
-                    <option value="fact_checking">Fact-checking</option>
-                    <option value="media_credibility">Media credibility</option>
-                    <option value="public_opinion">Public opinion</option>
-                    <option value="public_trust">Public trust</option>
-                    <option value="information_reception">Information reception</option>
+                    <option value="fact_checking">Kiểm chứng thông tin</option>
+                    <option value="media_credibility">Độ tin cậy truyền thông</option>
+                    <option value="public_opinion">Dư luận xã hội</option>
+                    <option value="public_trust">Niềm tin công chúng</option>
+                    <option value="information_reception">Tiếp nhận thông tin</option>
                   </select>
                 </div>
                 <div className="form-field">
@@ -433,11 +440,11 @@ export default function DatasetsPage() {
                     value={editingDataset.category}
                     onChange={(e) => setEditingDataset({ ...editingDataset, category: e.target.value })}
                   >
-                    <option value="fact_checking">Fact-checking</option>
-                    <option value="media_credibility">Media credibility</option>
-                    <option value="public_opinion">Public opinion</option>
-                    <option value="public_trust">Public trust</option>
-                    <option value="information_reception">Information reception</option>
+                    <option value="fact_checking">Kiểm chứng thông tin</option>
+                    <option value="media_credibility">Độ tin cậy truyền thông</option>
+                    <option value="public_opinion">Dư luận xã hội</option>
+                    <option value="public_trust">Niềm tin công chúng</option>
+                    <option value="information_reception">Tiếp nhận thông tin</option>
                   </select>
                 </div>
                 <div className="form-field">

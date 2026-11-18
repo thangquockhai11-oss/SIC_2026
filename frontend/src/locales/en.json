@@ -1,0 +1,123 @@
+{
+  "app": {
+    "title": "TrustMedia AI",
+    "subtitle": "Digital Media Fact-checking Platform",
+    "workspace": "Workspace",
+    "ready": "Multi-Agent Ready",
+    "engine_desc": "Multi-Agent Fact-Checking, Stance Verification & Consensus Calibration Engine.",
+    "dataset_info": "v2.0 • Empirical Dataset"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "analyzer": "News Analyzer",
+    "fact_checking": "Fact-checking",
+    "credibility": "Media Credibility",
+    "opinion": "Public Opinion",
+    "trust": "Public Trust",
+    "reception": "Information Reception",
+    "agents": "Multi-Agent Monitor",
+    "evidence": "Evidence Explorer",
+    "history": "Analysis History",
+    "datasets": "Dataset Management",
+    "reports": "Reports",
+    "settings": "Settings"
+  },
+  "sections": {
+    "overview": "OVERVIEW",
+    "ai_core": "AI ANALYSIS CENTER",
+    "deep_analysis": "IN-DEPTH DIMENSIONS",
+    "knowledge_reports": "KNOWLEDGE & REPORTS"
+  },
+  "verdicts": {
+    "SUPPORTED": "Supported by Evidence",
+    "REFUTED": "Refuted by Evidence",
+    "PARTIALLY_SUPPORTED": "Partially Supported",
+    "MISLEADING": "Misleading",
+    "CONFLICTING_EVIDENCE": "Conflicting Evidence",
+    "NOT_ENOUGH_INFORMATION": "Not Enough Information",
+    "NOT_CHECKABLE": "Not Checkable",
+    "ABSTAIN": "Abstain",
+    "UNRESOLVED": "Unresolved"
+  },
+  "statuses": {
+    "PROCESSING": "Processing",
+    "COMPLETED": "Completed",
+    "FAILED": "Failed",
+    "PENDING": "Pending",
+    "QUEUED": "Queued",
+    "RUNNING": "Running",
+    "IDLE": "Idle"
+  },
+  "agents": {
+    "fact_checking": "Fact-checking Agent",
+    "media_credibility": "Media Credibility Agent",
+    "public_opinion": "Public Opinion Agent",
+    "public_trust": "Public Trust Agent",
+    "information_reception": "Information Reception Agent",
+    "meta_agent": "Meta-Agent Orchestrator"
+  },
+  "claim_types": {
+    "FACTUAL_CLAIM": "Factual Claim",
+    "STATISTICAL_CLAIM": "Statistical Claim",
+    "HISTORICAL_CLAIM": "Historical Claim",
+    "SCIENTIFIC_CLAIM": "Scientific Claim",
+    "QUOTATION_CLAIM": "Quotation Claim",
+    "CAUSAL_CLAIM": "Causal Claim",
+    "OPINION": "Opinion",
+    "PREDICTION": "Prediction"
+  },
+  "rag": {
+    "title": "Evidence Retrieval System (RAG)",
+    "document_ingestion": "Document Ingestion",
+    "embedding": "Text-to-Vector Embedding",
+    "vector_search": "Semantic Search",
+    "bm25": "Keyword Search",
+    "hybrid_retrieval": "Hybrid Retrieval",
+    "reranker": "Evidence Reranker",
+    "context_builder": "Context Builder",
+    "evidence_retrieval": "Evidence Retrieval",
+    "execution_trace": "Agent Execution Trace",
+    "knowledge_base": "Knowledge Base",
+    "multi_agent_orchestration": "Multi-Agent Orchestration"
+  },
+  "table_chart": {
+    "claim": "Claim for Verification",
+    "verdict": "Verification Verdict",
+    "stance": "Stance on Claim",
+    "confidence": "Confidence Level",
+    "source": "Reference Source",
+    "evidence": "Independent Evidence",
+    "neutral": "Neutral",
+    "positive": "Positive",
+    "negative": "Negative",
+    "credibility_score": "Source Credibility Score",
+    "bias": "Bias Tendency",
+    "timeline": "Event Timeline"
+  },
+  "actions": {
+    "analyze_article": "Analyze Article",
+    "check_claims": "Check Claims",
+    "rerun_analysis": "Re-run Analysis",
+    "export_report": "Export Report",
+    "export_pdf": "Export PDF",
+    "export_json": "Export JSON",
+    "view_details": "View Details",
+    "clear_filters": "Clear Filters",
+    "search": "Search",
+    "cancel": "Cancel",
+    "save_changes": "Save Changes",
+    "login": "Log in",
+    "register": "Register",
+    "logout": "Log out",
+    "upload_document": "Upload Document",
+    "refresh": "Refresh",
+    "close": "Close"
+  },
+  "messages": {
+    "success": "Analysis completed successfully.",
+    "error": "An error occurred during processing. Please try again.",
+    "warning": "Some claims could not be verified due to lack of reference sources.",
+    "loading": "System is extracting claims and verifying evidence...",
+    "empty": "No data matching current filters."
+  }
+}

@@ -57,58 +57,65 @@ class BM25Retriever:
 
     def reload_index(self) -> int:
         """Fetch all chunks from database and rebuild the BM25 index."""
-        engine = get_engine()
-        with Session(engine) as session:
-            rows = (
-                session.query(
-                    DocumentChunk.id.label("chunk_id"),
-                    DocumentChunk.document_id,
-                    DocumentChunk.content,
-                    DocumentChunk.metadata_json,
-                    Document.title.label("doc_title"),
-                    Document.source_name,
-                    Document.source_url,
-                    Document.dataset_id,
-                    Document.record_id,
-                    Document.language,
+        try:
+            engine = get_engine()
+            with Session(engine) as session:
+                rows = (
+                    session.query(
+                        DocumentChunk.id.label("chunk_id"),
+                        DocumentChunk.document_id,
+                        DocumentChunk.content,
+                        DocumentChunk.metadata_json,
+                        Document.title.label("doc_title"),
+                        Document.source_name,
+                        Document.source_url,
+                        Document.dataset_id,
+                        Document.record_id,
+                        Document.language,
+                    )
+                    .join(Document, DocumentChunk.document_id == Document.id)
+                    .all()
                 )
-                .join(Document, DocumentChunk.document_id == Document.id)
-                .all()
-            )
 
-            records = []
-            tokenized_corpus = []
+                records = []
+                tokenized_corpus = []
 
-            for r in rows:
-                doc_title = str(r.doc_title or "")
-                c_text = str(r.content or "")
-                combined_text = f"{doc_title} {c_text}"
-                tokens = self.tokenize(combined_text)
+                for r in rows:
+                    doc_title = str(r.doc_title or "")
+                    c_text = str(r.content or "")
+                    combined_text = f"{doc_title} {c_text}"
+                    tokens = self.tokenize(combined_text)
 
-                records.append({
-                    "chunk_id": str(r.chunk_id),
-                    "document_id": str(r.document_id),
-                    "content": c_text,
-                    "doc_title": doc_title,
-                    "source_name": str(r.source_name or ""),
-                    "source_url": str(r.source_url or ""),
-                    "dataset_id": str(r.dataset_id or ""),
-                    "record_id": str(r.record_id or ""),
-                    "language": str(r.language or "vi"),
-                    "metadata": r.metadata_json if isinstance(r.metadata_json, dict) else {},
-                })
-                tokenized_corpus.append(tokens)
+                    records.append({
+                        "chunk_id": str(r.chunk_id),
+                        "document_id": str(r.document_id),
+                        "content": c_text,
+                        "doc_title": doc_title,
+                        "source_name": str(r.source_name or ""),
+                        "source_url": str(r.source_url or ""),
+                        "dataset_id": str(r.dataset_id or ""),
+                        "record_id": str(r.record_id or ""),
+                        "language": str(r.language or "vi"),
+                        "metadata": r.metadata_json if isinstance(r.metadata_json, dict) else {},
+                    })
+                    tokenized_corpus.append(tokens)
 
-            self.chunk_records = records
-            self.corpus_size = len(records)
+                self.chunk_records = records
+                self.corpus_size = len(records)
 
-            if tokenized_corpus:
-                self.bm25_model = BM25Okapi(tokenized_corpus)
-                logger.info("BM25 index built with %d documents.", self.corpus_size)
-            else:
-                self.bm25_model = None
+                if tokenized_corpus:
+                    self.bm25_model = BM25Okapi(tokenized_corpus)
+                    logger.info("BM25 index built with %d documents.", self.corpus_size)
+                else:
+                    self.bm25_model = None
 
-            return self.corpus_size
+                return self.corpus_size
+        except Exception as exc:
+            logger.warning("Failed to reload BM25 index from DB: %s", exc)
+            self.chunk_records = []
+            self.corpus_size = 0
+            self.bm25_model = None
+            return 0
 
     def search_bm25(
         self,
