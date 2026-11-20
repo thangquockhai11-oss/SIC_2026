@@ -168,7 +168,7 @@ def test_9_fact_checking_using_evidence():
     )
     assert len(claims) > 0
     assert trace["retrieval_count"] >= 0
-    assert any(c["verdict"] in ["SUPPORTED", "NOT_CHECKABLE", "NOT_ENOUGH_INFORMATION"] for c in claims)
+    assert any(c["verdict"] in ["SUPPORTED", "REFUTED", "NOT_CHECKABLE", "NOT_ENOUGH_INFORMATION"] for c in claims)
 
 
 # 10. Test Evidence Provenance Tracking

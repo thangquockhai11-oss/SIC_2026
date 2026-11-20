@@ -39,6 +39,8 @@ class EvidenceResponse(BaseModel):
 class ClaimResponse(BaseModel):
     id: str
     claim_text: str
+    original_sentence: str | None = None
+    paragraph_id: int | None = 0
     verdict: str
     confidence: float
     reasoning: str
@@ -50,6 +52,30 @@ class ClaimResponse(BaseModel):
     evidences: list[EvidenceResponse] = []
 
 
+class OutletProfile(BaseModel):
+    publisher_name: str
+    ownership: str | None = None
+    editorial_policy: str | None = None
+    correction_policy: str | None = None
+    verification_source: str | None = None
+
+
+class ArticleQuality(BaseModel):
+    author: str | None = None
+    data_sources: list[str] = []
+    cited_documents: list[str] = []
+    citation_density: float = 0.0
+    sensationalism_assessment: str | None = None
+
+
+class OutletSummary(BaseModel):
+    has_sufficient_sample: bool = False
+    sample_size: int | None = None
+    survey_timeframe: str | None = None
+    outlet_score: float | None = None
+    summary_note: str
+
+
 class MediaCredibilityResponse(BaseModel):
     id: str
     source_name: str
@@ -58,51 +84,143 @@ class MediaCredibilityResponse(BaseModel):
     citation_score: float
     evidence_score: float
     journalistic_standard_score: float
-    overall_credibility_score: float
+    overall_credibility_score: float | None = None
     reasoning: str
+    outlet_profile: OutletProfile | None = None
+    article_quality: ArticleQuality | None = None
+    outlet_summary: OutletSummary | None = None
 
 
 class PublicOpinionResponse(BaseModel):
     id: str
     topic: str
     sample_size: int
-    sentiment_positive: float
-    sentiment_neutral: float
-    sentiment_negative: float
-    sentiment_mixed: float
-    stance_support: float
-    stance_oppose: float
-    stance_discuss: float
-    stance_neutral: float
-    top_emotions: dict[str, float]
-    discussion_summary: str
-    raw_comments_sample: list[dict] | None = None
+    sentiment_positive: float | None = None
+    sentiment_neutral: float | None = None
+    sentiment_negative: float | None = None
+    sentiment_mixed: float | None = None
+    stance_support: float | None = None
+    stance_oppose: float | None = None
+    stance_discuss: float | None = None
+    stance_neutral: float | None = None
+    top_emotions: dict[str, float] = {}
+    discussion_summary: str | None = None
+    raw_comments_sample: list[dict | str] | None = None
+    data_provenance_type: str = "OBSERVED"
+    input_summary: str | None = None
+    method_applied: str | None = None
+    fallback_reason: str | None = None
 
 
 class PublicTrustSurveyResponse(BaseModel):
     id: str
     survey_name: str
     sample_size: int
-    methodology: str
-    trust_source_score: float
-    trust_message_score: float
-    trust_evidence_score: float
-    demographics_breakdown: dict
-    findings_summary: str
-    limitations: str
+    methodology: str | None = None
+    trust_source_score: float | None = None
+    trust_message_score: float | None = None
+    trust_evidence_score: float | None = None
+    demographics_breakdown: dict = {}
+    findings_summary: str | None = None
+    limitations: str | None = None
+    data_provenance_type: str = "OBSERVED"
+    input_summary: str | None = None
+    method_applied: str | None = None
+    fallback_reason: str | None = None
 
 
 class InformationReceptionResponse(BaseModel):
     id: str
     sample_size: int
+    comprehension_score: float | None = None
+    comprehension_ratio_str: str | None = None
+    claim_identification_rate: float | None = None
+    acceptance_rate: float | None = None
+    sharing_intention_high: float | None = None
+    sharing_intention_medium: float | None = None
+    sharing_intention_low: float | None = None
+    verify_before_sharing_rate: float | None = None
+    cognitive_resistance_notes: str | None = None
+    data_provenance_type: str = "OBSERVED"
+    input_summary: str | None = None
+    method_applied: str | None = None
+    fallback_reason: str | None = None
+
+
+class QuizQuestionCreate(BaseModel):
+    question_text: str
+    options: list[str]
+    correct_option_index: int
+    explanation: str | None = None
+
+
+class QuizQuestionResponse(BaseModel):
+    id: str
+    analysis_id: str
+    snapshot_id: str | None = None
+    question_text: str
+    options: list[str]
+    correct_option_index: int
+    explanation: str | None = None
+
+
+class ReaderSurveyCreate(BaseModel):
+    trust_outlet_score: float = Field(default=80.0, ge=0.0, le=100.0)
+    claim_trust_ratings: dict[str, float] = Field(default_factory=dict)
+    quiz_answers: dict[str, int] = Field(default_factory=dict)
+    sharing_intention: str = Field(default="MEDIUM")
+    verify_before_sharing: bool = True
+    session_id: str | None = None
+    submission_batch_id: str | None = None
+
+
+class ReaderSurveyRecordResponse(BaseModel):
+    id: str
+    analysis_id: str
+    snapshot_id: str | None = None
+    session_id: str | None = None
+    submission_batch_id: str | None = None
+    trust_outlet_score: float
+    claim_trust_ratings: dict[str, float]
+    quiz_answers: dict[str, int]
+    correct_count: int
+    total_questions: int
     comprehension_score: float
-    claim_identification_rate: float
-    acceptance_rate: float
-    sharing_intention_high: float
-    sharing_intention_medium: float
-    sharing_intention_low: float
-    verify_before_sharing_rate: float
-    cognitive_resistance_notes: str
+    sharing_intention: str
+    verify_before_sharing: bool
+    created_at: datetime
+
+
+class UserCommentCreate(BaseModel):
+    comment_text: str = Field(min_length=3, max_length=2000)
+    author_name: str = "Độc giả"
+    submission_batch_id: str | None = None
+
+
+class UserCommentRecordResponse(BaseModel):
+    id: str
+    analysis_id: str
+    snapshot_id: str | None = None
+    author_name: str
+    comment_text: str
+    stances: list[dict] = []
+    created_at: datetime
+
+
+class BatchFeedbackSubmission(BaseModel):
+    surveys: list[ReaderSurveyCreate] = []
+    comments: list[UserCommentCreate] = []
+    batch_id: str | None = None
+
+
+class BatchFeedbackResponse(BaseModel):
+    analysis_id: str
+    submitted_surveys: int
+    submitted_comments: int
+    batch_id: str | None = None
+    comprehension_score: float | None = None
+    comprehension_ratio_str: str | None = None
+    updated_stance_distribution: dict[str, float | None] = {}
 
 
 class AgentExecutionResponse(BaseModel):
@@ -134,6 +252,22 @@ class AgentExecutionTraceResponse(BaseModel):
     traces: list[AgentExecutionResponse]
 
 
+class ArticleSnapshotResponse(BaseModel):
+    id: str
+    analysis_id: str | None = None
+    source_url: str
+    final_url: str | None = None
+    title: str
+    author: str | None = None
+    published_date: str | None = None
+    extraction_status: str = "SUCCESS"  # SUCCESS, PAYWALL_DETECTED, TITLE_ONLY_EXTRACTED, FIXTURE_FALLBACK
+    paragraphs: list[str] = []
+    source_links: list[dict] = []
+    version: int = 1
+    is_verified_online: bool = True
+    created_at: datetime
+
+
 class AnalysisDetailResponse(BaseModel):
     id: str
     user_id: str | None = None
@@ -156,6 +290,8 @@ class AnalysisDetailResponse(BaseModel):
     survey: PublicTrustSurveyResponse | None = None
     reception: InformationReceptionResponse | None = None
     agent_executions: list[AgentExecutionResponse] = []
+    snapshot: ArticleSnapshotResponse | None = None
+    snapshots: list[ArticleSnapshotResponse] = []
 
 
 class AnalysisListItem(BaseModel):

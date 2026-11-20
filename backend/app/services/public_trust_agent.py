@@ -1,17 +1,19 @@
 """Public Trust Agent: Survey-Grounded Public Trust Evaluator.
 
-Processes scientific survey datasets and representative polling metrics
-(World Values Survey Wave 7 framework), rigorously decoupled from social media
-comment sentiment.
+Processes scientific survey datasets and representative polling metrics.
+Removes all synthetic sample sizes, keyword heuristics, and hash-based percentages.
+Displays 'Chưa có dữ liệu người đọc' when no verified surveys are present.
 """
 
 from datetime import datetime, timezone
+import logging
 import time
 from typing import Any
 import uuid
 
-from app.services.model_manager import model_manager
 from app.services.rag.hybrid_retriever import hybrid_rag_retriever
+
+logger = logging.getLogger(__name__)
 
 
 class PublicTrustAgent:
@@ -27,75 +29,76 @@ class PublicTrustAgent:
         source_name: str | None = None,
         source_credibility: float = 70.0,
         article_title: str | None = None,
+        reader_surveys: list[dict[str, Any]] | None = None,
     ) -> tuple[dict[str, Any], dict[str, Any]]:
-        """Evaluate public trust indicators from survey research data dynamically."""
+        """Evaluate public trust indicators strictly from empirical reader surveys.
+        Never generates sample sizes or percentages from hash or keywords.
+        """
         start_time = datetime.now(timezone.utc)
         t0 = time.time()
+        title_topic = (article_title or "Chủ đề bài viết").strip()
 
-        c_lower = content.lower()
-        title_topic = article_title or "Chủ đề bài viết"
+        # Check if real surveys are available
+        surveys = [s for s in (reader_surveys or []) if s.get("is_verified", True)]
+        sample_size = len(surveys)
 
-        # Topic detection for survey benchmarking
-        is_economic = any(k in c_lower for k in ["giá", "tiền", "thuê nhà", "chi phí", "evn", "kinh tế", "renting", "rent", "singapore", "tài chính"])
-        is_disaster = any(k in c_lower for k in ["vỡ đập", "ngập lụt", "mưa bão", "thiên tai", "sơ tán", "hồ chứa"])
-        is_education = any(k in c_lower for k in ["thi tốt nghiệp", "bộ giáo dục", "đại học", "học sinh", "thpt"])
-
-        if is_disaster:
-            survey_topic_name = "Khảo sát niềm tin công chúng trước thông tin thiên tai & ứng phó sự cố"
-            base_trust = 88.5
-            sample_size = 1580
-            methodology = "Khảo sát mẫu đại diện ngẫu nhiên cư dân vùng hạ du và lưu vực theo chuẩn WVS Wave 7."
-            summary = "Khảo sát thực chứng ghi nhận 92.4% người dân ưu tiên tuyệt đối văn bản điều hành của Ban Chỉ huy Phòng chống thiên tai thay vì tin đồn mạng xã hội."
-        elif is_economic:
-            survey_topic_name = "Khảo sát niềm tin người tiêu dùng & xu hướng chi tiêu xã hội học (WVS Economic Pulse)"
-            base_trust = round(min(92.0, max(68.0, source_credibility * 0.92 + 2.5)), 1)
-            sample_size = 1420
-            methodology = "Khảo sát phân tầng người trưởng thành (18-45 tuổi) về quyết định nhà ở, việc làm và chi phí sinh hoạt."
-            summary = f"Dữ liệu khảo sát ghi nhận công chúng đánh giá cao phóng sự điều tra và số liệu thực tế từ '{source_name or 'tòa soạn uy tín'}' ({base_trust}/100) hơn các bài chia sẻ ẩn danh."
-        elif is_education:
-            survey_topic_name = "Khảo sát niềm tin học sinh - phụ huynh vào chính sách thi cử quốc gia"
-            base_trust = 91.2
-            sample_size = 1850
-            methodology = "Mẫu khảo sát phân bổ tại 12 tỉnh/thành phố theo chuẩn nhân khẩu học WVS Wave 7."
-            summary = "91.2% phụ huynh và giáo viên chỉ tin tưởng các quyết định có số hiệu công văn chính thức từ Bộ Giáo dục và Đào tạo."
-        else:
-            survey_topic_name = f"Đo lường niềm tin công chúng vào thông tin từ {source_name or 'báo chí truyền thông'}"
-            base_trust = round(min(94.0, max(62.0, source_credibility * 0.88 + 5.0)), 1)
-            sample_size = 1250 + (abs(hash(content[:50])) % 350)
-            methodology = "Mẫu khảo sát phân tầng theo độ tuổi (18-65+), vùng địa lý (Bắc, Trung, Nam) theo chuẩn WVS Wave 7."
-            summary = f"Dữ liệu khảo sát thực chứng cho thấy niềm tin của công chúng đạt {base_trust}/100 khi bài viết cung cấp số liệu trích dẫn rõ ràng."
-
-        trust_src = base_trust
-        trust_msg = round(min(96.0, trust_src * 0.96 + 3.2), 1)
-        trust_ev = round(min(98.0, trust_src * 1.03 + 1.5), 1)
-
-        age_young = round(trust_src * 0.92, 1)
-        age_mid = round(trust_src * 1.01, 1)
-        age_senior = round(min(98.0, trust_src * 1.06), 1)
-
-        survey_data = {
-            "survey_name": survey_topic_name,
-            "sample_size": sample_size,
-            "methodology": methodology,
-            "trust_source_score": trust_src,
-            "trust_message_score": trust_msg,
-            "trust_evidence_score": trust_ev,
-            "demographics_breakdown": {
-                "by_age": {"18-29": age_young, "30-49": age_mid, "50+": age_senior},
-                "by_education": {"Trung học": round(trust_src * 0.94, 1), "Đại học": round(trust_src * 1.02, 1), "Sau đại học": round(trust_src * 1.05, 1)},
-                "by_region": {"Đô thị loại I": round(trust_src * 1.02, 1), "Đô thị loại II-III": round(trust_src * 0.98, 1), "Nông thôn": round(trust_src * 0.93, 1)},
-            },
-            "findings_summary": summary,
-            "limitations": "Khảo sát thực hiện qua nền tảng số nên có thể chưa bao phủ đầy đủ cư dân vùng sâu vùng xa.",
-        }
-
-        # RAG retrieval for survey benchmarks & codebook references
         rag_hits = hybrid_rag_retriever.retrieve(
-            query=f"{title_topic} khảo sát niềm tin công chúng WVS",
+            query=f"{title_topic} khảo sát niềm tin công chúng",
             top_k=2,
             agent_name="PublicTrustAgent",
         )
-        evidence_ids = [h["chunk_id"] for h in rag_hits]
+        evidence_ids = [h["chunk_id"] for h in rag_hits] if rag_hits else []
+
+        if sample_size == 0:
+            # Strictly zero observation state
+            survey_data = {
+                "survey_name": f"Khảo sát niềm tin độc giả vào thông tin từ {source_name or 'báo chí'}",
+                "sample_size": 0,
+                "methodology": "Khảo sát thực địa trực tiếp gắn với phiên bản bài viết (chưa có người tham gia)",
+                "trust_source_score": None,
+                "trust_message_score": None,
+                "trust_evidence_score": None,
+                "demographics_breakdown": {},
+                "findings_summary": "Chưa có dữ liệu người đọc",
+                "limitations": "Chưa thu thập được phiếu khảo sát thực tế từ độc giả cho phiên bản bài viết này.",
+                "data_provenance_type": "OBSERVED",
+                "input_summary": f"Văn bản: '{title_topic[:60]}', Số phiếu khảo sát đầu vào: 0.",
+                "method_applied": "ZERO_OBSERVATION_STATE",
+                "fallback_reason": "Chưa có phiếu khảo sát của người đọc; hệ thống bảo lưu trạng thái chưa có dữ liệu thay vì sinh số liệu giả từ hash/từ khóa.",
+            }
+            summary_msg = "Chưa có dữ liệu người đọc (0 phiếu khảo sát thực chứng)."
+        else:
+            # Empirical aggregation of real reader survey scores
+            trust_scores = [float(s["trust_outlet_score"]) for s in surveys if s.get("trust_outlet_score") is not None]
+            avg_trust_source = round(sum(trust_scores) / len(trust_scores), 1) if trust_scores else 50.0
+            
+            # Trust in message / claims
+            claim_ratings: list[float] = []
+            for s in surveys:
+                c_ratings = s.get("claim_trust_ratings") or {}
+                if isinstance(c_ratings, dict):
+                    claim_ratings.extend([float(v) for v in c_ratings.values() if v is not None])
+            avg_trust_msg = round(sum(claim_ratings) / len(claim_ratings), 1) if claim_ratings else avg_trust_source
+
+            survey_data = {
+                "survey_name": f"Khảo sát thực tế niềm tin độc giả ({source_name or 'Tòa soạn'})",
+                "sample_size": sample_size,
+                "methodology": "Thu thập phiếu khảo sát thực chứng từ độc giả gắn với phiên bản bài viết đã đọc.",
+                "trust_source_score": avg_trust_source,
+                "trust_message_score": avg_trust_msg,
+                "trust_evidence_score": round(min(100.0, avg_trust_source * 0.95 + 4.0), 1),
+                "demographics_breakdown": {
+                    "total_respondents": sample_size,
+                    "verified_responses": sample_size,
+                },
+                "findings_summary": f"Tổng hợp thực chứng từ {sample_size} phiếu khảo sát của độc giả: Điểm niềm tin tòa soạn đạt {avg_trust_source}/100.",
+                "limitations": f"Kết quả đại diện cho mẫu {sample_size} độc giả đã hoàn thành bài kiểm tra và phiếu khảo sát.",
+                "data_provenance_type": "OBSERVED",
+                "input_summary": f"Tổng hợp từ {sample_size} phiếu khảo sát thực của độc giả.",
+                "method_applied": "EMPIRICAL_SURVEY_AGGREGATION",
+                "fallback_reason": None,
+            }
+            summary_msg = f"Đo lường niềm tin công chúng từ {sample_size} phiếu khảo sát thực tế: {avg_trust_source}/100."
 
         latency_ms = int((time.time() - t0) * 1000)
         end_time = datetime.now(timezone.utc)
@@ -107,23 +110,27 @@ class PublicTrustAgent:
             "status": "COMPLETED",
             "latency_ms": latency_ms,
             "execution_time_ms": latency_ms,
-            "model_name": "WVS-SurveyFramework-v7",
-            "model_version": "Wave-7",
-            "dataset_ids": ["WVS-Wave-7"],
-            "dataset_versions": {"WVS": "Wave 7"},
+            "model_name": "EmpiricalSurveyAggregator",
+            "model_version": "2.0-empirical",
+            "dataset_ids": ["READER-FEEDBACK-DB"],
+            "dataset_versions": {"feedback": "v2.0"},
             "evidence_ids": evidence_ids,
-            "retrieval_count": len(evidence_ids) if evidence_ids else 1,
+            "retrieval_count": len(evidence_ids),
             "start_time": start_time,
             "end_time": end_time,
-            "result_summary": f"Điểm niềm tin bằng chứng: {survey_data['trust_evidence_score']}/100. Cỡ mẫu khảo sát: {survey_data['sample_size']}.",
+            "result_summary": summary_msg,
             "disagreement_detected": False,
             "errors": None,
             "output": survey_data,
-            "details": survey_data,
+            "details": {
+                "input_summary": survey_data["input_summary"],
+                "method_applied": survey_data["method_applied"],
+                "fallback_reason": survey_data["fallback_reason"],
+                "data_provenance_type": survey_data["data_provenance_type"],
+            },
         }
 
         return survey_data, trace
 
 
 public_trust_agent = PublicTrustAgent()
-

@@ -151,11 +151,20 @@ class MetaAgent:
         # Calibrated confidence adjustment
         final_confidence = round(max(0.48, min(0.98, base_conf - (0.10 if is_disagreement else 0.0))), 3)
 
+        # Reader data status
+        reader_sample = trust_data.get("sample_size", 0)
+        if reader_sample == 0:
+            reader_criterion = "Dữ liệu người đọc: Chưa có dữ liệu người đọc (0 phiếu khảo sát, 0 bình luận thực nghiệm)."
+        else:
+            t_src = trust_data.get("trust_source_score")
+            ratio_str = reception_data.get("comprehension_ratio_str") or f"{reception_data.get('comprehension_score', 0)}%"
+            reader_criterion = f"Dữ liệu người đọc thực chứng: Ghi nhận {reader_sample} phiếu khảo sát, điểm niềm tin tòa soạn {t_src}/100, tỷ lệ đọc hiểu {ratio_str}."
+
         # Article-tailored scientific calibration criteria
         calibration_criteria = [
             f"Thẩm định phát ngôn '{display_title}': Đã phân tách độc lập {len(claims)} phát ngôn sự kiện, ghi nhận {supported_count} xác thực, {refuted_count} bác bỏ và {not_checkable_count + insufficient_count} cần bổ sung đối chứng.",
             f"Độ độc lập nguồn tin: Nguồn '{source_name}' được thẩm định độc lập theo chuẩn NELA-GT đạt {source_cred:.1f}/100, tách biệt ranh giới giữa uy tín tòa soạn và từng phát biểu cụ thể.",
-            f"Đồng thuận dữ liệu công chúng: Dữ liệu khảo sát xã hội học ghi nhận điểm niềm tin nguồn đạt {trust_data.get('trust_source_score', 80.0):.1f}/100 và tỷ lệ tiếp nhận kiểm chứng đạt {reception_data.get('verify_before_sharing_rate', 70.0):.1f}%.",
+            reader_criterion,
         ]
 
         latency_ms = int((time.time() - t0) * 1000)

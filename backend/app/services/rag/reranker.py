@@ -73,7 +73,12 @@ class BGERerankerEngine:
 
         p_set = set(p_tokens)
         matched_tokens = [t for t in q_tokens if t in p_set]
+        if not matched_tokens:
+            return 0.0
+
         coverage_ratio = len(matched_tokens) / len(q_tokens)
+        if coverage_ratio < 0.20:
+            return 0.0
 
         # Bigram match for phrase consistency
         q_bigrams = [f"{q_tokens[i]}_{q_tokens[i+1]}" for i in range(len(q_tokens) - 1)]
@@ -86,11 +91,9 @@ class BGERerankerEngine:
         for t in matched_tokens:
             freq_bonus += min(p_tokens.count(t) * 0.04, 0.20)
 
-        # Non-linear logistic combination
-        raw_score = 0.55 * coverage_ratio + 0.30 * bigram_ratio + 0.15 * min(freq_bonus, 0.40)
-        # Sigmoid compression to [0, 1]
-        calibrated = 1.0 / (1.0 + math.exp(-6.0 * (raw_score - 0.25)))
-        return round(float(calibrated), 4)
+        # Non-linear combination
+        raw_score = 0.60 * coverage_ratio + 0.30 * bigram_ratio + 0.10 * min(freq_bonus, 0.30)
+        return round(float(raw_score), 4)
 
     def rerank(
         self,
@@ -124,10 +127,6 @@ class BGERerankerEngine:
 
         # Filter candidates below threshold
         valid_candidates = [c for c in candidates if c.get("rerank_score", 0.0) >= min_rerank_threshold]
-        if not valid_candidates and candidates:
-            # Fallback to keep top 1 if candidate pool had weak matches
-            valid_candidates = candidates[:1]
-
         valid_candidates.sort(key=lambda x: x.get("rerank_score", 0.0), reverse=True)
         return valid_candidates[:top_k]
 

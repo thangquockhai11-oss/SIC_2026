@@ -72,6 +72,10 @@ class Analysis(Base):
     survey = relationship("PublicTrustSurvey", back_populates="analysis", uselist=False, cascade="all, delete-orphan")
     reception = relationship("InformationReception", back_populates="analysis", uselist=False, cascade="all, delete-orphan")
     agent_executions = relationship("AgentExecution", back_populates="analysis", cascade="all, delete-orphan")
+    article_snapshots = relationship("ArticleSnapshot", back_populates="analysis", cascade="all, delete-orphan")
+    quiz_questions = relationship("QuizQuestion", back_populates="analysis", cascade="all, delete-orphan")
+    reader_surveys = relationship("ReaderSurveyResponse", back_populates="analysis", cascade="all, delete-orphan")
+    user_comments = relationship("UserComment", back_populates="analysis", cascade="all, delete-orphan")
 
 
 class Claim(Base):
@@ -80,6 +84,8 @@ class Claim(Base):
     id = Column(String(36), primary_key=True, default=gen_uuid)
     analysis_id = Column(String(36), ForeignKey("analyses.id", ondelete="CASCADE"), nullable=False, index=True)
     claim_text = Column(Text, nullable=False)
+    original_sentence = Column(Text, nullable=True)
+    paragraph_id = Column(Integer, nullable=True, default=0)
     verdict = Column(String(50), nullable=False)  # SUPPORTED, REFUTED, NOT_ENOUGH_INFORMATION, NOT_CHECKABLE
     confidence = Column(Float, nullable=False, default=0.0)
     reasoning = Column(Text, nullable=False)
@@ -126,6 +132,9 @@ class MediaCredibility(Base):
     journalistic_standard_score = Column(Float, nullable=False, default=0.0)
     overall_credibility_score = Column(Float, nullable=False, default=0.0)
     reasoning = Column(Text, nullable=False)
+    outlet_profile = Column(JSON, nullable=True)
+    article_quality = Column(JSON, nullable=True)
+    outlet_summary = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
 
     analysis = relationship("Analysis", back_populates="credibility")
@@ -138,17 +147,21 @@ class PublicOpinion(Base):
     analysis_id = Column(String(36), ForeignKey("analyses.id", ondelete="CASCADE"), nullable=True, index=True)
     topic = Column(String(500), nullable=False)
     sample_size = Column(Integer, nullable=False, default=0)
-    sentiment_positive = Column(Float, nullable=False, default=0.0)
-    sentiment_neutral = Column(Float, nullable=False, default=0.0)
-    sentiment_negative = Column(Float, nullable=False, default=0.0)
-    sentiment_mixed = Column(Float, nullable=False, default=0.0)
-    stance_support = Column(Float, nullable=False, default=0.0)
-    stance_oppose = Column(Float, nullable=False, default=0.0)
-    stance_discuss = Column(Float, nullable=False, default=0.0)
-    stance_neutral = Column(Float, nullable=False, default=0.0)
+    sentiment_positive = Column(Float, nullable=True, default=None)
+    sentiment_neutral = Column(Float, nullable=True, default=None)
+    sentiment_negative = Column(Float, nullable=True, default=None)
+    sentiment_mixed = Column(Float, nullable=True, default=None)
+    stance_support = Column(Float, nullable=True, default=None)
+    stance_oppose = Column(Float, nullable=True, default=None)
+    stance_discuss = Column(Float, nullable=True, default=None)
+    stance_neutral = Column(Float, nullable=True, default=None)
     top_emotions = Column(JSON, nullable=False, default=dict)
-    discussion_summary = Column(Text, nullable=False)
+    discussion_summary = Column(Text, nullable=True)
     raw_comments_sample = Column(JSON, nullable=True)
+    data_provenance_type = Column(String(50), nullable=False, default="OBSERVED")
+    input_summary = Column(Text, nullable=True)
+    method_applied = Column(String(100), nullable=True)
+    fallback_reason = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
 
     analysis = relationship("Analysis", back_populates="opinion")
@@ -161,13 +174,17 @@ class PublicTrustSurvey(Base):
     analysis_id = Column(String(36), ForeignKey("analyses.id", ondelete="CASCADE"), nullable=True, index=True)
     survey_name = Column(String(255), nullable=False)
     sample_size = Column(Integer, nullable=False, default=0)
-    methodology = Column(String(500), nullable=False)
-    trust_source_score = Column(Float, nullable=False, default=0.0)
-    trust_message_score = Column(Float, nullable=False, default=0.0)
-    trust_evidence_score = Column(Float, nullable=False, default=0.0)
+    methodology = Column(String(500), nullable=True)
+    trust_source_score = Column(Float, nullable=True, default=None)
+    trust_message_score = Column(Float, nullable=True, default=None)
+    trust_evidence_score = Column(Float, nullable=True, default=None)
     demographics_breakdown = Column(JSON, nullable=False, default=dict)
-    findings_summary = Column(Text, nullable=False)
-    limitations = Column(Text, nullable=False)
+    findings_summary = Column(Text, nullable=True)
+    limitations = Column(Text, nullable=True)
+    data_provenance_type = Column(String(50), nullable=False, default="OBSERVED")
+    input_summary = Column(Text, nullable=True)
+    method_applied = Column(String(100), nullable=True)
+    fallback_reason = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
 
     analysis = relationship("Analysis", back_populates="survey")
@@ -179,14 +196,19 @@ class InformationReception(Base):
     id = Column(String(36), primary_key=True, default=gen_uuid)
     analysis_id = Column(String(36), ForeignKey("analyses.id", ondelete="CASCADE"), nullable=True, index=True)
     sample_size = Column(Integer, nullable=False, default=0)
-    comprehension_score = Column(Float, nullable=False, default=0.0)
-    claim_identification_rate = Column(Float, nullable=False, default=0.0)
-    acceptance_rate = Column(Float, nullable=False, default=0.0)
-    sharing_intention_high = Column(Float, nullable=False, default=0.0)
-    sharing_intention_medium = Column(Float, nullable=False, default=0.0)
-    sharing_intention_low = Column(Float, nullable=False, default=0.0)
-    verify_before_sharing_rate = Column(Float, nullable=False, default=0.0)
-    cognitive_resistance_notes = Column(Text, nullable=False)
+    comprehension_score = Column(Float, nullable=True, default=None)
+    comprehension_ratio_str = Column(String(50), nullable=True)
+    claim_identification_rate = Column(Float, nullable=True, default=None)
+    acceptance_rate = Column(Float, nullable=True, default=None)
+    sharing_intention_high = Column(Float, nullable=True, default=None)
+    sharing_intention_medium = Column(Float, nullable=True, default=None)
+    sharing_intention_low = Column(Float, nullable=True, default=None)
+    verify_before_sharing_rate = Column(Float, nullable=True, default=None)
+    cognitive_resistance_notes = Column(Text, nullable=True)
+    data_provenance_type = Column(String(50), nullable=False, default="OBSERVED")
+    input_summary = Column(Text, nullable=True)
+    method_applied = Column(String(100), nullable=True)
+    fallback_reason = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
 
     analysis = relationship("Analysis", back_populates="reception")
@@ -355,4 +377,110 @@ class RAGModelVersion(Base):
     dimension = Column(Integer, nullable=False, default=1024)
     is_active = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+
+class ArticleSnapshot(Base):
+    __tablename__ = "article_snapshots"
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    analysis_id = Column(String(36), ForeignKey("analyses.id", ondelete="CASCADE"), nullable=True, index=True)
+    source_url = Column(String(2000), nullable=False, index=True)
+    final_url = Column(String(2000), nullable=True)
+    title = Column(String(500), nullable=False)
+    author = Column(String(255), nullable=True)
+    published_date = Column(String(100), nullable=True)
+    extraction_status = Column(String(50), nullable=False, default="SUCCESS")  # SUCCESS, PAYWALL_DETECTED, TITLE_ONLY_EXTRACTED, FIXTURE_FALLBACK
+    paragraphs = Column(JSON, nullable=False, default=list)
+    source_links = Column(JSON, nullable=False, default=list)
+    content_hash = Column(String(64), nullable=True, index=True)
+    version = Column(Integer, nullable=False, default=1)
+    is_verified_online = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+    analysis = relationship("Analysis", back_populates="article_snapshots")
+    quiz_questions = relationship("QuizQuestion", back_populates="snapshot")
+    reader_surveys = relationship("ReaderSurveyResponse", back_populates="snapshot")
+    user_comments = relationship("UserComment", back_populates="snapshot")
+
+
+class QuizQuestion(Base):
+    __tablename__ = "quiz_questions"
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    analysis_id = Column(String(36), ForeignKey("analyses.id", ondelete="CASCADE"), nullable=False, index=True)
+    snapshot_id = Column(String(36), ForeignKey("article_snapshots.id", ondelete="SET NULL"), nullable=True, index=True)
+    question_text = Column(Text, nullable=False)
+    options = Column(JSON, nullable=False)  # List of string options
+    correct_option_index = Column(Integer, nullable=False)  # Index of approved correct answer (0-indexed)
+    explanation = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+    analysis = relationship("Analysis", back_populates="quiz_questions")
+    snapshot = relationship("ArticleSnapshot", back_populates="quiz_questions")
+
+
+class ReaderSurveyResponse(Base):
+    __tablename__ = "reader_survey_responses"
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    analysis_id = Column(String(36), ForeignKey("analyses.id", ondelete="CASCADE"), nullable=False, index=True)
+    snapshot_id = Column(String(36), ForeignKey("article_snapshots.id", ondelete="SET NULL"), nullable=True, index=True)
+    session_id = Column(String(100), nullable=True, index=True)
+    submission_batch_id = Column(String(100), nullable=True, index=True)
+    
+    # 1. Trust in outlet (0-100 or 1-5 rating scaled)
+    trust_outlet_score = Column(Float, nullable=False)
+    
+    # 2. Trust in specific claims: {claim_id: rating_1_to_5}
+    claim_trust_ratings = Column(JSON, nullable=False, default=dict)
+    
+    # 3. Comprehension answers: {question_id: chosen_option_index}
+    quiz_answers = Column(JSON, nullable=False, default=dict)
+    correct_count = Column(Integer, nullable=False, default=0)
+    total_questions = Column(Integer, nullable=False, default=0)
+    comprehension_score = Column(Float, nullable=False, default=0.0)  # percentage, e.g. 66.7
+    
+    # 4. Sharing intention
+    sharing_intention = Column(String(20), nullable=False, default="MEDIUM")  # HIGH, MEDIUM, LOW
+    verify_before_sharing = Column(Boolean, nullable=False, default=True)
+    
+    is_verified = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+    analysis = relationship("Analysis", back_populates="reader_surveys")
+    snapshot = relationship("ArticleSnapshot", back_populates="reader_surveys")
+
+
+class UserComment(Base):
+    __tablename__ = "user_comments"
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    analysis_id = Column(String(36), ForeignKey("analyses.id", ondelete="CASCADE"), nullable=False, index=True)
+    snapshot_id = Column(String(36), ForeignKey("article_snapshots.id", ondelete="SET NULL"), nullable=True, index=True)
+    author_name = Column(String(100), nullable=False, default="Độc giả")
+    comment_text = Column(Text, nullable=False)
+    submission_batch_id = Column(String(100), nullable=True, index=True)
+    is_verified = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+    analysis = relationship("Analysis", back_populates="user_comments")
+    snapshot = relationship("ArticleSnapshot", back_populates="user_comments")
+    stances = relationship("CommentClaimStance", back_populates="comment", cascade="all, delete-orphan")
+
+
+class CommentClaimStance(Base):
+    __tablename__ = "comment_claim_stances"
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    comment_id = Column(String(36), ForeignKey("user_comments.id", ondelete="CASCADE"), nullable=False, index=True)
+    claim_id = Column(String(36), ForeignKey("claims.id", ondelete="CASCADE"), nullable=False, index=True)
+    stance = Column(String(20), nullable=False)  # SUPPORT, OPPOSE, DISCUSS, NEUTRAL
+    confidence = Column(Float, nullable=False, default=0.0)
+    reasoning = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+    comment = relationship("UserComment", back_populates="stances")
+    claim = relationship("Claim")
+
+
 

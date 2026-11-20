@@ -25,27 +25,17 @@ def get_dashboard_stats(db: Session = Depends(get_db_session)) -> DashboardStats
 
     # Sentiment distribution aggregated from PublicOpinion records
     opinion_rows = db.query(PublicOpinion).all()
-    if opinion_rows:
-        pos = sum(o.sentiment_positive for o in opinion_rows) / len(opinion_rows)
-        neu = sum(o.sentiment_neutral for o in opinion_rows) / len(opinion_rows)
-        neg = sum(o.sentiment_negative for o in opinion_rows) / len(opinion_rows)
-        mix = sum(o.sentiment_mixed for o in opinion_rows) / len(opinion_rows)
+    valid_sentiment_rows = [o for o in opinion_rows if o.sentiment_positive is not None]
+    if valid_sentiment_rows:
+        pos = sum(o.sentiment_positive or 0.0 for o in valid_sentiment_rows) / len(valid_sentiment_rows)
+        neu = sum(o.sentiment_neutral or 0.0 for o in valid_sentiment_rows) / len(valid_sentiment_rows)
+        neg = sum(o.sentiment_negative or 0.0 for o in valid_sentiment_rows) / len(valid_sentiment_rows)
+        mix = sum(o.sentiment_mixed or 0.0 for o in valid_sentiment_rows) / len(valid_sentiment_rows)
         sentiment_dist = {
             "Tích cực (Positive)": round(pos * 100, 1),
             "Trung lập (Neutral)": round(neu * 100, 1),
             "Tiêu cực (Negative)": round(neg * 100, 1),
             "Hỗn hợp (Mixed)": round(mix * 100, 1),
-        }
-
-        sup = sum(o.stance_support for o in opinion_rows) / len(opinion_rows)
-        opp = sum(o.stance_oppose for o in opinion_rows) / len(opinion_rows)
-        dis = sum(o.stance_discuss for o in opinion_rows) / len(opinion_rows)
-        st_neu = sum(o.stance_neutral for o in opinion_rows) / len(opinion_rows)
-        stance_dist = {
-            "Ủng hộ (Support)": round(sup * 100, 1),
-            "Phản đối (Oppose)": round(opp * 100, 1),
-            "Thảo luận (Discuss)": round(dis * 100, 1),
-            "Không liên quan (Neutral)": round(st_neu * 100, 1),
         }
     else:
         sentiment_dist = {
@@ -54,6 +44,20 @@ def get_dashboard_stats(db: Session = Depends(get_db_session)) -> DashboardStats
             "Tiêu cực (Negative)": 0.0,
             "Hỗn hợp (Mixed)": 0.0,
         }
+
+    valid_stance_rows = [o for o in opinion_rows if o.stance_support is not None]
+    if valid_stance_rows:
+        sup = sum(o.stance_support or 0.0 for o in valid_stance_rows) / len(valid_stance_rows)
+        opp = sum(o.stance_oppose or 0.0 for o in valid_stance_rows) / len(valid_stance_rows)
+        dis = sum(o.stance_discuss or 0.0 for o in valid_stance_rows) / len(valid_stance_rows)
+        st_neu = sum(o.stance_neutral or 0.0 for o in valid_stance_rows) / len(valid_stance_rows)
+        stance_dist = {
+            "Ủng hộ (Support)": round(sup * 100, 1),
+            "Phản đối (Oppose)": round(opp * 100, 1),
+            "Thảo luận (Discuss)": round(dis * 100, 1),
+            "Không liên quan (Neutral)": round(st_neu * 100, 1),
+        }
+    else:
         stance_dist = {
             "Ủng hộ (Support)": 0.0,
             "Phản đối (Oppose)": 0.0,

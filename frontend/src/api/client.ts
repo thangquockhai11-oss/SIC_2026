@@ -115,6 +115,14 @@ export const api = {
       const res = await client.get<{ analysis_id: string; total_latency_ms: number; traces: any[] }>(`/analyzer/${id}/trace`);
       return res.data;
     },
+    getSnapshot: async (id: string): Promise<any> => {
+      const res = await client.get(`/analyzer/${id}/snapshot`);
+      return res.data;
+    },
+    getSnapshotsByUrl: async (url: string): Promise<any[]> => {
+      const res = await client.get<any[]>("/analyzer/snapshots", { params: { url } });
+      return res.data;
+    },
     getModels: async (): Promise<any[]> => {
       const res = await client.get<any[]>("/analyzer/models/catalog");
       return res.data;
@@ -151,6 +159,47 @@ export const api = {
         "/evidence",
         { params }
       );
+      return res.data;
+    },
+
+    importDocument: async (payload: {
+      url?: string;
+      title?: string;
+      content?: string;
+      publisher?: string;
+      original_source?: string;
+      publication_date?: string;
+      document_version?: string;
+    }) => {
+      const res = await client.post("/evidence/import", payload);
+      return res.data;
+    },
+
+    uploadFile: async (formData: FormData) => {
+      const res = await client.post("/evidence/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return res.data;
+    },
+
+    listDocuments: async (params: { q?: string; page?: number; page_size?: number } = {}) => {
+      const res = await client.get<{ items: any[]; total: number; page: number; page_size: number }>(
+        "/evidence/documents",
+        { params }
+      );
+      return res.data;
+    },
+
+    findReferences: async (claimId: string, targetUrl?: string) => {
+      const res = await client.post(`/evidence/claims/${claimId}/find-references`, { target_url: targetUrl });
+      return res.data;
+    },
+
+    rerunClaim: async (claimId: string, newSourceUrl?: string, newSourceText?: string) => {
+      const res = await client.post(`/evidence/claims/${claimId}/rerun`, {
+        new_source_url: newSourceUrl,
+        new_source_text: newSourceText,
+      });
       return res.data;
     },
   },
@@ -275,6 +324,26 @@ export const api = {
     },
     documentDetail: async (docId: string): Promise<any> => {
       const res = await client.get(`/rag/documents/${docId}`);
+      return res.data;
+    },
+  },
+
+  // Reader Feedback & Verified Quiz
+  feedback: {
+    getQuiz: async (analysisId: string): Promise<any[]> => {
+      const res = await client.get(`/analyzer/${analysisId}/quiz`);
+      return res.data;
+    },
+    submitSurvey: async (analysisId: string, payload: any): Promise<any> => {
+      const res = await client.post(`/analyzer/${analysisId}/surveys`, payload);
+      return res.data;
+    },
+    submitComment: async (analysisId: string, payload: any): Promise<any> => {
+      const res = await client.post(`/analyzer/${analysisId}/comments`, payload);
+      return res.data;
+    },
+    submitBatch: async (analysisId: string, payload: any): Promise<any> => {
+      const res = await client.post(`/analyzer/${analysisId}/feedback/batch`, payload);
       return res.data;
     },
   },

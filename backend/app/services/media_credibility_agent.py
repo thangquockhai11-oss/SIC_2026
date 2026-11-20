@@ -1,14 +1,14 @@
 """Media Credibility Agent: Source & Journalistic Integrity Evaluator.
 
-Evaluates source metadata, transparency, citation rigor, and journalistic
-standards according to the NELA-GT benchmark framework, strictly independent
-of individual claim accuracy.
+Evaluates:
+1. Outlet Profile: Ownership, editorial policy, correction policy, verification source.
+2. Article Quality: Author, data sources, cited documents, citation density, sensationalism.
+3. Whole newsroom summary: Strictly conditioned on sample size and survey timeframe.
 """
 
 from datetime import datetime, timezone
 import time
 from typing import Any
-from urllib.parse import urlparse
 import uuid
 
 from app.services.dataset_loaders import credibility_loader
@@ -23,28 +23,43 @@ class MediaCredibilityAgent:
         self.agent_name = "MediaCredibilityAgent"
         self.agent_role = "Đánh giá chất lượng và độ minh bạch nguồn tin độc lập"
 
-    def evaluate(self, source_url: str | None, content: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    def evaluate(
+        self,
+        source_url: str | None,
+        content: str,
+        author: str | None = None,
+        sample_size: int | None = None,
+        survey_timeframe: str | None = None,
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
         """Evaluate source credibility and produce full execution trace."""
         start_time = datetime.now(timezone.utc)
         t0 = time.time()
 
-        res = credibility_loader.assess_media_credibility(source_url, content)
-        domain = urlparse(source_url).netloc if source_url else None
+        res = credibility_loader.assess_media_credibility(
+            source_url=source_url,
+            content=content,
+            author=author,
+            sample_size=sample_size,
+            survey_timeframe=survey_timeframe,
+        )
 
         cred_data = {
-            "source_name": res.get("source_name", "Nguồn chưa phân loại"),
-            "domain": domain,
-            "transparency_score": round(res["transparency_score"] * 100, 1),
-            "citation_score": round(res["citation_quality_score"] * 100, 1),
-            "evidence_score": round(res["evidence_quality_score"] * 100, 1),
-            "journalistic_standard_score": round((res["transparency_score"] + res["citation_quality_score"]) * 50, 1),
-            "overall_credibility_score": round(res["overall_credibility_score"] * 100, 1),
-            "reasoning": res["explanation"],
+            "source_name": res["source_name"],
+            "domain": res["domain"],
+            "transparency_score": res["transparency_score"],
+            "citation_score": res["citation_score"],
+            "evidence_score": res["evidence_score"],
+            "journalistic_standard_score": res["journalistic_standard_score"],
+            "overall_credibility_score": res["overall_credibility_score"],
+            "reasoning": res["reasoning"],
+            "outlet_profile": res["outlet_profile"],
+            "article_quality": res["article_quality"],
+            "outlet_summary": res["outlet_summary"],
         }
 
         # RAG retrieval for publisher guidelines and source audit records
         rag_hits = hybrid_rag_retriever.retrieve(
-            query=f"{domain or cred_data['source_name']} journalistic credibility transparency",
+            query=f"{res['domain'] or cred_data['source_name']} journalistic credibility transparency",
             top_k=2,
             agent_name="MediaCredibilityAgent",
         )
@@ -57,6 +72,7 @@ class MediaCredibilityAgent:
         model_name = model_meta.model_name if model_meta else "NELA-GT-CredibilityEvaluator"
         model_version = model_meta.model_version if model_meta else "2020.2-benchmark"
 
+        outlet_score_str = f"{cred_data['overall_credibility_score']}/100" if cred_data['overall_credibility_score'] is not None else "Chưa khảo sát mẫu"
         trace = {
             "execution_id": str(uuid.uuid4()),
             "agent_name": self.agent_name,
@@ -69,10 +85,10 @@ class MediaCredibilityAgent:
             "dataset_ids": ["NELA-GT-2020"],
             "dataset_versions": {"NELA-GT": "2020"},
             "evidence_ids": evidence_ids,
-            "retrieval_count": len(evidence_ids) if evidence_ids else (1 if domain else 0),
+            "retrieval_count": len(evidence_ids) if evidence_ids else (1 if res["domain"] else 0),
             "start_time": start_time,
             "end_time": end_time,
-            "result_summary": f"Độ tin cậy nguồn '{cred_data['source_name']}': {cred_data['overall_credibility_score']}/100.",
+            "result_summary": f"Nguồn '{cred_data['source_name']}': Hồ sơ tòa soạn & chất lượng bài viết đã đánh giá. Chỉ số toàn tòa soạn: {outlet_score_str}.",
             "disagreement_detected": False,
             "errors": None,
             "output": cred_data,
@@ -83,4 +99,3 @@ class MediaCredibilityAgent:
 
 
 media_credibility_agent = MediaCredibilityAgent()
-

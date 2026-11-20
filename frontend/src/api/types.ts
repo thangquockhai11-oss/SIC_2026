@@ -36,6 +36,8 @@ export type Evidence = {
 export type Claim = {
   id: string;
   claim_text: string;
+  original_sentence?: string | null;
+  paragraph_id?: number | null;
   verdict: "SUPPORTED" | "REFUTED" | "NOT_ENOUGH_INFORMATION" | "NOT_CHECKABLE";
   confidence: number;
   reasoning: string;
@@ -47,6 +49,30 @@ export type Claim = {
   evidences: Evidence[];
 };
 
+export type OutletProfile = {
+  publisher_name: string;
+  ownership?: string | null;
+  editorial_policy?: string | null;
+  correction_policy?: string | null;
+  verification_source?: string | null;
+};
+
+export type ArticleQuality = {
+  author?: string | null;
+  data_sources?: string[];
+  cited_documents?: string[];
+  citation_density?: number;
+  sensationalism_assessment?: string | null;
+};
+
+export type OutletSummary = {
+  has_sufficient_sample: boolean;
+  sample_size?: number | null;
+  survey_timeframe?: string | null;
+  outlet_score?: number | null;
+  summary_note: string;
+};
+
 export type MediaCredibility = {
   id: string;
   source_name: string;
@@ -55,30 +81,32 @@ export type MediaCredibility = {
   citation_score: number;
   evidence_score: number;
   journalistic_standard_score: number;
-  overall_credibility_score: number;
+  overall_credibility_score: number | null;
   reasoning: string;
+  outlet_profile?: OutletProfile | null;
+  article_quality?: ArticleQuality | null;
+  outlet_summary?: OutletSummary | null;
 };
 
 export type PublicOpinion = {
   id: string;
   topic: string;
   sample_size: number;
-  sentiment_positive: number;
-  sentiment_neutral: number;
-  sentiment_negative: number;
-  sentiment_mixed: number;
-  stance_support: number;
-  stance_oppose: number;
-  stance_discuss: number;
-  stance_neutral: number;
+  sentiment_positive: number | null;
+  sentiment_neutral: number | null;
+  sentiment_negative: number | null;
+  sentiment_mixed: number | null;
+  stance_support: number | null;
+  stance_oppose: number | null;
+  stance_discuss: number | null;
+  stance_neutral: number | null;
   top_emotions: Record<string, number>;
   discussion_summary: string;
-  raw_comments_sample?: Array<{
-    author: string;
-    comment: string;
-    sentiment: string;
-    stance: string;
-  }> | null;
+  raw_comments_sample?: any;
+  data_provenance_type?: "OBSERVED" | "PREDICTED" | "ILLUSTRATIVE" | null;
+  input_summary?: string | null;
+  method_applied?: string | null;
+  fallback_reason?: string | null;
 };
 
 export type PublicTrustSurvey = {
@@ -86,25 +114,76 @@ export type PublicTrustSurvey = {
   survey_name: string;
   sample_size: number;
   methodology: string;
-  trust_source_score: number;
-  trust_message_score: number;
-  trust_evidence_score: number;
+  trust_source_score: number | null;
+  trust_message_score: number | null;
+  trust_evidence_score: number | null;
   demographics_breakdown: Record<string, any>;
   findings_summary: string;
   limitations: string;
+  data_provenance_type?: "OBSERVED" | "PREDICTED" | "ILLUSTRATIVE" | null;
+  input_summary?: string | null;
+  method_applied?: string | null;
+  fallback_reason?: string | null;
 };
 
 export type InformationReception = {
   id: string;
   sample_size: number;
-  comprehension_score: number;
-  claim_identification_rate: number;
-  acceptance_rate: number;
-  sharing_intention_high: number;
-  sharing_intention_medium: number;
-  sharing_intention_low: number;
-  verify_before_sharing_rate: number;
+  comprehension_score: number | null;
+  comprehension_ratio_str?: string | null;
+  claim_identification_rate: number | null;
+  acceptance_rate: number | null;
+  sharing_intention_high: number | null;
+  sharing_intention_medium: number | null;
+  sharing_intention_low: number | null;
+  verify_before_sharing_rate: number | null;
   cognitive_resistance_notes: string;
+  data_provenance_type?: "OBSERVED" | "PREDICTED" | "ILLUSTRATIVE" | null;
+  input_summary?: string | null;
+  method_applied?: string | null;
+  fallback_reason?: string | null;
+};
+
+export type QuizQuestion = {
+  id: string;
+  analysis_id: string;
+  snapshot_id?: string | null;
+  question_text: string;
+  options: string[];
+  correct_option_index: number;
+  explanation: string;
+};
+
+export type ReaderSurveyCreate = {
+  trust_outlet_score: number;
+  claim_trust_ratings?: Record<string, number>;
+  quiz_answers: Record<string, number>;
+  sharing_intention: string;
+  verify_before_sharing: boolean;
+  session_id?: string;
+  submission_batch_id?: string;
+};
+
+export type UserCommentCreate = {
+  comment_text: string;
+  author_name?: string;
+  submission_batch_id?: string;
+};
+
+export type BatchFeedbackSubmission = {
+  surveys: ReaderSurveyCreate[];
+  comments: UserCommentCreate[];
+  batch_id?: string;
+};
+
+export type BatchFeedbackResponse = {
+  analysis_id: string;
+  submitted_surveys: number;
+  submitted_comments: number;
+  batch_id: string;
+  comprehension_score: number | null;
+  comprehension_ratio_str: string | null;
+  updated_stance_distribution: Record<string, number | null>;
 };
 
 export type AgentExecution = {
@@ -130,6 +209,22 @@ export type AgentExecution = {
   details?: Record<string, any> | null;
 };
 
+export type ArticleSnapshot = {
+  id: string;
+  analysis_id?: string | null;
+  source_url: string;
+  final_url?: string | null;
+  title: string;
+  author?: string | null;
+  published_date?: string | null;
+  extraction_status: "SUCCESS" | "PAYWALL_DETECTED" | "TITLE_ONLY_EXTRACTED" | "FIXTURE_FALLBACK";
+  paragraphs: string[];
+  source_links: Array<{ text: string; url: string }>;
+  version: number;
+  is_verified_online: boolean;
+  created_at: string;
+};
+
 export type AnalysisDetail = {
   id: string;
   user_id: string | null;
@@ -152,6 +247,8 @@ export type AnalysisDetail = {
   survey: PublicTrustSurvey | null;
   reception: InformationReception | null;
   agent_executions: AgentExecution[];
+  snapshot?: ArticleSnapshot | null;
+  snapshots?: ArticleSnapshot[];
 };
 
 export type AnalysisListItem = {
@@ -220,4 +317,61 @@ export type DatasetListResponse = {
   total: number;
   page: number;
   page_size: number;
+};
+
+export type EvidenceDocument = {
+  id: string;
+  title: string;
+  publisher: string;
+  original_source: string;
+  publication_date: string | null;
+  retrieval_date: string;
+  document_version: string;
+  source_url: string | null;
+  chunks_count: number;
+  created_at: string;
+};
+
+export type Entities5D = {
+  people: string[];
+  action: string[];
+  location: string[];
+  event_date: string[];
+  scope: string;
+};
+
+export type SyndicatedOrigin = {
+  original_source: string;
+  copies_count: number;
+  copy_urls: string[];
+  is_syndicated: boolean;
+};
+
+export type ReferencePassage = {
+  chunk_id: string;
+  source_name: string;
+  original_source: string;
+  source_url: string | null;
+  excerpt: string;
+  publication_date?: string | null;
+  relevance_score: number;
+  nli_relation: string;
+  entities_5d: Entities5D;
+  date_conflict?: string | null;
+};
+
+export type FindReferencesResult = {
+  claim_id: string;
+  claim_text: string;
+  original_sentence?: string | null;
+  paragraph_id?: number | null;
+  verdict: string;
+  verification_status: string;
+  claim_5d: Entities5D;
+  passages: ReferencePassage[];
+  syndicated_origins: SyndicatedOrigin[];
+  independent_origins_count: number;
+  disputed_detail: string | null;
+  has_conflict: boolean;
+  reasoning: string;
 };

@@ -29,7 +29,7 @@ def analyze_comments(data: OpinionAnalyzeInput) -> PublicOpinionResponse:
         stance_neutral=raw_res["stance_neutral"],
         top_emotions=raw_res["top_emotions"],
         discussion_summary=raw_res["discussion_summary"],
-        raw_comments_sample=raw_res["raw_comments_sample"],
+        raw_comments_sample=[{"text": c} if isinstance(c, str) else c for c in (raw_res.get("raw_comments_sample") or [])],
     )
 
 

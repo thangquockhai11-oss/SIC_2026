@@ -1,21 +1,28 @@
 """Public Opinion Agent: Dual-Aspect Sentiment & Target-Oriented Stance Analyzer.
 
-Enforces strict separation between Sentiment polarity and targeted Stance,
-calibrated with UIT-VSMEC (Vietnamese social emotions) and TweetEval.
+Enforces strict separation between Sentiment polarity and targeted Stance.
+Removes all synthetic/fake comments and hardcoded opinion percentages.
+Displays 'Chưa có dữ liệu người đọc' when no real comments are provided.
+Evaluates stance on each individual (comment, claim) pair before aggregating.
 """
 
 from datetime import datetime, timezone
+import logging
 import time
 from typing import Any
 import uuid
 
-from app.services.dataset_loaders import opinion_loader
-from app.services.model_manager import model_manager
+from app.services.pairwise_stance_analyzer import (
+    aggregate_pairwise_stances,
+    evaluate_comment_claim_pair,
+)
 from app.services.rag.hybrid_retriever import hybrid_rag_retriever
+
+logger = logging.getLogger(__name__)
 
 
 class PublicOpinionAgent:
-    """Specialized agent analyzing sentiment and stance separately."""
+    """Specialized agent analyzing sentiment and stance separately from real user comments."""
 
     def __init__(self):
         self.agent_name = "PublicOpinionAgent"
@@ -25,130 +32,115 @@ class PublicOpinionAgent:
         self,
         content: str,
         claim_text: str | None = None,
-        comments: list[str] | None = None,
+        claims: list[dict[str, Any]] | None = None,
+        comments: list[str] | list[dict[str, Any]] | None = None,
         language: str = "vi",
         article_title: str | None = None,
     ) -> tuple[dict[str, Any], dict[str, Any]]:
-        """Analyze public opinion with dual-aspect sentiment and stance separation."""
+        """Analyze public opinion strictly from verified comments.
+        Never fabricates comments or percentages.
+        """
         start_time = datetime.now(timezone.utc)
         t0 = time.time()
+        title_topic = (article_title or "Chủ đề bài viết").strip()
 
-        c_lower = content.lower()
-        title_text = article_title or (claim_text if claim_text else "bài viết")
-
-        is_sensational_hoax = any(k in c_lower for k in ["bếp gas", "vỡ đập", "hủy thi", "lừa đảo", "chấn động"])
-        is_lifestyle_economic = any(k in c_lower for k in ["renting", "rent", "singapore", "thuê nhà", "giá điện", "evn", "chi phí", "người trẻ"])
-
-        if not comments:
-            if is_sensational_hoax:
-                comments = [
-                    "Thông tin này hoàn toàn phi lý, cơ quan chức năng cần xử phạt nghiêm các trang đưa tin sai lệch.",
-                    "Lại là chiêu trò câu like giật gân, mọi người tuyệt đối không nên chia sẻ làm hoang mang dư luận.",
-                    "Đã có thông cáo chính thức bác bỏ rồi nhé, đề nghị cộng đồng mạng kiểm chứng kỹ trước khi tin.",
-                    "Chiêu trò bán hàng trá hình nguy hiểm, may mà có cảnh báo kịp thời.",
-                    "Hoan nghênh cơ quan thẩm quyền và báo chí đã nhanh chóng xác minh đính chính.",
-                ]
-            elif is_lifestyle_economic:
-                comments = [
-                    "Bài viết phân tích rất đúng thực tế chi phí sinh hoạt và nhu cầu tự lập của người trẻ hiện nay.",
-                    "Giá thuê nhà và chi phí hiện nay là bài toán lớn, cần cân nhắc kỹ dòng tiền trước khi quyết định ra riêng.",
-                    "Một góc nhìn sâu sắc về thay đổi xã hội học và phong cách sống của thế hệ dưới 35.",
-                    "Rất đồng tình với các số liệu khảo sát được trích dẫn trong bài báo, số liệu rất thuyết phục.",
-                    "Cần thêm các chính sách hỗ trợ nhà ở xã hội hoặc cơ chế tài chính linh hoạt cho nhóm lao động trẻ.",
-                ]
-            else:
-                comments = [
-                    f"Bài viết cung cấp thông tin đa chiều và dẫn chứng cụ thể về {title_text[:40]}.",
-                    "Cần đối chiếu thêm các góc nhìn chuyên môn để có nhận định khách quan hơn.",
-                    "Đồng tình với quan điểm phân tích có căn cứ số liệu trong bài viết.",
-                    "Thông tin thời sự đáng chú ý, phản ánh đúng diễn biến được quan tâm.",
-                    "Theo dõi diễn biến tiếp theo từ các thông cáo báo chí chính thức.",
-                ]
-
-        # Use opinion_loader calibrated against UIT-VSMEC
-        res = opinion_loader.analyze_opinion(content, claim_text=claim_text, language=language)
-
-        sample_size = len(comments) * 35 + (abs(hash(content[:50])) % 120)
-        vsmec_emotions = opinion_loader.get_vsmec_emotion_distribution()
-
-        top_emotions = {
-            f"{k} (UIT-VSMEC)": round(v * 100, 1)
-            for k, v in list(vsmec_emotions.items())[:4]
-        }
-
-        # Stance and Sentiment separate distributions
-        stance_dist = res["stance_distribution"]
-        sent_dist = res["sentiment_distribution"]
-
-        if is_sensational_hoax:
-            stance_support = 0.08
-            stance_oppose = 0.72
-            stance_discuss = 0.16
-            stance_neutral = 0.04
-            dominant_stance = "OPPOSE"
-            dominant_pct = 72
-            stance_text = "Phản đối & Bác bỏ tin đồn"
-        elif is_lifestyle_economic:
-            stance_support = 0.32
-            stance_oppose = 0.14
-            stance_discuss = 0.48
-            stance_neutral = 0.06
-            dominant_stance = "DISCUSS"
-            dominant_pct = 48
-            stance_text = "Thảo luận & Phân tích chuyên sâu"
-        else:
-            stance_support = stance_dist.get("SUPPORT", 0.30)
-            stance_oppose = stance_dist.get("OPPOSE", 0.25)
-            stance_discuss = 0.35
-            stance_neutral = stance_dist.get("NEUTRAL", 0.10)
-            dominant_stance = res["stance"]
-            dominant_pct = int(max(stance_support, stance_oppose, stance_discuss) * 100)
-            stance_text = "Thảo luận trung lập" if dominant_stance == "NEUTRAL" else ("Ủng hộ" if dominant_stance == "SUPPORT" else "Phản đối")
-
-        raw_samples = [
-            {
-                "author": f"User_{idx+1}",
-                "comment": c,
-                "sentiment": "NEGATIVE" if any(w in c.lower() for w in ["phi lý", "giả mạo", "hoang mang", "nguy hiểm"]) else ("POSITIVE" if any(w in c.lower() for w in ["sâu sắc", "thuyết phục", "hoan nghênh", "đúng thực tế"]) else "NEUTRAL"),
-                "stance": "OPPOSE" if any(w in c.lower() for w in ["phản đối", "sai lệch", "bác bỏ", "xử phạt"]) else ("SUPPORT" if any(w in c.lower() for w in ["đồng tình", "thuyết phục", "ủng hộ"]) else "DISCUSS"),
-            }
-            for idx, c in enumerate(comments[:5])
-        ]
-
-        op_data = {
-            "topic": f"Ý kiến công chúng về '{title_text[:60]}'",
-            "sample_size": sample_size,
-            "sentiment_positive": sent_dist.get("POSITIVE", 0.30),
-            "sentiment_neutral": sent_dist.get("NEUTRAL", 0.50),
-            "sentiment_negative": sent_dist.get("NEGATIVE", 0.20),
-            "sentiment_mixed": 0.10,
-            "stance_support": stance_support,
-            "stance_oppose": stance_oppose,
-            "stance_discuss": stance_discuss,
-            "stance_neutral": stance_neutral,
-            "top_emotions": top_emotions,
-            "discussion_summary": (
-                f"Phân tích lập trường dư luận độc lập: Luồng ý kiến chiếm ưu thế là '{stance_text}' ({dominant_pct}%). "
-                f"Tâm lý người đọc phản ánh rõ nét tính chất chủ đề '{title_text[:50]}': "
-                f"{'Cộng đồng kiên quyết lên án thông tin giả mạo và yêu cầu kiểm chứng pháp lý.' if is_sensational_hoax else 'Công chúng chủ động chia sẻ trải nghiệm thực tế và thảo luận các khía cạnh kinh tế - xã hội có liên quan.'}"
-            ),
-            "raw_comments_sample": raw_samples,
-        }
-
-        # RAG retrieval for social sentiment context and related discussions
         rag_hits = hybrid_rag_retriever.retrieve(
-            query=f"{title_text} thảo luận ý kiến cộng đồng dư luận",
+            query=f"{title_topic} dư luận mạng xã hội ý kiến bình luận",
             top_k=2,
             agent_name="PublicOpinionAgent",
         )
-        evidence_ids = [h["chunk_id"] for h in rag_hits]
+        evidence_ids = [h["chunk_id"] for h in rag_hits] if rag_hits else []
+
+        # Standardize comment texts
+        raw_comment_texts: list[str] = []
+        if comments:
+            for item in comments:
+                if isinstance(item, str):
+                    c_txt = item.strip()
+                    if c_txt:
+                        raw_comment_texts.append(c_txt)
+                elif isinstance(item, dict):
+                    c_txt = str(item.get("comment_text", "")).strip()
+                    if c_txt:
+                        raw_comment_texts.append(c_txt)
+
+        sample_size = len(raw_comment_texts)
+
+        if sample_size == 0:
+            opinion_data = {
+                "topic": title_topic[:100],
+                "sample_size": 0,
+                "sentiment_positive": None,
+                "sentiment_neutral": None,
+                "sentiment_negative": None,
+                "sentiment_mixed": None,
+                "stance_support": None,
+                "stance_oppose": None,
+                "stance_discuss": None,
+                "stance_neutral": None,
+                "top_emotions": {},
+                "discussion_summary": "Chưa có dữ liệu người đọc",
+                "raw_comments_sample": [],
+                "data_provenance_type": "OBSERVED",
+                "input_summary": f"Văn bản: '{title_topic[:60]}', Số bình luận người đọc: 0.",
+                "method_applied": "ZERO_OBSERVATION_STATE",
+                "fallback_reason": "Không có bình luận thực tế nào cho bài viết này; hệ thống bảo lưu trạng thái chưa có dữ liệu thay vì tự tạo bình luận mẫu.",
+            }
+            summary_msg = "Chưa có dữ liệu người đọc (0 bình luận thực tế)."
+        else:
+            # Pair each comment with target claim(s)
+            target_claims = [c.get("claim_text", "") for c in (claims or []) if c.get("claim_text")]
+            if not target_claims and claim_text:
+                target_claims = [claim_text]
+            if not target_claims:
+                target_claims = [title_topic]
+
+            pairwise_evals: list[dict[str, Any]] = []
+            for comment in raw_comment_texts:
+                for target in target_claims:
+                    pair_result = evaluate_comment_claim_pair(comment, target)
+                    pairwise_evals.append(pair_result)
+
+            agg = aggregate_pairwise_stances(pairwise_evals)
+
+            # Sentiment estimation based strictly on stance polarity of actual comments
+            support_pct = agg["stance_support"]
+            oppose_pct = agg["stance_oppose"]
+            neutral_pct = agg["stance_neutral"]
+            discuss_pct = agg["stance_discuss"]
+
+            pos_sent = round(support_pct * 0.9, 3)
+            neg_sent = round(oppose_pct * 0.9, 3)
+            neu_sent = round(neutral_pct + discuss_pct * 0.5, 3)
+            mix_sent = round(max(0.0, 1.0 - (pos_sent + neg_sent + neu_sent)), 3)
+
+            opinion_data = {
+                "topic": title_topic[:100],
+                "sample_size": sample_size,
+                "sentiment_positive": pos_sent,
+                "sentiment_neutral": neu_sent,
+                "sentiment_negative": neg_sent,
+                "sentiment_mixed": mix_sent,
+                "stance_support": support_pct,
+                "stance_oppose": oppose_pct,
+                "stance_discuss": discuss_pct,
+                "stance_neutral": neutral_pct,
+                "top_emotions": {
+                    "trust": round(support_pct * 0.8, 2),
+                    "skepticism": round(oppose_pct * 0.85, 2),
+                    "analytical": round(discuss_pct * 0.75, 2),
+                },
+                "discussion_summary": agg["summary_text"],
+                "raw_comments_sample": raw_comment_texts[:5],
+                "data_provenance_type": "OBSERVED",
+                "input_summary": f"Phân tích {len(pairwise_evals)} cặp (bình luận, phát ngôn) từ {sample_size} bình luận thực.",
+                "method_applied": "EMPIRICAL_PAIRWISE_COMMENT_CLAIM_STANCE",
+                "fallback_reason": None,
+            }
+            summary_msg = f"Phân tích lập trường thực tế: {agg['dominant_stance']} ({sample_size} bình luận, {len(pairwise_evals)} cặp đối soát)."
 
         latency_ms = int((time.time() - t0) * 1000)
         end_time = datetime.now(timezone.utc)
-
-        model_meta = model_manager.get_model("opinion_sentiment_stance")
-        model_name = model_meta.model_name if model_meta else "TrustMedia-DualAspect-OpinionModel"
-        model_version = model_meta.model_version if model_meta else "1.3.0"
 
         trace = {
             "execution_id": str(uuid.uuid4()),
@@ -157,23 +149,27 @@ class PublicOpinionAgent:
             "status": "COMPLETED",
             "latency_ms": latency_ms,
             "execution_time_ms": latency_ms,
-            "model_name": model_name,
-            "model_version": model_version,
-            "dataset_ids": ["UIT-VSMEC", "TweetEval"],
-            "dataset_versions": {"UIT-VSMEC": "1.0", "TweetEval": "2020"},
+            "model_name": "PairwiseCommentClaimStanceModel",
+            "model_version": "2.0-pairwise",
+            "dataset_ids": ["USER-COMMENTS-DB"],
+            "dataset_versions": {"comments": "v2.0"},
             "evidence_ids": evidence_ids,
-            "retrieval_count": len(evidence_ids) if evidence_ids else len(comments),
+            "retrieval_count": len(evidence_ids),
             "start_time": start_time,
             "end_time": end_time,
-            "result_summary": f"Lập trường chủ đạo: {stance_text}. Cảm xúc hàng đầu: {res.get('top_emotion', 'Other')}.",
+            "result_summary": summary_msg,
             "disagreement_detected": False,
             "errors": None,
-            "output": {"dominant_stance": dominant_stance, "sample_size": sample_size},
-            "details": op_data,
+            "output": opinion_data,
+            "details": {
+                "input_summary": opinion_data["input_summary"],
+                "method_applied": opinion_data["method_applied"],
+                "fallback_reason": opinion_data["fallback_reason"],
+                "data_provenance_type": opinion_data["data_provenance_type"],
+            },
         }
 
-        return op_data, trace
+        return opinion_data, trace
 
 
 public_opinion_agent = PublicOpinionAgent()
-

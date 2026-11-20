@@ -13,8 +13,10 @@ from app.database.dependencies import get_engine
 from app.database.models import (
     AgentExecution,
     Analysis,
+    ArticleSnapshot,
     Base,
     Claim,
+    CommentClaimStance,
     DatasetItem,
     Document,
     DocumentChunk,
@@ -25,10 +27,13 @@ from app.database.models import (
     MediaCredibility,
     PublicOpinion,
     PublicTrustSurvey,
+    QuizQuestion,
     RAGExecution,
     RAGModelVersion,
+    ReaderSurveyResponse,
     RetrievalLog,
     User,
+    UserComment,
     gen_uuid,
     utc_now,
 )
@@ -56,9 +61,45 @@ def init_db() -> None:
                     "CREATE INDEX IF NOT EXISTS document_chunks_embedding_hnsw_idx "
                     "ON document_chunks USING hnsw (embedding vector_cosine_ops);"
                 ))
+                conn.execute(text("ALTER TABLE claims ADD COLUMN IF NOT EXISTS original_sentence TEXT;"))
+                conn.execute(text("ALTER TABLE claims ADD COLUMN IF NOT EXISTS paragraph_id INTEGER DEFAULT 0;"))
+                conn.execute(text("ALTER TABLE media_credibility ADD COLUMN IF NOT EXISTS outlet_profile JSONB;"))
+                conn.execute(text("ALTER TABLE media_credibility ADD COLUMN IF NOT EXISTS article_quality JSONB;"))
+                conn.execute(text("ALTER TABLE media_credibility ADD COLUMN IF NOT EXISTS outlet_summary JSONB;"))
+                conn.execute(text("ALTER TABLE public_opinions ADD COLUMN IF NOT EXISTS data_provenance_type VARCHAR(50) DEFAULT 'OBSERVED';"))
+                conn.execute(text("ALTER TABLE public_opinions ADD COLUMN IF NOT EXISTS input_summary TEXT;"))
+                conn.execute(text("ALTER TABLE public_opinions ADD COLUMN IF NOT EXISTS method_applied VARCHAR(100);"))
+                conn.execute(text("ALTER TABLE public_opinions ADD COLUMN IF NOT EXISTS fallback_reason TEXT;"))
+                conn.execute(text("ALTER TABLE public_trust_surveys ADD COLUMN IF NOT EXISTS data_provenance_type VARCHAR(50) DEFAULT 'OBSERVED';"))
+                conn.execute(text("ALTER TABLE public_trust_surveys ADD COLUMN IF NOT EXISTS input_summary TEXT;"))
+                conn.execute(text("ALTER TABLE public_trust_surveys ADD COLUMN IF NOT EXISTS method_applied VARCHAR(100);"))
+                conn.execute(text("ALTER TABLE public_trust_surveys ADD COLUMN IF NOT EXISTS fallback_reason TEXT;"))
+                conn.execute(text("ALTER TABLE information_receptions ADD COLUMN IF NOT EXISTS data_provenance_type VARCHAR(50) DEFAULT 'OBSERVED';"))
+                conn.execute(text("ALTER TABLE information_receptions ADD COLUMN IF NOT EXISTS comprehension_ratio_str VARCHAR(50);"))
+                conn.execute(text("ALTER TABLE information_receptions ADD COLUMN IF NOT EXISTS input_summary TEXT;"))
+                conn.execute(text("ALTER TABLE information_receptions ADD COLUMN IF NOT EXISTS method_applied VARCHAR(100);"))
+                conn.execute(text("ALTER TABLE information_receptions ADD COLUMN IF NOT EXISTS fallback_reason TEXT;"))
+                if not is_sqlite:
+                    for col in [
+                        "comprehension_score", "claim_identification_rate", "acceptance_rate",
+                        "sharing_intention_high", "sharing_intention_medium", "sharing_intention_low",
+                        "verify_before_sharing_rate", "cognitive_resistance_notes"
+                    ]:
+                        conn.execute(text(f"ALTER TABLE information_receptions ALTER COLUMN {col} DROP NOT NULL;"))
+                    for col in [
+                        "trust_source_score", "trust_message_score", "trust_evidence_score",
+                        "methodology", "demographics_breakdown", "findings_summary", "limitations"
+                    ]:
+                        conn.execute(text(f"ALTER TABLE public_trust_surveys ALTER COLUMN {col} DROP NOT NULL;"))
+                    for col in [
+                        "stance_support", "stance_oppose", "stance_neutral", "stance_discuss",
+                        "sentiment_positive", "sentiment_neutral", "sentiment_negative", "sentiment_mixed",
+                        "top_emotions", "discussion_summary"
+                    ]:
+                        conn.execute(text(f"ALTER TABLE public_opinions ALTER COLUMN {col} DROP NOT NULL;"))
                 conn.commit()
             except Exception as e:
-                logger.warning("Could not create HNSW index: %s", e)
+                logger.warning("Could not create HNSW index or alter table: %s", e)
 
     with Session(engine) as session:
         # 1. Seed default accounts if missing

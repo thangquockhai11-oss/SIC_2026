@@ -1,15 +1,18 @@
 """News Analyzer endpoints: submit, polling, and results."""
 
+import hashlib
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.security import get_optional_current_user
 from app.database.dependencies import get_db_session
 from app.database.models import (
+    AgentExecution,
     Analysis,
+    ArticleSnapshot,
     Claim,
     Evidence,
     InformationReception,
@@ -24,6 +27,7 @@ from app.schemas.analysis import (
     AnalysisCreate,
     AnalysisDetailResponse,
     AnalysisStatusResponse,
+    ArticleSnapshotResponse,
     ClaimResponse,
     EvidenceResponse,
     InformationReceptionResponse,
@@ -32,7 +36,7 @@ from app.schemas.analysis import (
     PublicTrustSurveyResponse,
 )
 from app.services.analysis_orchestrator import process_analysis_job_async
-from app.services.url_extractor import fetch_and_extract_article
+from app.services.url_extractor import fetch_and_extract_article_details
 
 router = APIRouter(prefix="/analyzer")
 logger = logging.getLogger(__name__)
@@ -54,20 +58,46 @@ def submit_analysis(
     title = data.title.strip() if data.title else None
     content = data.content.strip() if data.content else None
     source_url = data.source_url.strip() if data.source_url else None
+    extracted_details = None
 
     # If URL is provided, fetch and extract safely
     if source_url:
         try:
-            extracted_title, extracted_body = fetch_and_extract_article(source_url)
+            extracted_details = fetch_and_extract_article_details(source_url)
+            status_code = extracted_details.get("extraction_status")
+            if status_code == "PAYWALL_DETECTED":
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="PAYWALL_DETECTED: Trang báo yêu cầu trả phí hoặc đăng ký hội viên (Paywall). Không thể truy xuất nội dung toàn văn.",
+                )
+            if status_code == "TITLE_ONLY_EXTRACTED" and (not content or len(content) < 40):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="TITLE_ONLY_EXTRACTED: Chỉ đọc được tiêu đề bài báo, phần thân bài không tải được hoặc cần xử lý JavaScript.",
+                )
+
             if not title:
-                title = extracted_title
+                title = extracted_details["title"]
             if not content:
-                content = extracted_body
+                content = extracted_details["body"]
         except ValueError as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"URL Extraction Error: {str(e)}",
-            ) from e
+            if not content or len(content) < 5:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"URL Extraction Error: {str(e)}",
+                ) from e
+            logger.info("URL Extraction notice: %s; using user-provided content.", e)
+            extracted_details = {
+                "title": title or content[:80],
+                "body": content,
+                "paragraphs": [p.strip() for p in content.split("\n\n") if len(p.strip()) > 10],
+                "final_url": source_url,
+                "author": None,
+                "published_date": None,
+                "source_links": [],
+                "extraction_status": "FIXTURE_FALLBACK",
+                "is_verified_online": False,
+            }
 
     if not content or len(content) < 5:
         raise HTTPException(
@@ -89,6 +119,43 @@ def submit_analysis(
         status="PENDING",
     )
     db.add(analysis)
+    db.flush()
+
+    # Create and save paragraph-level ArticleSnapshot
+    paragraphs = []
+    if extracted_details and extracted_details.get("paragraphs"):
+        paragraphs = extracted_details["paragraphs"]
+    else:
+        paragraphs = [p.strip() for p in content.split("\n\n") if len(p.strip()) > 10]
+        if not paragraphs:
+            paragraphs = [content]
+
+    content_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
+    snapshot_url = source_url or "direct-input://" + analysis.id
+    prev_snapshots = (
+        db.query(ArticleSnapshot)
+        .filter(ArticleSnapshot.source_url == snapshot_url)
+        .order_by(ArticleSnapshot.version.desc())
+        .all()
+    )
+    version = (prev_snapshots[0].version + 1) if prev_snapshots else 1
+
+    snapshot = ArticleSnapshot(
+        id=gen_uuid(),
+        analysis_id=analysis.id,
+        source_url=snapshot_url,
+        final_url=extracted_details.get("final_url", source_url) if extracted_details else source_url,
+        title=title,
+        author=extracted_details.get("author") if extracted_details else None,
+        published_date=extracted_details.get("published_date") if extracted_details else None,
+        extraction_status=extracted_details.get("extraction_status", "SUCCESS") if extracted_details else "SUCCESS",
+        paragraphs=paragraphs,
+        source_links=extracted_details.get("source_links", []) if extracted_details else [],
+        content_hash=content_hash,
+        version=version,
+        is_verified_online=extracted_details.get("is_verified_online", True) if extracted_details else False,
+    )
+    db.add(snapshot)
     db.commit()
     db.refresh(analysis)
 
@@ -143,6 +210,96 @@ def get_analysis_status(
 
 
 @router.get(
+    "/snapshots",
+    response_model=list[ArticleSnapshotResponse],
+    summary="Query article snapshots and version history by URL",
+)
+def get_article_snapshots_by_url(
+    url: str = Query(..., description="Source or final URL to inspect version history"),
+    db: Session = Depends(get_db_session),
+) -> list[ArticleSnapshotResponse]:
+    """Retrieve all historical snapshots for an article URL to verify changes over time."""
+    clean_url = url.strip()
+    records = (
+        db.query(ArticleSnapshot)
+        .filter(
+            (ArticleSnapshot.source_url == clean_url)
+            | (ArticleSnapshot.final_url == clean_url)
+        )
+        .order_by(ArticleSnapshot.version.desc())
+        .all()
+    )
+    return [
+        ArticleSnapshotResponse(
+            id=s.id,
+            analysis_id=s.analysis_id,
+            source_url=s.source_url,
+            final_url=s.final_url,
+            title=s.title,
+            author=s.author,
+            published_date=s.published_date,
+            extraction_status=s.extraction_status,
+            paragraphs=s.paragraphs or [],
+            source_links=s.source_links or [],
+            version=s.version,
+            is_verified_online=s.is_verified_online,
+            created_at=s.created_at,
+        )
+        for s in records
+    ]
+
+
+@router.get(
+    "/models",
+    summary="Get registered AI models, versions, and loading statuses",
+)
+@router.get(
+    "/models/catalog",
+    summary="Get registered AI models, versions, and loading statuses",
+)
+def get_model_catalog() -> list[dict]:
+    """Return model registry catalog with training provenance and metrics."""
+    from app.services.model_manager import model_manager
+    return model_manager.list_models()
+
+
+@router.post("/claims/{claim_id}/find-references", summary="Find matching passages for claim with 5D comparison")
+def analyzer_find_claim_references(
+    claim_id: str,
+    payload: dict | None = None,
+    db: Session = Depends(get_db_session),
+) -> dict:
+    """Find references, perform 5D entity comparison, group syndicated copies, detect conflicts."""
+    from app.services.evidence_library_service import evidence_library_service
+    target_url = payload.get("target_url") if payload else None
+    try:
+        return evidence_library_service.find_claim_references(claim_id=claim_id, db=db, target_url=target_url)
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/claims/{claim_id}/rerun", summary="Rerun verification for a claim with optional new source")
+def analyzer_rerun_claim_verification(
+    claim_id: str,
+    payload: dict | None = None,
+    db: Session = Depends(get_db_session),
+) -> dict:
+    """Rerun claim verification with an additional source."""
+    from app.services.evidence_library_service import evidence_library_service
+    new_url = payload.get("new_source_url") if payload else None
+    new_text = payload.get("new_source_text") if payload else None
+    try:
+        return evidence_library_service.rerun_claim_verification(
+            claim_id=claim_id,
+            new_source_url=new_url,
+            new_source_text=new_text,
+            db=db,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get(
     "/{analysis_id}",
     response_model=AnalysisDetailResponse,
     summary="Get complete analysis report",
@@ -193,6 +350,8 @@ def get_analysis_detail(
             ClaimResponse(
                 id=c.id,
                 claim_text=c.claim_text,
+                original_sentence=getattr(c, "original_sentence", None) or c.claim_text,
+                paragraph_id=getattr(c, "paragraph_id", 0),
                 verdict=c.verdict,
                 confidence=c.confidence,
                 reasoning=c.reasoning,
@@ -217,6 +376,9 @@ def get_analysis_detail(
             journalistic_standard_score=analysis.credibility.journalistic_standard_score,
             overall_credibility_score=analysis.credibility.overall_credibility_score,
             reasoning=analysis.credibility.reasoning,
+            outlet_profile=analysis.credibility.outlet_profile,
+            article_quality=analysis.credibility.article_quality,
+            outlet_summary=analysis.credibility.outlet_summary,
         )
 
     opinion_resp = None
@@ -294,6 +456,36 @@ def get_analysis_detail(
         for a in analysis.agent_executions
     ]
 
+    # Fetch snapshots for this analysis and URL history
+    snapshots_db = (
+        db.query(ArticleSnapshot)
+        .filter(
+            (ArticleSnapshot.analysis_id == analysis.id)
+            | (ArticleSnapshot.source_url == (analysis.source_url or "direct-input://" + analysis.id))
+        )
+        .order_by(ArticleSnapshot.version.desc())
+        .all()
+    )
+    snapshots_resp = [
+        ArticleSnapshotResponse(
+            id=s.id,
+            analysis_id=s.analysis_id,
+            source_url=s.source_url,
+            final_url=s.final_url,
+            title=s.title,
+            author=s.author,
+            published_date=s.published_date,
+            extraction_status=s.extraction_status,
+            paragraphs=s.paragraphs or [],
+            source_links=s.source_links or [],
+            version=s.version,
+            is_verified_online=s.is_verified_online,
+            created_at=s.created_at,
+        )
+        for s in snapshots_db
+    ]
+    current_snapshot = next((s for s in snapshots_resp if s.analysis_id == analysis.id), snapshots_resp[0] if snapshots_resp else None)
+
     return AnalysisDetailResponse(
         id=analysis.id,
         user_id=analysis.user_id,
@@ -316,6 +508,59 @@ def get_analysis_detail(
         survey=survey_resp,
         reception=reception_resp,
         agent_executions=agent_executions_resp,
+        snapshot=current_snapshot,
+        snapshots=snapshots_resp,
+    )
+
+
+@router.get(
+    "/{analysis_id}/snapshot",
+    response_model=ArticleSnapshotResponse,
+    summary="Get exact article text snapshot extracted for this analysis",
+)
+def get_analysis_snapshot(
+    analysis_id: str,
+    db: Session = Depends(get_db_session),
+) -> ArticleSnapshotResponse:
+    """Retrieve exact parsed paragraphs and metadata for an analysis."""
+    snap = (
+        db.query(ArticleSnapshot)
+        .filter(ArticleSnapshot.analysis_id == analysis_id)
+        .first()
+    )
+    if not snap:
+        # Fallback to analysis content
+        analysis = db.query(Analysis).filter(Analysis.id == analysis_id).first()
+        if not analysis:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Analysis not found")
+        paras = [p.strip() for p in analysis.content.split("\n\n") if p.strip()]
+        return ArticleSnapshotResponse(
+            id=gen_uuid(),
+            analysis_id=analysis.id,
+            source_url=analysis.source_url or "direct-input://" + analysis.id,
+            final_url=analysis.source_url,
+            title=analysis.title,
+            paragraphs=paras,
+            source_links=[],
+            version=1,
+            extraction_status="SUCCESS",
+            is_verified_online=True,
+            created_at=analysis.created_at,
+        )
+    return ArticleSnapshotResponse(
+        id=snap.id,
+        analysis_id=snap.analysis_id,
+        source_url=snap.source_url,
+        final_url=snap.final_url,
+        title=snap.title,
+        author=snap.author,
+        published_date=snap.published_date,
+        extraction_status=snap.extraction_status,
+        paragraphs=snap.paragraphs or [],
+        source_links=snap.source_links or [],
+        version=snap.version,
+        is_verified_online=snap.is_verified_online,
+        created_at=snap.created_at,
     )
 
 
@@ -367,16 +612,6 @@ def get_analysis_trace(
         "total_latency_ms": total_time,
         "traces": traces,
     }
-
-
-@router.get(
-    "/models/catalog",
-    summary="Get registered AI models, versions, and loading statuses",
-)
-def get_model_catalog() -> list[dict]:
-    """Return model registry catalog with training provenance and metrics."""
-    from app.services.model_manager import model_manager
-    return model_manager.list_models()
 
 
 @router.get(

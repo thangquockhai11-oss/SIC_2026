@@ -66,6 +66,8 @@ async def process_analysis_job_async(
                     id=c_data.get("claim_id") or gen_uuid(),
                     analysis_id=analysis.id,
                     claim_text=c_data["claim_text"],
+                    original_sentence=c_data.get("original_sentence") or c_data.get("claim_text"),
+                    paragraph_id=c_data.get("paragraph_id", 0),
                     verdict=c_data["verdict"],
                     confidence=c_data["confidence"],
                     reasoning=c_data["reasoning"],
@@ -103,12 +105,15 @@ async def process_analysis_job_async(
                     analysis_id=analysis.id,
                     source_name=cred_data["source_name"],
                     domain=cred_data.get("domain"),
-                    transparency_score=cred_data["transparency_score"],
-                    citation_score=cred_data["citation_score"],
-                    evidence_score=cred_data["evidence_score"],
-                    journalistic_standard_score=cred_data["journalistic_standard_score"],
-                    overall_credibility_score=cred_data["overall_credibility_score"],
-                    reasoning=cred_data["reasoning"],
+                    transparency_score=cred_data.get("transparency_score", 0.0),
+                    citation_score=cred_data.get("citation_score", 0.0),
+                    evidence_score=cred_data.get("evidence_score", 0.0),
+                    journalistic_standard_score=cred_data.get("journalistic_standard_score", 0.0),
+                    overall_credibility_score=cred_data.get("overall_credibility_score") or 0.0,
+                    reasoning=cred_data.get("reasoning", ""),
+                    outlet_profile=cred_data.get("outlet_profile"),
+                    article_quality=cred_data.get("article_quality"),
+                    outlet_summary=cred_data.get("outlet_summary"),
                 )
                 session.add(cred)
 
@@ -131,6 +136,10 @@ async def process_analysis_job_async(
                     top_emotions=op_data["top_emotions"],
                     discussion_summary=op_data["discussion_summary"],
                     raw_comments_sample=op_data.get("raw_comments_sample"),
+                    data_provenance_type=op_data.get("data_provenance_type", "OBSERVED"),
+                    input_summary=op_data.get("input_summary"),
+                    method_applied=op_data.get("method_applied"),
+                    fallback_reason=op_data.get("fallback_reason"),
                 )
                 session.add(opinion)
 
@@ -149,6 +158,10 @@ async def process_analysis_job_async(
                     demographics_breakdown=survey_data["demographics_breakdown"],
                     findings_summary=survey_data["findings_summary"],
                     limitations=survey_data["limitations"],
+                    data_provenance_type=survey_data.get("data_provenance_type", "OBSERVED"),
+                    input_summary=survey_data.get("input_summary"),
+                    method_applied=survey_data.get("method_applied"),
+                    fallback_reason=survey_data.get("fallback_reason"),
                 )
                 session.add(survey)
 
@@ -160,6 +173,7 @@ async def process_analysis_job_async(
                     analysis_id=analysis.id,
                     sample_size=rec_data["sample_size"],
                     comprehension_score=rec_data["comprehension_score"],
+                    comprehension_ratio_str=rec_data.get("comprehension_ratio_str"),
                     claim_identification_rate=rec_data["claim_identification_rate"],
                     acceptance_rate=rec_data["acceptance_rate"],
                     sharing_intention_high=rec_data["sharing_intention_high"],
@@ -167,6 +181,10 @@ async def process_analysis_job_async(
                     sharing_intention_low=rec_data["sharing_intention_low"],
                     verify_before_sharing_rate=rec_data["verify_before_sharing_rate"],
                     cognitive_resistance_notes=rec_data["cognitive_resistance_notes"],
+                    data_provenance_type=rec_data.get("data_provenance_type", "OBSERVED"),
+                    input_summary=rec_data.get("input_summary"),
+                    method_applied=rec_data.get("method_applied"),
+                    fallback_reason=rec_data.get("fallback_reason"),
                 )
                 session.add(reception)
 

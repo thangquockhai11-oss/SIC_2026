@@ -126,7 +126,7 @@ class AdvancedHybridRetriever:
         final_results = []
         for c in reranked:
             r_score = c.get("rerank_score", c.get("rrf_normalized", 0.0))
-            if r_score < min_relevance_threshold and len(final_results) > 0:
+            if r_score < min_relevance_threshold:
                 continue
 
             content_text = c.get("content", "")

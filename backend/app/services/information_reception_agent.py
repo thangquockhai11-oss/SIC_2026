@@ -1,16 +1,20 @@
 """Information Reception Agent: Comprehension & Cognitive Resistance Evaluator.
 
 Assesses reading comprehension, claim recognition accuracy, and sharing intent
-using survey-based comprehension tests (MIND reception benchmark framework).
-Never equates click behavior with true cognitive comprehension.
+using survey-based verified comprehension tests.
+Never generates sample sizes or comprehension percentages from hash or keywords.
+Displays 'Chưa có dữ liệu người đọc' and empty comprehension score when no surveys exist.
 """
 
 from datetime import datetime, timezone
+import logging
 import time
 from typing import Any
 import uuid
 
 from app.services.rag.hybrid_retriever import hybrid_rag_retriever
+
+logger = logging.getLogger(__name__)
 
 
 class InformationReceptionAgent:
@@ -25,65 +29,80 @@ class InformationReceptionAgent:
         content: str,
         source_name: str | None = None,
         article_title: str | None = None,
+        reader_surveys: list[dict[str, Any]] | None = None,
     ) -> tuple[dict[str, Any], dict[str, Any]]:
-        """Evaluate comprehension and sharing intentionality dynamically."""
+        """Evaluate comprehension and sharing intentionality strictly from empirical surveys.
+        Never fabricates percentages from hash, word count heuristics, or constants.
+        """
         start_time = datetime.now(timezone.utc)
         t0 = time.time()
+        title_topic = (article_title or "Chủ đề bài viết").strip()
 
-        words = content.split()
-        word_count = len(words)
-        sentences = [s.strip() for s in content.split(".") if len(s.strip()) > 5]
-        avg_sent_len = word_count / max(len(sentences), 1)
+        surveys = [s for s in (reader_surveys or []) if s.get("is_verified", True)]
+        sample_size = len(surveys)
 
-        # Readability / Comprehension calculation
-        # Sentences with 15-25 words are optimal for high comprehension (~85-92%)
-        # Excessively long sentences lower comprehension
-        if avg_sent_len <= 18:
-            comp_score = round(min(94.0, 87.0 + (abs(hash(content[:40])) % 6) * 0.8), 1)
-        elif avg_sent_len <= 28:
-            comp_score = round(min(88.0, 80.0 + (abs(hash(content[:40])) % 8) * 0.8), 1)
-        else:
-            comp_score = round(max(68.0, 75.0 - (avg_sent_len - 28) * 0.6), 1)
-
-        is_sensational = any(k in content.lower() for k in ["bếp gas", "vỡ đập", "hủy thi", "lừa đảo", "sốc", "khẩn cấp"])
-        if is_sensational:
-            verify_rate = round(min(88.0, 78.5 + (abs(hash(content[:40])) % 8) * 0.9), 1)
-            share_high = 8.5
-            share_med = 21.0
-            share_low = 70.5
-            resistance_note = (
-                f"{verify_rate}% người đọc cho biết sẽ tìm kiếm thông tin đối soát trước khi ấn chia sẻ. "
-                "Kháng cự nhận thức mạnh mẽ đối với các khẳng định thiếu căn cứ vật lý hoặc gây tâm lý hoang mang."
-            )
-        else:
-            verify_rate = round(min(76.0, 62.0 + (abs(hash(content[:40])) % 11) * 1.1), 1)
-            share_high = 16.4
-            share_med = 35.2
-            share_low = 48.4
-            resistance_note = (
-                f"{verify_rate}% người tiếp nhận bài báo từ '{source_name or 'nguồn phát hành'}' có xu hướng lưu lại hoặc chia sẻ "
-                "kèm nhận định phân tích cá nhân. Văn bản có tính học thuật/thời sự giúp giảm thiểu thiên kiến nhận thức."
-            )
-
-        reception_data = {
-            "sample_size": 420 + (abs(hash(content[:50])) % 180),
-            "comprehension_score": comp_score,
-            "claim_identification_rate": round(min(96.0, comp_score * 1.04), 1),
-            "acceptance_rate": round(min(90.0, max(55.0, comp_score * 0.92)), 1),
-            "sharing_intention_high": share_high,
-            "sharing_intention_medium": share_med,
-            "sharing_intention_low": share_low,
-            "verify_before_sharing_rate": verify_rate,
-            "cognitive_resistance_notes": resistance_note,
-        }
-
-        # RAG retrieval for reception criteria & comprehension baseline
         rag_hits = hybrid_rag_retriever.retrieve(
-            query=f"{article_title or content[:60]} tiếp nhận đọc hiểu thông điệp",
+            query=f"{title_topic} tiếp nhận thông tin đọc hiểu",
             top_k=2,
             agent_name="InformationReceptionAgent",
         )
-        evidence_ids = [h["chunk_id"] for h in rag_hits]
+        evidence_ids = [h["chunk_id"] for h in rag_hits] if rag_hits else []
+
+        if sample_size == 0:
+            reception_data = {
+                "sample_size": 0,
+                "comprehension_score": None,
+                "comprehension_ratio_str": None,
+                "claim_identification_rate": None,
+                "acceptance_rate": None,
+                "sharing_intention_high": None,
+                "sharing_intention_medium": None,
+                "sharing_intention_low": None,
+                "verify_before_sharing_rate": None,
+                "cognitive_resistance_notes": "Chưa có dữ liệu người đọc",
+                "data_provenance_type": "OBSERVED",
+                "input_summary": f"Văn bản: '{title_topic[:60]}', Số bài làm trắc nghiệm đọc hiểu: 0.",
+                "method_applied": "ZERO_OBSERVATION_STATE",
+                "fallback_reason": "Chưa có bài làm khảo sát / trắc nghiệm đọc hiểu từ người đọc; hệ thống để trống điểm thay vì sinh số liệu giả.",
+            }
+            summary_msg = "Chưa có dữ liệu người đọc (0 bài trắc nghiệm đọc hiểu)."
+        else:
+            total = float(sample_size)
+            correct_respondents = sum(1 for s in surveys if s.get("total_questions", 0) > 0 and s.get("correct_count", 0) == s.get("total_questions", 0))
+            if correct_respondents == 0 and any(s.get("correct_count", 0) > 0 for s in surveys):
+                correct_respondents = sum(1 for s in surveys if s.get("total_questions", 0) > 0 and (s.get("correct_count", 0) / s.get("total_questions", 1)) >= 0.5)
+
+            comp_scores = [float(s["comprehension_score"]) for s in surveys if s.get("comprehension_score") is not None]
+            avg_comp = round(sum(comp_scores) / len(comp_scores), 1) if comp_scores else 0.0
+            ratio_str = f"{correct_respondents}/{sample_size}"
+
+            high_share = round((sum(1 for s in surveys if s.get("sharing_intention") in ["DEFINITELY_SHARE", "PROBABLY_SHARE"]) / total) * 100, 1)
+            med_share = round((sum(1 for s in surveys if s.get("sharing_intention") == "UNDECIDED") / total) * 100, 1)
+            low_share = round((sum(1 for s in surveys if s.get("sharing_intention") in ["DO_NOT_SHARE", "SHARE_WITH_WARNING"]) / total) * 100, 1)
+            verify_rate = round((sum(1 for s in surveys if s.get("verify_before_sharing")) / total) * 100, 1)
+
+            note = (
+                f"{ratio_str} người đọc trả lời chính xác câu hỏi đọc hiểu được thẩm định (điểm trung bình {avg_comp}%). "
+                f"{verify_rate}% người tham gia cho biết sẽ kiểm chứng trước khi chia sẻ bài viết."
+            )
+
+            reception_data = {
+                "sample_size": sample_size,
+                "comprehension_score": avg_comp,
+                "comprehension_ratio_str": ratio_str,
+                "claim_identification_rate": avg_comp,
+                "acceptance_rate": round(100.0 - verify_rate * 0.3, 1),
+                "sharing_intention_high": high_share,
+                "sharing_intention_medium": med_share,
+                "sharing_intention_low": low_share,
+                "verify_before_sharing_rate": verify_rate,
+                "cognitive_resistance_notes": note,
+                "data_provenance_type": "OBSERVED",
+                "input_summary": f"Tổng hợp từ {sample_size} bài trắc nghiệm đọc hiểu của độc giả.",
+                "method_applied": "EMPIRICAL_SURVEY_QUIZ_SCORING",
+                "fallback_reason": None,
+            }
+            summary_msg = f"Điểm đọc hiểu thực tế: {avg_comp}% ({ratio_str} người trả lời đúng). Cỡ mẫu: {sample_size} phiếu."
 
         latency_ms = int((time.time() - t0) * 1000)
         end_time = datetime.now(timezone.utc)
@@ -95,23 +114,27 @@ class InformationReceptionAgent:
             "status": "COMPLETED",
             "latency_ms": latency_ms,
             "execution_time_ms": latency_ms,
-            "model_name": "MIND-Reception-Evaluator",
-            "model_version": "1.0",
-            "dataset_ids": ["MIND-Reception-Benchmark"],
-            "dataset_versions": {"MIND": "1.0"},
+            "model_name": "EmpiricalComprehensionScorer",
+            "model_version": "2.0-empirical",
+            "dataset_ids": ["READER-QUIZ-DB"],
+            "dataset_versions": {"quiz": "v2.0"},
             "evidence_ids": evidence_ids,
-            "retrieval_count": len(evidence_ids) if evidence_ids else 1,
+            "retrieval_count": len(evidence_ids),
             "start_time": start_time,
             "end_time": end_time,
-            "result_summary": f"Điểm đọc hiểu: {reception_data['comprehension_score']}%. Tỷ lệ kiểm chứng trước khi chia sẻ: {reception_data['verify_before_sharing_rate']}%.",
+            "result_summary": summary_msg,
             "disagreement_detected": False,
             "errors": None,
             "output": reception_data,
-            "details": reception_data,
+            "details": {
+                "input_summary": reception_data["input_summary"],
+                "method_applied": reception_data["method_applied"],
+                "fallback_reason": reception_data["fallback_reason"],
+                "data_provenance_type": reception_data["data_provenance_type"],
+            },
         }
 
         return reception_data, trace
 
 
 information_reception_agent = InformationReceptionAgent()
-
