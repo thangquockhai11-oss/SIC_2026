@@ -49,6 +49,16 @@ def init_db() -> None:
 
     Base.metadata.create_all(bind=engine)
 
+    if engine.dialect.name == "sqlite":
+        with engine.connect() as conn:
+            try:
+                cols = [r[1] for r in conn.execute(text("PRAGMA table_info(analyses)")).fetchall()]
+                if "fact_checking_report" not in cols:
+                    conn.execute(text("ALTER TABLE analyses ADD COLUMN fact_checking_report JSON"))
+                    conn.commit()
+            except Exception as e:
+                logger.warning("Could not migrate analyses columns: %s", e)
+
     if engine.dialect.name == "postgresql":
         with engine.connect() as conn:
             try:
