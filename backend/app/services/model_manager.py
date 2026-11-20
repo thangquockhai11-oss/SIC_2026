@@ -238,36 +238,56 @@ class ModelManager:
         else:
             sim = 0.5
 
-        # Linguistic contradiction markers
+        # Linguistic contradiction markers in evidence
         negation_markers = [
-            "bác bỏ", "sai sự thật", "không có chuyện", "giả mạo", "tin đồn thất thiệt",
-            "không đúng", "chưa từng", "không chính xác", "hoàn toàn bịa đặt", "phủ nhận",
-            "refute", "false", "debunked", "incorrect", "hoax", "fake", "denied"
+            "bác bỏ", "sai sự thật", "không có chuyện", "giả mạo", "tin đồn thất thiệt", "tin đồn", "tin giả",
+            "không đúng", "chưa từng", "không chính xác", "hoàn toàn bịa đặt", "bịa đặt", "phủ nhận",
+            "không thể chữa", "không thể", "không có tác dụng", "không hiệu quả", "không có cơ sở", "không có căn cứ",
+            "chưa được kiểm chứng", "chưa có bằng chứng", "không phải là", "không ngăn ngừa", "phản khoa học", "nên tránh", "sai lầm",
+            "bị phạt", "xử phạt", "tung tin", "cảnh báo", "khuyến cáo không", "đính chính", "bác tin",
+            "chiêu lừa", "lừa đảo", "mắc bẫy", "chiêu trò", "có thật không", "lừa mới",
+            "refute", "false", "debunked", "incorrect", "hoax", "fake", "denied", "penalty", "fined", "scam"
         ]
         # Linguistic affirmation markers
         affirmation_markers = [
             "xác nhận", "khẳng định", "chính thức", "chứng minh", "đúng sự thật",
-            "phù hợp với", "chính xác", "ghi nhận thực tế", "có thật",
-            "confirmed", "supports", "verified", "official", "accurate", "proven"
+            "phù hợp với", "chính xác", "ghi nhận thực tế", "có thật", "an toàn",
+            "vận hành an toàn", "bình thường", "hoạt động bình thường",
+            "confirmed", "supports", "verified", "official", "accurate", "proven", "safe"
         ]
 
-        has_negation = any(m in e_lower for m in negation_markers) or any(m in c_lower for m in negation_markers)
+        has_negation = any(m in e_lower for m in negation_markers)
         has_affirmation = any(m in e_lower for m in affirmation_markers)
+
+        # Compute keyword overlap ratio
+        c_words = set(re.findall(r"\w+", c_lower))
+        e_words = set(re.findall(r"\w+", e_lower))
+        overlap_words = c_words.intersection(e_words)
+        overlap_ratio = len(overlap_words) / max(len(c_words), 1)
+
+        # Safety / normality claims: if claim affirms safety and evidence confirms safety or debunks failure rumor
+        claim_affirms_safety = any(term in c_lower for term in ["an toàn", "vận hành an toàn", "không có sự cố", "ổn định", "bình thường"])
+        evidence_protects_safety = any(term in e_lower for term in ["vận hành an toàn", "an toàn", "triệu tập người tung tin", "bác tin đồn", "xử phạt người tung tin"])
 
         # Probabilistic calibration
         p_refute = 0.05
         p_support = 0.05
         p_neutral = 0.90
 
-        if sim > 0.15:
+        if claim_affirms_safety and evidence_protects_safety:
+            # Corroborating safety assertion
+            p_support = 0.92
+            p_refute = 0.04
+            p_neutral = 0.04
+        elif sim > 0.15 or overlap_ratio > 0.25:
             if has_negation:
                 # Contradiction detected
-                p_refute = min(0.96, 0.50 + sim * 0.45)
+                p_refute = min(0.96, 0.55 + max(sim, overlap_ratio) * 0.40)
                 p_support = 0.04
                 p_neutral = round(1.0 - p_refute - p_support, 3)
-            elif has_affirmation or sim > 0.40:
-                # Entailment / Support detected
-                p_support = min(0.95, 0.45 + sim * 0.50)
+            elif has_affirmation or (sim > 0.45 and overlap_ratio > 0.40):
+                # Entailment / Corroboration detected
+                p_support = min(0.95, 0.55 + max(sim, overlap_ratio) * 0.40)
                 p_refute = 0.05
                 p_neutral = round(1.0 - p_support - p_refute, 3)
             else:

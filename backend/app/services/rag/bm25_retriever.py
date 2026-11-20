@@ -105,6 +105,10 @@ class BM25Retriever:
 
                 if tokenized_corpus:
                     self.bm25_model = BM25Okapi(tokenized_corpus)
+                    # Clamp non-positive IDFs to avoid negative BM25 scores on small corpora
+                    for term, val in self.bm25_model.idf.items():
+                        if val <= 0.0:
+                            self.bm25_model.idf[term] = 0.25
                     logger.info("BM25 index built with %d documents.", self.corpus_size)
                 else:
                     self.bm25_model = None

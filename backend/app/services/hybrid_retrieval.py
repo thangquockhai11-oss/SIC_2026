@@ -190,6 +190,12 @@ class HybridKnowledgeRetriever:
                 continue
 
             chunk = self.chunks[idx]
+            # Check content token overlap ratio to prevent obscure queries matching unrelated text
+            c_tokens = set(self._tokenize(chunk.evidence_text + " " + chunk.claim_text))
+            matched_tokens = set(tokens).intersection(c_tokens)
+            if len(matched_tokens) < 2 or (len(matched_tokens) / len(set(tokens))) < 0.28:
+                continue
+
             results.append({
                 "chunk_id": chunk.chunk_id,
                 "dataset_source": chunk.dataset_id,

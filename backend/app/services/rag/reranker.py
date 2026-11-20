@@ -94,8 +94,8 @@ class BGERerankerEngine:
             freq_bonus += min(p_tokens.count(t) * 0.04, 0.20)
 
         # If coverage is very weak and no bigram match, do not inflate with sigmoid
-        if coverage_ratio < 0.22 and bigram_ratio == 0:
-            return round(coverage_ratio * 0.3, 4)
+        if coverage_ratio < 0.35 and bigram_ratio == 0:
+            return round(coverage_ratio * 0.2, 4)
 
         # Non-linear logistic combination
         raw_score = 0.55 * coverage_ratio + 0.30 * bigram_ratio + 0.15 * min(freq_bonus, 0.40)
