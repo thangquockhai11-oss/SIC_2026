@@ -37,9 +37,61 @@ export default function FactCheckingPage() {
     (c) => c.verdict !== "SUPPORTED" && c.verdict !== "REFUTED"
   ).length;
 
-  const refutedPct = Math.round((refutedCount / totalClaims) * 100);
-  const verifiedPct = Math.round((verifiedCount / totalClaims) * 100);
-  const inconclusivePct = 100 - refutedPct - verifiedPct;
+  const refutedPctVal = (refutedCount / totalClaims) * 100;
+  const verifiedPctVal = (verifiedCount / totalClaims) * 100;
+  const inconclusivePctVal = (inconclusiveCount / totalClaims) * 100;
+
+  const refutedPctStr = refutedPctVal.toFixed(1);
+  const verifiedPctStr = verifiedPctVal.toFixed(1);
+  const inconclusivePctStr = inconclusivePctVal.toFixed(1);
+
+  // Authoritative Trustworthiness Recommendation for the article
+  const getRecommendation = () => {
+    if (refutedCount > 0) {
+      return {
+        decision: "KHÔNG NÊN TIN CẬY",
+        badgeBg: "bg-error-container text-error",
+        borderClass: "border-error/40 bg-error-container/10",
+        icon: "cancel",
+        colorClass: "text-error",
+        title: "CẢNH BÁO SAI LỆCH",
+        description: `Bài báo có ${refutedPctStr}% phát ngôn bị bác bỏ do mâu thuẫn trực tiếp với bằng chứng thực tế. Độc giả KHÔNG NÊN TIN CẬY nội dung này và không nên chia sẻ.`,
+      };
+    }
+    if (inconclusivePctVal >= 50 || verifiedPctVal < 50) {
+      return {
+        decision: "CHƯA NÊN VỘI TIN (CẦN THẬN TRỌNG)",
+        badgeBg: "bg-[#FEF3C7] text-[#B45309]",
+        borderClass: "border-[#B45309]/40 bg-[#FEF3C7]/20",
+        icon: "warning",
+        colorClass: "text-[#B45309]",
+        title: "THIẾU CHỨNG CỨ ĐỐI SOÁT",
+        description: `Bài báo có ${inconclusivePctStr}% nội dung chưa đủ chứng cứ kiểm chứng (chỉ ${verifiedPctStr}% được xác thực). Độc giả CẦN THẬN TRỌNG, CHƯA NÊN VỘI TIN khi chưa có tài liệu chính thức xác nhận.`,
+      };
+    }
+    if (verifiedPctVal >= 70) {
+      return {
+        decision: "NÊN TIN CẬY (ĐỘ CHÍNH XÁC CAO)",
+        badgeBg: "bg-[#DCFCE7] text-[#15803D]",
+        borderClass: "border-[#15803D]/40 bg-[#DCFCE7]/20",
+        icon: "verified",
+        colorClass: "text-[#15803D]",
+        title: "ĐÃ ĐỐI SOÁT CHÍNH XÁC",
+        description: `Bài báo đạt ${verifiedPctStr}% luận điểm được xác minh chính xác từ nguồn tin độc lập, 0% sai lệch. Độc giả CÓ THỂ AN TÂM TIN CẬY và tham khảo thông tin.`,
+      };
+    }
+    return {
+      decision: "THAM KHẢO CÓ CHỌN LỌC",
+      badgeBg: "bg-surface-container-high text-primary",
+      borderClass: "border-primary/20 bg-surface-container-low",
+      icon: "info",
+      colorClass: "text-primary",
+      title: "KIỂM CHỨNG TRUNG BÌNH",
+      description: `Bài báo có mức độ kiểm chứng trung bình (${verifiedPctStr}% xác thực, ${inconclusivePctStr}% cần kiểm chứng thêm). Độc giả nên tham khảo có chọn lọc.`,
+    };
+  };
+
+  const recommendation = getRecommendation();
 
   const handleExportPDF = () => {
     window.print();
@@ -268,41 +320,66 @@ export default function FactCheckingPage() {
             </div>
 
             {/* Quick Metrics Mini-Panel */}
-            <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm border border-surface-container">
-              <div className="flex items-center justify-between mb-space-xs">
+            <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm border border-surface-container flex flex-col gap-space-sm">
+              <div className="flex items-center justify-between">
                 <span className="font-label-sm text-label-sm uppercase tracking-wider text-outline font-semibold">
                   Tỷ trọng sai lệch toàn bài
                 </span>
-                <span className="font-title-lg text-title-lg text-error font-bold">{refutedPct}.0%</span>
+                <span className="font-title-lg text-title-lg text-error font-bold">{refutedPctStr}%</span>
               </div>
+
               {/* Progress bar breakdown */}
-              <div className="w-full h-2 rounded-full bg-surface-container flex overflow-hidden mb-space-xs">
+              <div className="w-full h-2.5 rounded-full bg-surface-container flex overflow-hidden">
                 <div
                   className="bg-[#15803D] h-full transition-all"
-                  style={{ width: `${verifiedPct}%` }}
-                  title={`Được xác nhận: ${verifiedPct}%`}
+                  style={{ width: `${verifiedPctVal}%` }}
+                  title={`Được xác nhận: ${verifiedCount} (${verifiedPctStr}%)`}
                 ></div>
                 <div
                   className="bg-[#B45309] h-full transition-all"
-                  style={{ width: `${inconclusivePct}%` }}
-                  title={`Chưa đủ chứng cứ: ${inconclusivePct}%`}
+                  style={{ width: `${inconclusivePctVal}%` }}
+                  title={`Chưa đủ chứng cứ / Thiếu tin cậy: ${inconclusiveCount} (${inconclusivePctStr}%)`}
                 ></div>
                 <div
                   className="bg-[#B91C1C] h-full transition-all"
-                  style={{ width: `${refutedPct}%` }}
-                  title={`Bị bác bỏ: ${refutedPct}%`}
+                  style={{ width: `${refutedPctVal}%` }}
+                  title={`Bị bác bỏ: ${refutedCount} (${refutedPctStr}%)`}
                 ></div>
               </div>
-              <div className="flex items-center justify-between text-outline font-label-sm text-label-sm pt-1">
-                <span className="flex items-center gap-1 font-medium">
-                  <span className="w-2 h-2 rounded-full bg-[#15803D]"></span> {verifiedCount} Xác thực
+
+              {/* Categories with Full Percentages */}
+              <div className="flex flex-wrap items-center justify-between text-outline font-label-sm text-label-sm pt-0.5 gap-y-1">
+                <span className="flex items-center gap-1 font-medium text-on-surface">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#15803D]"></span>
+                  <span>{verifiedCount} Xác thực</span>
+                  <strong className="text-[#15803D]">({verifiedPctStr}%)</strong>
                 </span>
-                <span className="flex items-center gap-1 font-medium">
-                  <span className="w-2 h-2 rounded-full bg-[#B45309]"></span> {inconclusiveCount} Thiếu tin cậy
+                <span className="flex items-center gap-1 font-medium text-on-surface">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#B45309]"></span>
+                  <span>{inconclusiveCount} Thiếu tin cậy</span>
+                  <strong className="text-[#B45309]">({inconclusivePctStr}%)</strong>
                 </span>
-                <span className="flex items-center gap-1 font-medium">
-                  <span className="w-2 h-2 rounded-full bg-[#B91C1C]"></span> {refutedCount} Bác bỏ
+                <span className="flex items-center gap-1 font-medium text-on-surface">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#B91C1C]"></span>
+                  <span>{refutedCount} Bác bỏ</span>
+                  <strong className="text-[#B91C1C]">({refutedPctStr}%)</strong>
                 </span>
+              </div>
+
+              {/* Prominent Trustworthiness Conclusion & Reader Recommendation */}
+              <div className={`mt-2 p-space-sm rounded-lg border ${recommendation.borderClass} flex flex-col gap-1.5`}>
+                <div className="flex flex-wrap items-center justify-between gap-1">
+                  <span className="font-label-sm text-label-sm uppercase tracking-wider font-bold text-outline">
+                    Kết luận độ tin cậy
+                  </span>
+                  <span className={`px-2 py-0.5 rounded-full font-label-sm text-label-sm font-bold uppercase tracking-wide inline-flex items-center gap-1 ${recommendation.badgeBg}`}>
+                    <span className="material-symbols-outlined text-[13px]">{recommendation.icon}</span>
+                    {recommendation.decision}
+                  </span>
+                </div>
+                <p className="font-body-md text-body-md text-on-surface text-[13px] leading-relaxed">
+                  {recommendation.description}
+                </p>
               </div>
             </div>
           </aside>
