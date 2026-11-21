@@ -240,10 +240,19 @@ class NLIVerifierService:
             }
 
         if self._model is not None:
-            pred_id = int(self._model.predict([(c_clean, e_clean)])[0])
             probs = self._model.predict_proba([(c_clean, e_clean)])[0]
-            label_name = NLI_CLASSES[pred_id]
+            pred_id = int(np.argmax(probs))
             conf = float(probs[pred_id])
+
+            # Epistemic calibration: Require confidence margin over NEUTRAL (index 2)
+            # If model is near uniform or margin over NEUTRAL is < 0.05, revert to NEUTRAL
+            if pred_id != 2:
+                neutral_prob = float(probs[2])
+                if conf < 0.45 or (conf - neutral_prob) < 0.05:
+                    pred_id = 2
+                    conf = neutral_prob
+
+            label_name = NLI_CLASSES[pred_id]
             prob_dict = {NLI_CLASSES[i]: round(float(p), 4) for i, p in enumerate(probs)}
         else:
             # Fallback heuristic

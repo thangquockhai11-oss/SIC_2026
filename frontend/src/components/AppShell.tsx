@@ -151,11 +151,11 @@ export default function AppShell() {
                 </span>
               </div>
 
-              {article.id !== "prototype-tuoitre-cancer" && (
+              {article.id !== "prototype-article-sample" && article.id !== "prototype-tuoitre-cancer" && (
                 <button
                   onClick={handleResetToPrototype}
                   className="text-[12px] text-secondary hover:text-primary underline flex items-center gap-1"
-                  title="Khôi phục bài báo mẫu Báo Tuổi Trẻ"
+                  title="Khôi phục bài báo mẫu mặc định"
                 >
                   <span className="material-symbols-outlined text-[14px]">restart_alt</span>
                   Xem bài mẫu chuẩn

@@ -223,232 +223,57 @@ class GeminiNLPService:
         article_content: str = "",
         claim_type: str = "FACTUAL_CLAIM",
     ) -> NLPEvidenceSynthesis:
-        """Intelligent offline semantic matcher that ensures 100% domain relevance."""
-        c_lower = claim_text.lower()
-        t_lower = article_title.lower()
+        """Dynamic evidence alignment grounded strictly in article content and retrieved dataset evidence."""
+        # Step 1: Locate genuine article quote from article_content
+        actual_quote = claim_text
+        if article_content:
+            c_words = [w for w in re.findall(r"\w+", claim_text.lower()) if len(w) > 2]
+            best_sent = ""
+            best_overlap = 0
+            for sent in re.split(r"(?<=[.!?\n])\s+", article_content):
+                sent_clean = sent.strip()
+                if len(sent_clean) < 15:
+                    continue
+                overlap = sum(1 for w in c_words if w in sent_clean.lower())
+                if overlap > best_overlap:
+                    best_overlap = overlap
+                    best_sent = sent_clean
+            if best_sent and best_overlap >= 2:
+                actual_quote = best_sent
 
-        # Case A: Cancer / Herb extract / In-Vitro vs Human cure
-        if any(w in c_lower or w in t_lower for w in ["chiết xuất", "ung thư", "khối u", "thảo dược"]):
-            if "tiêu diệt hoàn toàn" in c_lower or "48 giờ" in c_lower or "ở người" in c_lower:
-                return NLPEvidenceSynthesis(
-                    verdict="REFUTED",
-                    confidence=0.94,
-                    decisive_reasoning="Phát ngôn phóng đại kết quả từ nuôi cấy ống nghiệm (in-vitro) thành hiệu quả điều trị thực tế trên cơ thể người, gây hiểu lầm nghiêm trọng về khả năng chữa trị ung thư.",
-                    article_quote="Theo thông tin từ nhóm nghiên cứu, chiết xuất thảo dược X có khả năng tiêu diệt hoàn toàn khối u ung thư gan ở người trong vòng 48 giờ mà không để lại bất kỳ tác dụng phụ nào.",
-                    article_highlight="tiêu diệt hoàn toàn khối u ung thư gan ở người trong vòng 48 giờ",
-                    evidence_quote="Chiết xuất thử nghiệm mới chỉ thực hiện trên dòng tế bào HepG2 trong ống nghiệm (in-vitro), cho tỷ lệ ức chế tăng sinh 62%. Chưa từng thử nghiệm lâm sàng trên người và chưa có kết luận về việc tiêu diệt khối u.",
-                    evidence_highlight="dòng tế bào HepG2 trong ống nghiệm (in-vitro)",
-                    evidence_source="Viện Hàn lâm KH&CN (NC-Y-2024, Thư viện Y học Quốc gia)",
-                    evidence_url="https://vkhthuyloi.vn",
-                    protocol_standard="IFCN Standard v2.4",
-                    compatibility_score="0.08 / 1.0 (Sai lệch bản chất)",
-                    gap_t1_title="Tầng 1: In-Vitro",
-                    gap_t1_desc="Tế bào HepG2 phòng lab",
-                    gap_t1_status="CÓ CHỨNG CỨ",
-                    gap_t2_title="Tầng 2: In-Vivo (Động vật)",
-                    gap_t2_desc="Chuột thực nghiệm",
-                    gap_t2_status="CHƯA THỰC HIỆN",
-                    gap_t3_title="Tầng 3: Thử nghiệm lâm sàng I/II",
-                    gap_t3_desc="Bệnh nhân tình nguyện",
-                    gap_t3_status="CHƯA CẤP PHÉP",
-                    gap_t4_desc="“Tiêu diệt khối u ở người”",
-                    gap_t4_status="SAI LỆCH KHOA HỌC",
-                    classification="Ngoại suy quá mức (Overreach / Extrapolation)",
-                    classification_desc="Phóng đại từ mức độ nghiên cứu tiền lâm sàng cơ bản thành kết luận lâm sàng trị liệu đã hoàn tất trên cơ thể người.",
-                    harm_level="RẤT CAO",
-                    harm_desc="Tiềm ẩn nguy cơ người bệnh tự ý từ bỏ phác đồ hóa - xạ trị chuẩn của bệnh viện chuyên khoa để sử dụng thảo dược chưa kiểm chứng.",
-                )
-            elif "62%" in c_lower or "in-vitro" in c_lower:
-                return NLPEvidenceSynthesis(
-                    verdict="SUPPORTED",
-                    confidence=0.98,
-                    decisive_reasoning="Số liệu ức chế 62% trên tế bào HepG2 được kiểm chứng hoàn toàn đồng nhất với báo cáo thí nghiệm gốc của Viện Hàn lâm.",
-                    article_quote="Thử nghiệm đạt tỷ lệ ức chế tế bào 62% trong môi trường in-vitro phòng thí nghiệm.",
-                    article_highlight="tỷ lệ ức chế tế bào 62% trong môi trường in-vitro",
-                    evidence_quote="Báo cáo thử nghiệm xác nhận nồng độ IC50 cho hiệu suất ức chế phân chia tế bào đạt 62.1% ± 1.8% trên nuôi cấy in-vitro chuẩn.",
-                    evidence_highlight="hiệu suất ức chế phân chia tế bào đạt 62.1%",
-                    evidence_source="Phòng Hóa sinh Ứng dụng - Viện Hàn lâm KH&CN",
-                    evidence_url="https://vast.gov.vn",
-                    protocol_standard="TCVN Y sinh 2024",
-                    compatibility_score="0.98 / 1.0 (Chính xác)",
-                    gap_t1_title="Tầng 1: In-Vitro",
-                    gap_t1_desc="Tế bào HepG2 phòng lab",
-                    gap_t1_status="CÓ CHỨNG CỨ",
-                    gap_t2_title="Tầng 2: Đo nồng độ IC50",
-                    gap_t2_desc="Hiệu suất ức chế chuẩn",
-                    gap_t2_status="ĐÃ KIỂM ĐỊNH",
-                    gap_t3_title="Tầng 3: Đối chiếu công bố",
-                    gap_t3_desc="Biên bản nghiệm thu",
-                    gap_t3_status="ĐỒNG NHẤT",
-                    gap_t4_desc="“Ức chế tế bào 62% in-vitro”",
-                    gap_t4_status="ĐƯỢC XÁC THỰC",
-                    classification="Số liệu khoa học xác thực",
-                    classification_desc="Thông tin phản ánh trung thực kết quả đo lường thực nghiệm trong phòng lab.",
-                    harm_level="THẤP",
-                    harm_desc="Không gây hại nhận thức khi bối cảnh ống nghiệm được nêu rõ.",
-                )
-            elif "cấp phép" in c_lower or "bộ y tế" in c_lower:
-                return NLPEvidenceSynthesis(
-                    verdict="NOT_ENOUGH_INFORMATION",
-                    confidence=0.75,
-                    decisive_reasoning="Chưa tìm thấy quyết định cấp phép thử nghiệm lâm sàng tương ứng trong cơ sở dữ liệu công khai của Cục Quản lý Dược và Bộ Y tế.",
-                    article_quote="Chế phẩm đã được Bộ Y tế cấp phép thử nghiệm lâm sàng tại các bệnh viện trung ương.",
-                    article_highlight="được Bộ Y tế cấp phép thử nghiệm lâm sàng",
-                    evidence_quote="Hồ sơ đang trong giai đoạn tiếp nhận thẩm định đề cương tại Hội đồng Đạo đức trong nghiên cứu y sinh học Quốc gia, chưa có quyết định phê duyệt chính thức.",
-                    evidence_highlight="đang trong giai đoạn tiếp nhận thẩm định",
-                    evidence_source="Cổng thông tin Pháp quy Dược phẩm - Bộ Y tế",
-                    evidence_url="https://dav.gov.vn",
-                    protocol_standard="Quy chuẩn Dược lâm sàng BYT",
-                    compatibility_score="0.45 / 1.0 (Chờ phúc tra)",
-                    gap_t1_title="Tầng 1: Nộp hồ sơ đề cương",
-                    gap_t1_desc="Văn phòng Hội đồng Đạo đức",
-                    gap_t1_status="ĐÃ TIẾP NHẬN",
-                    gap_t2_title="Tầng 2: Thẩm định chuyên gia",
-                    gap_t2_desc="Tiểu ban Thẩm định Dược",
-                    gap_t2_status="ĐANG THẨM ĐỊNH",
-                    gap_t3_title="Tầng 3: Quyết định cấp phép",
-                    gap_t3_desc="Công văn chính thức Bộ Y tế",
-                    gap_t3_status="CHƯA CẤP PHÉP",
-                    gap_t4_desc="“Đã được cấp phép thử nghiệm lâm sàng”",
-                    gap_t4_status="CHƯA ĐỦ CĂN CỨ",
-                    classification="Thông tin chưa được phê duyệt",
-                    classification_desc="Tuyên bố hành chính khi cơ quan có thẩm quyền chưa ban hành văn bản chính thức.",
-                    harm_level="TRUNG BÌNH",
-                    harm_desc="Gây ngộ nhận về tình trạng pháp lý và mức độ an toàn của chế phẩm y dược.",
-                )
-            else:
-                return NLPEvidenceSynthesis(
-                    verdict="SUPPORTED",
-                    confidence=0.99,
-                    decisive_reasoning="Danh tính nhóm nghiên cứu và việc công bố kết quả bước đầu được xác thực đầy đủ qua văn bản của Viện Hàn lâm KH&CN.",
-                    article_quote="Nhóm nghiên cứu thuộc Viện Hàn lâm Khoa học công nghệ công bố kết quả bước đầu.",
-                    article_highlight="Viện Hàn lâm Khoa học công nghệ công bố kết quả",
-                    evidence_quote="Thông cáo báo chí của Viện Hàn lâm Khoa học và Công nghệ Việt Nam xác nhận nghiên cứu cơ bản của nhóm tác giả thuộc Phòng Hóa sinh Ứng dụng.",
-                    evidence_highlight="xác nhận nghiên cứu cơ bản của nhóm tác giả",
-                    evidence_source="Thông cáo báo chí Viện Hàn lâm KH&CN Việt Nam",
-                    evidence_url="https://vast.gov.vn",
-                    protocol_standard="Xác thực danh tính & cơ quan chủ quản",
-                    compatibility_score="1.0 / 1.0 (Xác thực)",
-                    gap_t1_title="Tầng 1: Đề tài cơ sở",
-                    gap_t1_desc="Phòng Hóa sinh Ứng dụng",
-                    gap_t1_status="ĐÃ ĐĂNG KÝ",
-                    gap_t2_title="Tầng 2: Báo cáo định kỳ",
-                    gap_t2_desc="Hội đồng Khoa học Viện",
-                    gap_t2_status="ĐÃ THÔNG QUA",
-                    gap_t3_title="Tầng 3: Thông cáo chính thức",
-                    gap_t3_desc="Cổng thông tin Viện Hàn lâm",
-                    gap_t3_status="ĐÃ CÔNG BỐ",
-                    gap_t4_desc="“Nhóm nghiên cứu công bố kết quả”",
-                    gap_t4_status="ĐƯỢC XÁC NHẬN",
-                    classification="Xác thực sự kiện báo chí",
-                    classification_desc="Tác giả và cơ quan công bố thông tin tồn tại hợp pháp và chính xác.",
-                    harm_level="THẤP",
-                    harm_desc="Thông tin xác thực, bảo đảm tính minh bạch xuất xứ.",
-                )
+        # Find highlight in article quote
+        art_hl = claim_text[:45]
+        if actual_quote != claim_text:
+            for piece in re.split(r"[,;:]", claim_text):
+                p_str = piece.strip()
+                if len(p_str) > 15 and p_str.lower() in actual_quote.lower():
+                    art_hl = p_str
+                    break
 
-        # Case B: Streamer Chu Nhị Lỗi (CafeF)
-        if any(w in c_lower or w in t_lower for w in ["chu nhị lỗi", "streamer", "viện tâm thần", "sơn đông"]):
-            return NLPEvidenceSynthesis(
-                verdict="PARTIALLY_SUPPORTED",
-                confidence=0.88,
-                decisive_reasoning="Sự kiện streamer Chu Nhị Lỗi và tranh chấp gia đình là có thật theo hồ sơ truyền thông mạng Trung Quốc, tuy nhiên các chi tiết về số tiền kiếm được và chẩn đoán y khoa chưa có biên bản pháp lý chính thức đối chứng.",
-                article_quote="Đang ở đỉnh cao với phòng livestream hơn 100.000 người xem, Chu Nhị Lỗi bị mẹ đưa vào một bệnh viện tâm thần tư nhân.",
-                article_highlight="bị mẹ đưa vào một bệnh viện tâm thần tư nhân",
-                evidence_quote="Theo thông tin từ Báo điện tử CafeF và truyền thông mạng Trung Quốc, mâu thuẫn gia đình xuất phát từ tranh chấp quản lý tài chính và hợp đồng livestream. Cơ quan bảo trợ địa phương đã tiến hành xác minh tình trạng cư trú.",
-                evidence_highlight="mâu thuẫn gia đình xuất phát từ tranh chấp quản lý tài chính",
-                evidence_source="Báo điện tử CafeF · Chuyên mục Đời sống & Pháp luật",
-                evidence_url="https://cafef.vn",
-                protocol_standard="Kiểm chứng hồ sơ tư pháp báo chí quốc tế",
-                compatibility_score="0.72 / 1.0 (Đối chiếu nguồn tin)",
-                gap_t1_title="Tầng 1: Hoạt động livestream",
-                gap_t1_desc="Tài khoản mạng xã hội",
-                gap_t1_status="CÓ THỰC TẾ",
-                gap_t2_title="Tầng 2: Mâu thuẫn gia đình",
-                gap_t2_desc="Tranh chấp thu nhập tài chính",
-                gap_t2_status="CÓ PHẢN ÁNH",
-                gap_t3_title="Tầng 3: Hồ sơ giám định y khoa",
-                gap_t3_desc="Bệnh án pháp lý chính thức",
-                gap_t3_status="CHƯA CÔNG KHAI",
-                gap_t4_desc="“Bị lừa vào viện tâm thần mất sạch tiền”",
-                gap_t4_status="ĐÚNG MỘT PHẦN",
-                classification="Tin tức xã hội cần nguồn bổ trợ",
-                classification_desc="Sự kiện giật gân có nền tảng tranh chấp thực tế nhưng số liệu và diễn biến chi tiết mang tính một chiều.",
-                harm_level="TRUNG BÌNH",
-                harm_desc="Ảnh hưởng đến uy tín cá nhân và tạo dư luận trái chiều.",
-            )
-
-        # Case C: Bếp gas chạy bằng nước lã
-        if any(w in c_lower or w in t_lower for w in ["bếp gas", "nước lã", "tự cháy", "chạy bằng nước"]):
-            return NLPEvidenceSynthesis(
-                verdict="REFUTED",
-                confidence=0.97,
-                decisive_reasoning="Tuyên bố 'bếp gas chạy bằng nước lã' là chiêu trò lừa đảo phản khoa học, vi phạm trực tiếp định luật bảo toàn năng lượng và đã bị VAFC cùng VTV24 chính thức cảnh báo.",
-                article_quote="Gần đây trên mạng xã hội quảng cáo tràn lan thiết bị 'bếp gas chạy bằng nước lã tiết kiệm 100% chi phí gas'.",
-                article_highlight="bếp gas chạy bằng nước lã tiết kiệm 100% chi phí gas",
-                evidence_quote="Trung tâm Xử lý Tin giả Việt Nam (VAFC) và các nhà khoa học Viện Hóa học khẳng định nước (H2O) không thể tự cháy để sinh nhiệt như chất đốt. Các thiết bị trên thị trường thực chất giấu bình gas mini bên trong.",
-                evidence_highlight="nước (H2O) không thể tự cháy để sinh nhiệt",
-                evidence_source="Trung tâm Xử lý Tin giả Việt Nam (VAFC) & Ban Khoa giáo VTV24",
-                evidence_url="https://vafc.gov.vn",
-                protocol_standard="Quy chuẩn Vật lý - Hóa học TCVN",
-                compatibility_score="0.02 / 1.0 (Phản khoa học)",
-                gap_t1_title="Tầng 1: Định luật Nhiệt động học",
-                gap_t1_desc="Nước không phải chất phản ứng sinh công",
-                gap_t1_status="BỊ BÁC BỎ",
-                gap_t2_title="Tầng 2: Kiểm tra cấu tạo thiết bị",
-                gap_t2_desc="Cơ quan quản lý thị trường",
-                gap_t2_status="PHÁT HIỆN BẪY LỪA",
-                gap_t3_title="Tầng 3: Cảnh báo chính thức",
-                gap_t3_desc="Trung tâm VAFC - Bộ TT&TT",
-                gap_t3_status="ĐÃ XỬ PHẠT",
-                gap_t4_desc="“Bếp gas tiết kiệm 100% bằng nước lã”",
-                gap_t4_status="LỪA ĐẢO / BÁC BỎ",
-                classification="Lừa đảo thương mại & Phản khoa học",
-                classification_desc="Lợi dụng sự thiếu hiểu biết khoa học kỹ thuật của người tiêu dùng để trục lợi.",
-                harm_level="RẤT CAO",
-                harm_desc="Tiềm ẩn nguy cơ cháy nổ nguy hiểm và thiệt hại kinh tế trực tiếp cho người mua.",
-            )
-
-        # Case D: Dam failure rumor (Vỡ đập thủy điện)
-        if any(w in c_lower or w in t_lower for w in ["vỡ đập", "thủy điện", "nứt đập", "sạt lở đập"]):
-            return NLPEvidenceSynthesis(
-                verdict="REFUTED",
-                confidence=0.96,
-                decisive_reasoning="Thông tin vỡ đập thủy điện là tin đồn thất thiệt hoàn toàn bịa đặt; Tập đoàn Điện lực Việt Nam (EVN) và Ban chỉ huy PCTT xác nhận công trình vận hành an toàn.",
-                article_quote="Ban chỉ huy phòng chống thiên tai và EVN khẳng định đập thủy điện vận hành an toàn, không có sự cố nứt vỡ.",
-                article_highlight="đập thủy điện vận hành an toàn, không có sự cố",
-                evidence_quote="Thông cáo khẩn từ Tập đoàn Điện lực Việt Nam (EVN) và Ban Chỉ huy PCTT xác nhận mực nước hồ và thân đập hoàn toàn ổn định trong giới hạn thiết kế, công an đã xử phạt đối tượng tung tin sai sự thật.",
-                evidence_highlight="hoàn toàn ổn định trong giới hạn thiết kế",
-                evidence_source="Tập đoàn Điện lực Việt Nam (EVN) & Báo Tuổi Trẻ",
-                evidence_url="https://tuoitre.vn",
-                protocol_standard="Quy trình Vận hành Liên hồ chứa Quốc gia",
-                compatibility_score="0.95 / 1.0 (An toàn xác thực)",
-                gap_t1_title="Tầng 1: Đo đạc cảm biến thân đập",
-                gap_t1_desc="Hệ thống quan trắc tự động",
-                gap_t1_status="CHỈ SỐ AN TOÀN",
-                gap_t2_title="Tầng 2: Báo cáo kỹ thuật hiện trường",
-                gap_t2_desc="Kỹ sư vận hành EVN",
-                gap_t2_status="XÁC NHẬN BÌNH THƯỜNG",
-                gap_t3_title="Tầng 3: Thông cáo ban ngành",
-                gap_t3_desc="Ban chỉ huy PCTT tỉnh",
-                gap_t3_status="BÁC TIN ĐỒN",
-                gap_t4_desc="“Tin đồn vỡ đập thủy điện”",
-                gap_t4_status="TIN GIẢ BỊ BÁC BỎ",
-                classification="Tin đồn thất thiệt gây hoang mang",
-                classification_desc="Bịa đặt thảm họa thiên tai đe dọa an ninh trật tự công cộng.",
-                harm_level="RẤT CAO",
-                harm_desc="Gây hoảng loạn di tản không cần thiết trong nhân dân mùa mưa lũ.",
-            )
-
-        # Case E: Fine-grained evidence alignment from dataset candidate powered by trained AI
+        # Step 2: Evidence alignment from top reranked dataset candidate
         top_cand = candidates[0] if candidates else {}
-        excerpt = top_cand.get("excerpt") or top_cand.get("content") or "Tài liệu đối chiếu từ cơ sở dữ liệu học thuật."
+        excerpt = top_cand.get("excerpt") or top_cand.get("content") or ""
         source_name = top_cand.get("source_name") or "Cơ quan báo chí độc lập"
         source_url = top_cand.get("source_url")
-        cand_stance = str(top_cand.get("stance") or top_cand.get("baseline_verdict") or top_cand.get("nli_relation") or "NOT_ENOUGH_INFORMATION").upper()
-        cand_conf = float(top_cand.get("nli_confidence") or top_cand.get("reliability_score") or 0.88)
+        cand_stance = str(top_cand.get("stance") or top_cand.get("baseline_verdict") or top_cand.get("nli_relation") or "").upper()
+        cand_conf = float(top_cand.get("nli_confidence") or top_cand.get("reliability_score") or 0.85)
         dataset_src = top_cand.get("dataset_source", "ViFactCheck")
 
-        # Determine decisive phrasing and highlights based on trained AI decision
+        # Step 3: Run trained NLI verifier if available
+        try:
+            from ml.models.nli_verifier import nli_verifier_service
+            if nli_verifier_service.is_ready() and excerpt:
+                nli_out = nli_verifier_service.verify_pair(claim_text, excerpt)
+                if nli_out["label"] == "ENTAILMENT":
+                    cand_stance = "SUPPORT"
+                    cand_conf = max(cand_conf, nli_out["confidence"])
+                elif nli_out["label"] == "CONTRADICTION":
+                    cand_stance = "REFUTE"
+                    cand_conf = max(cand_conf, nli_out["confidence"])
+        except Exception as e:
+            logger.debug("Trained NLI verification during synthesis fallback: %s", e)
+
+        # Step 4: Determine decisive phrasing and highlights based on trained AI decision
         if any(f in cand_stance for f in ["REFUTE", "CONTRADICTION", "FALSE"]):
             syn_verdict = "REFUTED"
             syn_conf = max(cand_conf, 0.90)
@@ -460,8 +285,7 @@ class GeminiNLPService:
             classification = "Thông tin sai sự thật bị bác bỏ"
             harm_level = "RẤT CAO"
             compat = "0.10 / 1.0 (Sai lệch thực chứng)"
-            art_hl = claim_text[:40]
-            evi_hl = excerpt[:40]
+            evi_hl = excerpt[:50] if excerpt else ""
         elif any(s in cand_stance for s in ["SUPPORT", "ENTAILMENT", "TRUE"]):
             syn_verdict = "SUPPORTED"
             syn_conf = max(cand_conf, 0.92)
@@ -473,8 +297,7 @@ class GeminiNLPService:
             classification = "Thông tin đã được xác thực"
             harm_level = "THẤP"
             compat = "0.96 / 1.0 (Xác thực)"
-            art_hl = claim_text[:40]
-            evi_hl = excerpt[:40]
+            evi_hl = excerpt[:50] if excerpt else ""
         elif "PARTIAL" in cand_stance:
             syn_verdict = "PARTIALLY_SUPPORTED"
             syn_conf = max(cand_conf, 0.84)
@@ -486,27 +309,25 @@ class GeminiNLPService:
             classification = "Thông tin đúng một phần"
             harm_level = "TRUNG BÌNH"
             compat = "0.65 / 1.0 (Một phần)"
-            art_hl = claim_text[:40]
-            evi_hl = excerpt[:40]
+            evi_hl = excerpt[:50] if excerpt else ""
         else:
             syn_verdict = "NOT_ENOUGH_INFORMATION"
-            syn_conf = 0.75
+            syn_conf = 0.70
             decisive_reasoning = (
-                f"Chưa tìm thấy bằng chứng đối chứng trực tiếp đạt ngưỡng liên quan trong cơ sở tri thức đối chuẩn. "
-                "Hệ thống bảo lưu kết luận Chưa đủ thông tin (NOT_ENOUGH_INFORMATION) theo quy chuẩn IFCN."
+                "Chưa tìm thấy bằng chứng đối chứng trực tiếp đạt ngưỡng liên quan trong cơ sở tri thức đối chuẩn. "
+                "Hệ thống tuân thủ nguyên tắc khoa học: bảo lưu trạng thái Chưa đủ thông tin (NOT_ENOUGH_INFORMATION) theo chuẩn IFCN."
             )
             gap_t4_status = "CHƯA ĐỦ THÔNG TIN"
             classification = "Chưa đủ căn cứ kiểm chứng"
             harm_level = "TRUNG BÌNH"
             compat = "0.50 / 1.0 (Chờ đối chiếu)"
-            art_hl = claim_text[:35]
             evi_hl = ""
 
         return NLPEvidenceSynthesis(
             verdict=syn_verdict,
             confidence=round(syn_conf, 3),
             decisive_reasoning=decisive_reasoning,
-            article_quote=claim_text,
+            article_quote=actual_quote,
             article_highlight=art_hl,
             evidence_quote=excerpt[:350],
             evidence_highlight=evi_hl,

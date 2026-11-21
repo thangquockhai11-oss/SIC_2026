@@ -103,14 +103,14 @@ export interface ActiveArticle {
 
 // Baseline Prototype Data matching stitch_trustmedia_research_interface exactly
 export const PROTOTYPE_ARTICLE: ActiveArticle = {
-  id: "prototype-tuoitre-cancer",
+  id: "prototype-article-sample",
   code: "#TM-2024-8841A",
-  category: "Nghiên cứu Y tế & Sức khỏe cộng đồng",
-  title: "Nghiên cứu mới về chiết xuất thảo dược hỗ trợ ức chế tế bào ung thư tại Viện Hàn lâm Khoa học",
-  source_name: "Báo Tuổi Trẻ",
-  source_url: "https://tuoitre.vn",
+  category: "Thời sự & Đối chuẩn Báo chí",
+  title: "Nghiên cứu về chiết xuất thảo dược hỗ trợ ức chế tế bào ung thư tại Viện Hàn lâm Khoa học",
+  source_name: "Bản tin Thời sự Khoa giáo",
+  source_url: undefined,
   publication_date: "24/10/2024",
-  author: "Ban Khoa giáo",
+  author: "Ban Biên tập Khoa giáo",
   overall_verdict: "REFUTED",
   transparency_score: 82,
   transparency_rank: "HẠNG A- (KHÁ TỐT)",
@@ -732,6 +732,11 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
     };
 
     setArticle(newArticle);
+    try {
+      localStorage.setItem("trustmedia_active_article", JSON.stringify(newArticle));
+    } catch (e) {
+      console.warn("Could not save to localStorage:", e);
+    }
     if (claimsMapped.length > 0) {
       setActiveClaimId(claimsMapped[0].id);
     }

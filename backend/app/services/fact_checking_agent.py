@@ -727,6 +727,14 @@ class FactCheckingAgent:
 
         for cand in retrieved_candidates:
             excerpt = cand.get("excerpt") or cand.get("content", "")
+            if "BẰNG CHỨNG ĐỐI CHIỂU:" in excerpt:
+                excerpt = excerpt.split("BẰNG CHỨNG ĐỐI CHIỂU:", 1)[1].strip()
+            elif "PHÁT NGÔN / CLAIM:" in excerpt:
+                parts = excerpt.split("\n")
+                clean_parts = [p for p in parts if not p.startswith("PHÁT NGÔN") and not p.startswith("CHỦ ĐỀ")]
+                excerpt = "\n".join(clean_parts).strip()
+            cand["excerpt"] = excerpt
+
             r_score = float(cand.get("relevance_score", 0.0))
             source_nm = cand.get("source_name") or "Cơ quan báo chí độc lập"
             dataset_src = cand.get("dataset_source") or "ViFactCheck"
@@ -747,52 +755,27 @@ class FactCheckingAgent:
             num_ok, num_note = self._check_numerical_consistency(claim.get("numerical_values", []), excerpt)
             temp_ok, temp_note = self._check_temporal_consistency(claim.get("date_or_time_period"), excerpt)
 
-            # Reconcile Stance
-            stance = nli_rel
-            baseline_v = str(cand.get("baseline_verdict", "")).upper()
+            # Reconcile Stance using Trained NLI Model & Calibrated Evidence Relevance
+            stance = "NOT_ENOUGH_INFORMATION"
+            rerank_sc = float(cand.get("rerank_score", 0.0))
+            is_relevant = r_score >= 0.35 or rerank_sc >= 0.35
 
-            # Debunk and scam keywords in evidence
-            debunk_markers = [
-                "bác bỏ", "sai sự thật", "không có chuyện", "giả mạo", "tin đồn thất thiệt", "tin giả",
-                "không đúng", "chưa từng", "không chính xác", "hoàn toàn bịa đặt", "bịa đặt", "phủ nhận",
-                "không thể chữa", "không thể", "không có tác dụng", "không hiệu quả", "không có cơ sở", "không có căn cứ",
-                "chưa được kiểm chứng", "chưa có bằng chứng", "không phải là", "không ngăn ngừa", "phản khoa học", "nên tránh", "sai lầm",
-                "bị phạt", "xử phạt", "cảnh báo", "khuyến cáo không", "đính chính", "bác tin",
-                "chiêu lừa", "lừa đảo", "mắc bẫy", "chiêu trò", "có thật không", "lừa mới", "bẫy lừa"
-            ]
-
-            claim_affirms_safety = any(term in claim_text.lower() for term in ["an toàn", "vận hành an toàn", "không có sự cố", "ổn định", "bình thường"])
-            evidence_debunks_failure_rumor = any(term in excerpt.lower() for term in ["triệu tập người tung tin", "xử phạt người tung tin", "bác tin đồn", "bác bỏ tin đồn"])
-
-            # 1. Align with ground-truth benchmark dataset verdict if strongly relevant
-            if dataset_src in ("ViFactCheck", "X-FACT", "FEVER", "ViWiki-Corpus", "Research-Hydro-2026") and r_score >= 0.22:
-                if any(f in baseline_v for f in ["REFUTE", "FALSE", "PANTS"]):
-                    stance = "REFUTES"
-                elif any(s in baseline_v for s in ["SUPPORT", "TRUE"]):
-                    stance = "SUPPORTS"
-            # 2. Corroborating safety assertion
-            elif claim_affirms_safety and (evidence_debunks_failure_rumor or "an toàn" in excerpt.lower()):
-                stance = "SUPPORTS"
-                nli_conf = max(nli_conf, 0.90)
-            # 3. Explicit debunk / scam markers in evidence
-            elif any(dm in excerpt.lower() for dm in debunk_markers):
-                stance = "REFUTES"
-                nli_conf = max(nli_conf, 0.90)
-            # 4. Numerical or temporal divergence
-            elif not num_ok or not temp_ok:
-                stance = "REFUTES"
-            # 5. Model NLI inference
-            elif nli_rel in ("SUPPORTS", "REFUTES"):
-                stance = nli_rel
-            # 6. Corroboration from story-level news pool or explicit confirmation
-            elif cand.get("query_matched_strategy") == "story_level_pool":
-                stance = "SUPPORTS"
-                nli_conf = max(nli_conf, 0.86)
-            elif r_score >= 0.38 and any(term in excerpt.lower() for term in ["xác nhận", "khẳng định", "chính thức", "chứng minh", "đúng sự thật"]):
-                stance = "SUPPORTS"
-                nli_conf = max(nli_conf, 0.86)
-            else:
+            if not is_relevant:
+                # Evidence has insufficient semantic relevance to claim: do not hallucinate support or refute
                 stance = "NOT_ENOUGH_INFORMATION"
+            else:
+                if nli_rel == "SUPPORTS":
+                    # If trained NLI predicts support, check if numerical or temporal mismatch turns it into contradiction
+                    if not num_ok or not temp_ok:
+                        stance = "REFUTES"
+                        nli_conf = 0.90
+                    else:
+                        stance = "SUPPORTS"
+                elif nli_rel == "REFUTES":
+                    stance = "REFUTES"
+                else:
+                    # Calibrated NLI model determined NEUTRAL relationship: insufficient to support or refute
+                    stance = "NOT_ENOUGH_INFORMATION"
 
             ev_item = {
                 "id": str(uuid.uuid4()),
@@ -929,7 +912,10 @@ class FactCheckingAgent:
             if synthesis.confidence >= 0.88 and final_verdict in ("SUPPORTED", "REFUTED", "PARTIALLY_SUPPORTED", "NOT_ENOUGH_INFORMATION"):
                 final_verdict = synthesis.verdict
                 confidence = max(confidence, synthesis.confidence)
-            decisive_reasoning = synthesis.decisive_reasoning or reasoning
+            if synthesis.verdict == final_verdict and synthesis.decisive_reasoning:
+                decisive_reasoning = synthesis.decisive_reasoning
+            else:
+                decisive_reasoning = reasoning
         else:
             decisive_reasoning = reasoning
 

@@ -79,6 +79,10 @@ class HybridKnowledgeRetriever:
                         ev = str(row.get("Evidence", "")).strip()
                         if not ev or ev.lower() == "nan" or ev == "None":
                             ev = str(row.get("Context", ""))[:300]
+                        if "BẰNG CHỨNG ĐỐI CHIỂU:" in ev:
+                            ev = ev.split("BẰNG CHỨNG ĐỐI CHIỂU:")[-1].strip()
+                        elif "BẰNG CHỨNG:" in ev:
+                            ev = ev.split("BẰNG CHỨNG:")[-1].strip()
 
                         lbl = row.get("labels", 2)
                         verdict_map = {0: "SUPPORTED", 1: "REFUTED", 2: "NOT_ENOUGH_INFORMATION"}

@@ -76,9 +76,11 @@ export default function MediaCredibilityPage() {
             <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary-container/10 text-primary-container">
               <span className="material-symbols-outlined text-[14px]">shield</span>
             </span>
-            <span>Khung đánh giá ĐHQG-HCM / COPE Journalistic Index</span>
+            <span>Khung đánh giá ĐHQG-HCM / Fact-Checking & Content Integrity Index</span>
             <span className="text-outline-variant">/</span>
-            <span className="text-primary font-medium">{article.source_name}</span>
+            <span className="text-primary font-medium">
+              Thẩm định Nội dung: {article.title ? (article.title.length > 40 ? article.title.slice(0, 40) + "..." : article.title) : article.source_name}
+            </span>
           </div>
           <div className="flex items-center gap-space-md text-label-sm font-label-sm">
             <span className="flex items-center gap-1">
