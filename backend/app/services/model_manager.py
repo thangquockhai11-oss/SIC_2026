@@ -218,13 +218,21 @@ class ModelManager:
     def run_nli_inference(
         self, claim: str, evidence: str, language: str = "vi"
     ) -> tuple[str, float, dict[str, float]]:
-        """Run Natural Language Inference between claim and evidence.
+        """Run Natural Language Inference between claim and evidence using trained model if available."""
+        try:
+            from ml.models.nli_verifier import nli_verifier_service
+            if nli_verifier_service.is_ready():
+                res = nli_verifier_service.verify_pair(claim, evidence)
+                label_map = {
+                    "ENTAILMENT": "SUPPORTS",
+                    "CONTRADICTION": "REFUTES",
+                    "NEUTRAL": "NOT_ENOUGH_INFORMATION",
+                }
+                v = label_map.get(res["label"], "NOT_ENOUGH_INFORMATION")
+                return v, res["confidence"], res["probabilities"]
+        except Exception as e:
+            logger.debug("Falling back to baseline NLI inference: %s", e)
 
-        Evaluates semantic entailment, contradiction, or neutral relation.
-        Returns:
-            (verdict, calibrated_confidence, class_probabilities)
-            where verdict is one of: 'SUPPORTS', 'REFUTES', 'NOT_ENOUGH_INFORMATION'
-        """
         c_lower = claim.lower().strip()
         e_lower = evidence.lower().strip()
 

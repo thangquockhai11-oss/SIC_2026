@@ -1,0 +1,72 @@
+[
+  {
+    "Experiment": "Exp A",
+    "Description": "LLM Only (Zero-Shot Closed Book)",
+    "Accuracy": 36.67,
+    "Macro_F1": 0.2671,
+    "Hallucination_Rate": 100.0,
+    "Citation_Precision": 0.0,
+    "Grounding_Rate": 0.0,
+    "Latency_ms": 0.0
+  },
+  {
+    "Experiment": "Exp B",
+    "Description": "BM25 + LLM",
+    "Accuracy": 100.0,
+    "Macro_F1": 1.0,
+    "Hallucination_Rate": 0.83,
+    "Citation_Precision": 99.17,
+    "Grounding_Rate": 99.17,
+    "Latency_ms": 3.4
+  },
+  {
+    "Experiment": "Exp C",
+    "Description": "Dense Retrieval (BGE-M3) + LLM",
+    "Accuracy": 99.17,
+    "Macro_F1": 0.9905,
+    "Hallucination_Rate": 1.67,
+    "Citation_Precision": 98.33,
+    "Grounding_Rate": 98.33,
+    "Latency_ms": 3.04
+  },
+  {
+    "Experiment": "Exp D",
+    "Description": "Hybrid RAG (BM25 + Dense + RRF)",
+    "Accuracy": 100.0,
+    "Macro_F1": 1.0,
+    "Hallucination_Rate": 0.83,
+    "Citation_Precision": 99.17,
+    "Grounding_Rate": 99.17,
+    "Latency_ms": 3.02
+  },
+  {
+    "Experiment": "Exp E",
+    "Description": "Hybrid RAG + BGE-Reranker-v2",
+    "Accuracy": 100.0,
+    "Macro_F1": 1.0,
+    "Hallucination_Rate": 0.0,
+    "Citation_Precision": 100.0,
+    "Grounding_Rate": 100.0,
+    "Latency_ms": 5.19
+  },
+  {
+    "Experiment": "Exp F",
+    "Description": "Hybrid RAG + Reranker + NLI Verifier",
+    "Accuracy": 45.83,
+    "Macro_F1": 0.3329,
+    "Hallucination_Rate": 0.0,
+    "Citation_Precision": 100.0,
+    "Grounding_Rate": 100.0,
+    "Latency_ms": 28.66
+  },
+  {
+    "Experiment": "Exp G",
+    "Description": "Full TrustMedia AI (Calibrated System)",
+    "Accuracy": 40.0,
+    "Macro_F1": 0.3223,
+    "Hallucination_Rate": 0.0,
+    "Citation_Precision": 100.0,
+    "Grounding_Rate": 100.0,
+    "Latency_ms": 62.11
+  }
+]

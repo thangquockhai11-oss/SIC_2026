@@ -174,7 +174,15 @@ class FactCheckingAgent:
         temporal: str | None,
         slots: tuple[str | None, str | None, str | None],
     ) -> tuple[str, bool]:
-        """Classify claim into one of the 8 canonical taxonomy types and checkability."""
+        """Classify claim into one of the canonical taxonomy types and checkability."""
+        try:
+            from ml.models.claim_classifier import claim_classifier_service
+            if claim_classifier_service.is_ready():
+                res = claim_classifier_service.classify(text)
+                return res["claim_type"], res["is_checkable"]
+        except Exception:
+            pass
+
         t_lower = text.lower()
 
         # 1. OPINION: subjective sentiments, rhetorical questions, ungrounded appraisals

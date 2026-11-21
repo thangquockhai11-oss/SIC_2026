@@ -1,0 +1,52 @@
+[
+  {
+    "configuration": "BM25 (Lexical Only)",
+    "hit@1": 0.98,
+    "hit@3": 1.0,
+    "hit@5": 1.0,
+    "hit@10": 1.0,
+    "mrr": 0.99,
+    "ndcg@5": 0.9926,
+    "mean_latency_ms": 5.33
+  },
+  {
+    "configuration": "Dense Semantic (BGE-M3 Only)",
+    "hit@1": 0.9867,
+    "hit@3": 1.0,
+    "hit@5": 1.0,
+    "hit@10": 1.0,
+    "mrr": 0.9933,
+    "ndcg@5": 0.9951,
+    "mean_latency_ms": 3.78
+  },
+  {
+    "configuration": "Hybrid RRF (k=20)",
+    "hit@1": 0.9867,
+    "hit@3": 1.0,
+    "hit@5": 1.0,
+    "hit@10": 1.0,
+    "mrr": 0.9933,
+    "ndcg@5": 0.9951,
+    "mean_latency_ms": 3.87
+  },
+  {
+    "configuration": "Hybrid RRF (k=60 - TrustMedia Baseline)",
+    "hit@1": 0.9867,
+    "hit@3": 1.0,
+    "hit@5": 1.0,
+    "hit@10": 1.0,
+    "mrr": 0.9933,
+    "ndcg@5": 0.9951,
+    "mean_latency_ms": 3.75
+  },
+  {
+    "configuration": "Hybrid RRF (k=100)",
+    "hit@1": 0.9867,
+    "hit@3": 1.0,
+    "hit@5": 1.0,
+    "hit@10": 1.0,
+    "mrr": 0.9933,
+    "ndcg@5": 0.9951,
+    "mean_latency_ms": 3.76
+  }
+]
