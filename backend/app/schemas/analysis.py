@@ -62,6 +62,19 @@ class ClaimResponse(BaseModel):
     confidence_metric_type: str = "Calibrated Posterior Probability"
     verification_status: str = "VERIFIED"
     evidences: list[EvidenceResponse] = []
+    article_quote: str | None = None
+    article_highlight: str | None = None
+    article_quote_highlight: str | None = None
+    evidence_quote: str | None = None
+    evidence_highlight: str | None = None
+    evidence_quote_highlight: str | None = None
+    evidence_source: str | None = None
+    evidence_url: str | None = None
+    protocol_standard: str | None = None
+    compatibility_score: str | None = None
+    decisive_reasoning: str | None = None
+    evidence_gap: dict | None = None
+    review_board: dict | None = None
 
 
 class MediaCredibilityResponse(BaseModel):

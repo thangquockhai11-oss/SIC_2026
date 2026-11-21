@@ -235,31 +235,65 @@ def download_tweeteval() -> dict[str, Any]:
     return download_hf_repo("cardiffnlp/tweet_eval", dest_dir)
 
 
+def download_viwiki() -> dict[str, Any]:
+    """Download Vietnamese Wikipedia dump files from Wikimedia."""
+    dest_dir = RAW_DIR / "viwiki"
+    base_url = "https://dumps.wikimedia.org/viwiki/latest/"
+    urls = {
+        "viwiki-latest-all-titles-in-ns0.gz": base_url + "viwiki-latest-all-titles-in-ns0.gz",
+        "viwiki-latest-pages-articles-multistream-index.txt.bz2": base_url + "viwiki-latest-pages-articles-multistream-index.txt.bz2",
+    }
+    results = {}
+    for filename, url in urls.items():
+        results[filename] = download_file(url, dest_dir / filename)
+    return results
+
+
+def download_enwiki() -> dict[str, Any]:
+    """Download English Wikipedia dump files from Wikimedia."""
+    dest_dir = RAW_DIR / "enwiki"
+    base_url = "https://dumps.wikimedia.org/enwiki/latest/"
+    urls = {
+        "enwiki-latest-all-titles-in-ns0.gz": base_url + "enwiki-latest-all-titles-in-ns0.gz",
+        "enwiki-latest-pages-articles-multistream-index1.txt-p1p41242.bz2": base_url + "enwiki-latest-pages-articles-multistream-index1.txt-p1p41242.bz2",
+    }
+    results = {}
+    for filename, url in urls.items():
+        results[filename] = download_file(url, dest_dir / filename)
+    return results
+
+
 def main():
     logger.info("=== Starting TrustMedia AI Dataset Download Pipeline ===")
     summary = {}
 
     # AUTO_DOWNLOAD Group
-    logger.info("--- [1/7] Downloading FEVER ---")
+    logger.info("--- [1/9] Downloading FEVER ---")
     summary["fever"] = download_fever()
 
-    logger.info("--- [2/7] Downloading ViFactCheck ---")
+    logger.info("--- [2/9] Downloading ViFactCheck ---")
     summary["vifactcheck"] = download_vifactcheck()
 
-    logger.info("--- [3/7] Downloading X-FACT ---")
+    logger.info("--- [3/9] Downloading X-FACT ---")
     summary["xfact"] = download_xfact()
 
-    logger.info("--- [4/7] Downloading GoEmotions ---")
+    logger.info("--- [4/9] Downloading GoEmotions ---")
     summary["goemotions"] = download_goemotions()
 
-    logger.info("--- [5/7] Downloading UIT-VSMEC ---")
+    logger.info("--- [5/9] Downloading UIT-VSMEC ---")
     summary["uit_vsmec"] = download_uit_vsmec()
 
-    logger.info("--- [6/7] Downloading PHEME ---")
+    logger.info("--- [6/9] Downloading PHEME ---")
     summary["pheme"] = download_pheme()
 
-    logger.info("--- [7/7] Downloading NELA-GT-2020 ---")
+    logger.info("--- [7/9] Downloading NELA-GT-2020 ---")
     summary["nela_gt"] = download_nela_gt()
+
+    logger.info("--- [8/9] Downloading viwiki (Vietnamese Wikipedia Dump) ---")
+    summary["viwiki"] = download_viwiki()
+
+    logger.info("--- [9/9] Downloading enwiki (English Wikipedia Dump) ---")
+    summary["enwiki"] = download_enwiki()
 
     # LICENSE_REVIEW_REQUIRED Group
     logger.info("--- Downloading TweetEval (LICENSE_REVIEW_REQUIRED) ---")

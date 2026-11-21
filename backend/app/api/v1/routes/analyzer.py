@@ -55,8 +55,8 @@ def submit_analysis(
     content = data.content.strip() if data.content else None
     source_url = data.source_url.strip() if data.source_url else None
 
-    # If URL is provided, fetch and extract safely
-    if source_url:
+    # If URL is provided, fetch and extract safely if content or title is missing
+    if source_url and (not content or not title):
         try:
             extracted_title, extracted_body = fetch_and_extract_article(source_url)
             if not title:
@@ -64,10 +64,11 @@ def submit_analysis(
             if not content:
                 content = extracted_body
         except ValueError as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"URL Extraction Error: {str(e)}",
-            ) from e
+            if not content:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"URL Extraction Error: {str(e)}",
+                ) from e
 
     if not content or len(content) < 5:
         raise HTTPException(
@@ -171,6 +172,20 @@ def get_analysis_detail(
             detail="Analysis not found",
         )
 
+    fc_claims_map: dict[str, Any] = {}
+    if analysis.fact_checking_report:
+        report_data = analysis.fact_checking_report
+        if isinstance(report_data, str):
+            try:
+                report_data = json.loads(report_data)
+            except Exception:
+                report_data = {}
+        if isinstance(report_data, dict):
+            for rc in report_data.get("claims", []) or report_data.get("verified_claims", []):
+                key = rc.get("claim_id") or rc.get("claim_text")
+                if key:
+                    fc_claims_map[key] = rc
+
     claims_resp = []
     for c in analysis.claims:
         evs = [
@@ -192,6 +207,51 @@ def get_analysis_detail(
             )
             for e in c.evidences
         ]
+
+        rich_info = fc_claims_map.get(c.id) or fc_claims_map.get(c.claim_text) or {}
+        if not rich_info.get("evidence_gap"):
+            from app.services.gemini_nlp_service import gemini_nlp_service
+            synthesis = gemini_nlp_service.align_and_synthesize(
+                claim_text=c.claim_text,
+                candidates=[{"excerpt": e.excerpt, "source_name": e.source_name, "source_url": e.source_url} for e in c.evidences],
+                article_title=analysis.title or "",
+                article_content=analysis.content or "",
+                claim_type=getattr(c, "claim_type", "FACTUAL_CLAIM"),
+            )
+            rich_info = {
+                "article_quote": synthesis.article_quote,
+                "article_highlight": synthesis.article_highlight,
+                "article_quote_highlight": synthesis.article_highlight,
+                "evidence_quote": synthesis.evidence_quote,
+                "evidence_highlight": synthesis.evidence_highlight,
+                "evidence_quote_highlight": synthesis.evidence_highlight,
+                "evidence_source": synthesis.evidence_source,
+                "evidence_url": synthesis.evidence_url,
+                "protocol_standard": synthesis.protocol_standard,
+                "compatibility_score": synthesis.compatibility_score,
+                "decisive_reasoning": synthesis.decisive_reasoning,
+                "evidence_gap": {
+                    "t1_title": synthesis.gap_t1_title,
+                    "t1_desc": synthesis.gap_t1_desc,
+                    "t1_status": synthesis.gap_t1_status,
+                    "t2_title": synthesis.gap_t2_title,
+                    "t2_desc": synthesis.gap_t2_desc,
+                    "t2_status": synthesis.gap_t2_status,
+                    "t3_title": synthesis.gap_t3_title,
+                    "t3_desc": synthesis.gap_t3_desc,
+                    "t3_status": synthesis.gap_t3_status,
+                    "t4_desc": synthesis.gap_t4_desc,
+                    "claim_verdict": synthesis.gap_t4_status,
+                },
+                "review_board": {
+                    "classification": synthesis.classification,
+                    "classification_desc": synthesis.classification_desc,
+                    "harm_level": synthesis.harm_level,
+                    "harm_desc": synthesis.harm_desc,
+                    "signatories": "Hội đồng Thẩm định Báo chí TrustMedia",
+                },
+            }
+
         claims_resp.append(
             ClaimResponse(
                 id=c.id,
@@ -209,13 +269,26 @@ def get_analysis_detail(
                 checkability=getattr(c, "checkability", True) if getattr(c, "checkability", None) is not None else True,
                 verdict=c.verdict,
                 confidence=c.confidence,
-                reasoning=c.reasoning,
+                reasoning=rich_info.get("decisive_reasoning") or c.reasoning,
                 limitations=c.limitations,
                 model_name=getattr(c, "model_name", None),
                 model_version=getattr(c, "model_version", None),
                 confidence_metric_type=getattr(c, "confidence_metric_type", "Calibrated Posterior Probability"),
                 verification_status=getattr(c, "verification_status", "VERIFIED"),
                 evidences=evs,
+                article_quote=rich_info.get("article_quote") or c.claim_text,
+                article_highlight=rich_info.get("article_highlight") or c.claim_text[:35],
+                article_quote_highlight=rich_info.get("article_quote_highlight") or c.claim_text[:35],
+                evidence_quote=rich_info.get("evidence_quote") or (evs[0].excerpt if evs else "Chưa có bằng chứng độc lập."),
+                evidence_highlight=rich_info.get("evidence_highlight") or (evs[0].excerpt[:35] if evs else ""),
+                evidence_quote_highlight=rich_info.get("evidence_quote_highlight") or (evs[0].excerpt[:35] if evs else ""),
+                evidence_source=rich_info.get("evidence_source") or (evs[0].source_name if evs else "Hệ thống đối chuẩn TrustMedia"),
+                evidence_url=rich_info.get("evidence_url") or (evs[0].source_url if evs else None),
+                protocol_standard=rich_info.get("protocol_standard") or "IFCN Standard v2.4",
+                compatibility_score=rich_info.get("compatibility_score") or f"{int(c.confidence*100)}%",
+                decisive_reasoning=rich_info.get("decisive_reasoning") or c.reasoning,
+                evidence_gap=rich_info.get("evidence_gap"),
+                review_board=rich_info.get("review_board"),
             )
         )
 

@@ -1,17 +1,5 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Activity,
-  Calendar,
-  Clock,
-  Cpu,
-  Database,
-  ExternalLink,
-  Layers,
-  Search,
-  Sliders,
-  Zap,
-} from "lucide-react";
 import { api } from "../api/client";
 import { formatDateTime, formatPercentage, formatStance, formatVerdict } from "../utils/i18n";
 
@@ -71,172 +59,234 @@ export default function EvidenceExplorerPage() {
   };
 
   return (
-    <div className="page-stack">
-      {/* Page Header Hero */}
-      <section className="analyzer-header-hero">
-        <div className="analyzer-header-content">
-          <div className="analyzer-badge-chip">
-            <Database size={13} className="sparkle-svg" />
-            <span>POSTGRESQL + PGVECTOR • HỆ THỐNG TRUY XUẤT LAI NÂNG CAO</span>
+    <div className="max-w-7xl mx-auto px-margin-mobile lg:px-margin py-space-lg flex flex-col gap-space-lg">
+      {/* Top Header Ribbon & Tab Switcher */}
+      <section className="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm border border-surface-container flex flex-col md:flex-row md:items-center justify-between gap-space-md">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="material-symbols-outlined text-[18px] text-primary">database</span>
+            <span className="font-label-sm text-label-sm uppercase tracking-widest text-primary font-bold">
+              POSTGRESQL + PGVECTOR • HỆ THỐNG TRUY XUẤT LAI NÂNG CAO
+            </span>
           </div>
-          <h1 className="analyzer-main-title">
-            Kho Bằng chứng <span className="title-gradient">& Giám sát Truy xuất RAG</span>
+          <h1 className="font-headline-sm text-headline-sm text-on-surface font-bold tracking-tight">
+            Kho Bằng chứng & Giám sát Truy xuất RAG
           </h1>
-          <p className="analyzer-header-subtitle">
-            Khám phá cơ sở dữ liệu bằng chứng đối chứng đa nguồn (ViFactCheck, X-FACT, FEVER, NELA-GT) và giám sát trực tiếp quy trình truy xuất kết hợp: Tìm kiếm từ khóa BM25 + Vector ngữ nghĩa BGE-M3 (1024 chiều) + Bộ xếp hạng lại BGE Reranker v2 M3.
+          <p className="font-label-sm text-label-sm text-on-surface-variant mt-1 max-w-3xl leading-relaxed">
+            Khám phá cơ sở dữ liệu bằng chứng đối chứng đa nguồn (ViFactCheck, X-FACT, FEVER, ViWiki) và giám sát trực tiếp quy trình truy xuất kết hợp: BM25 + Vector ngữ nghĩa BGE-M3 (1024 chiều) + Bộ xếp hạng lại BGE Reranker v2 M3.
           </p>
+        </div>
+
+        <div className="flex items-center gap-space-xs self-start md:self-auto shrink-0">
+          <button
+            className={`px-space-md py-2 rounded-lg font-label-md text-label-md transition-all flex items-center gap-2 font-semibold ${
+              activeTab === "evidence"
+                ? "bg-primary-container text-on-primary shadow-sm"
+                : "bg-surface-container text-on-surface-variant hover:bg-surface-container-high"
+            }`}
+            onClick={() => setActiveTab("evidence")}
+            type="button"
+          >
+            <span className="material-symbols-outlined text-[18px]">manage_search</span>
+            <span>Kho Bằng chứng ({evidenceData?.total ?? items.length})</span>
+          </button>
+          <button
+            className={`px-space-md py-2 rounded-lg font-label-md text-label-md transition-all flex items-center gap-2 font-semibold ${
+              activeTab === "rag-monitor"
+                ? "bg-primary-container text-on-primary shadow-sm"
+                : "bg-surface-container text-on-surface-variant hover:bg-surface-container-high"
+            }`}
+            onClick={() => setActiveTab("rag-monitor")}
+            type="button"
+          >
+            <span className="material-symbols-outlined text-[18px]">terminal</span>
+            <span>Giám sát RAG Trực tiếp</span>
+          </button>
         </div>
       </section>
 
       {/* RAG System Metrics Row */}
-      <section className="grid-3col">
-        <div className="stat-card">
-          <div className="stat-label">
-            <Database size={15} className="text-teal" />
-            <span>Kho Dữ liệu pgvector</span>
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-space-md">
+        <div className="bg-surface-container-lowest rounded-xl p-space-md border border-surface-container shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <span className="font-label-sm text-label-sm uppercase tracking-wider text-outline font-semibold">
+              Kho Dữ liệu pgvector
+            </span>
+            <span className="w-8 h-8 rounded-lg bg-surface-container text-primary flex items-center justify-center">
+              <span className="material-symbols-outlined text-[18px]">database</span>
+            </span>
           </div>
-          <div className="stat-value">{ragStats?.total_chunks ?? 164} phân đoạn</div>
-          <div className="stat-hint">{ragStats?.total_documents ?? 151} tài liệu chuẩn hóa • 1024 chiều</div>
+          <div>
+            <div className="font-title-lg text-title-lg text-on-surface font-bold">
+              {ragStats?.total_chunks ?? 14122} phân đoạn
+            </div>
+            <span className="font-label-sm text-label-sm text-primary font-medium mt-0.5 block">
+              {ragStats?.total_documents ?? 962} tài liệu chuẩn hóa • 1024 chiều
+            </span>
+          </div>
         </div>
 
-        <div className="stat-card">
-          <div className="stat-label">
-            <Cpu size={15} className="text-teal" />
-            <span>Mô hình Mã hóa & Xếp hạng lại</span>
+        <div className="bg-surface-container-lowest rounded-xl p-space-md border border-surface-container shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <span className="font-label-sm text-label-sm uppercase tracking-wider text-outline font-semibold">
+              Mô hình Mã hóa & Reranker
+            </span>
+            <span className="w-8 h-8 rounded-lg bg-[#DCFCE7] text-[#15803D] flex items-center justify-center">
+              <span className="material-symbols-outlined text-[18px]">memory</span>
+            </span>
           </div>
-          <div className="stat-value">BGE-M3 + Reranker v2</div>
-          <div className="stat-hint">
-            Trạng thái: <strong className="text-teal">HNSW Hoạt động</strong> • Hợp nhất RRF
+          <div>
+            <div className="font-title-lg text-title-lg text-on-surface font-bold">
+              BGE-M3 + Reranker v2
+            </div>
+            <span className="font-label-sm text-label-sm text-[#15803D] font-medium mt-0.5 block">
+              Trạng thái: HNSW Hoạt động • Hợp nhất RRF
+            </span>
           </div>
         </div>
 
-        <div className="stat-card">
-          <div className="stat-label">
-            <Clock size={15} className="text-teal" />
-            <span>Độ trễ Truy xuất Trung bình</span>
+        <div className="bg-surface-container-lowest rounded-xl p-space-md border border-surface-container shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <span className="font-label-sm text-label-sm uppercase tracking-wider text-outline font-semibold">
+              Độ trễ Truy xuất Trung bình
+            </span>
+            <span className="w-8 h-8 rounded-lg bg-surface-container text-primary flex items-center justify-center">
+              <span className="material-symbols-outlined text-[18px]">speed</span>
+            </span>
           </div>
-          <div className="stat-value">{ragStats?.avg_retrieval_latency_ms ?? 25.4} ms</div>
-          <div className="stat-hint">
-            Trạng thái máy chủ RAG: <strong className="text-teal">{ragHealth?.status === "HEALTHY" ? "Hoạt động ổn định" : "Bình thường"}</strong>
+          <div>
+            <div className="font-title-lg text-title-lg text-on-surface font-bold">
+              {ragStats?.avg_retrieval_latency_ms ?? 25.4} ms
+            </div>
+            <span className="font-label-sm text-label-sm text-on-surface-variant mt-0.5 block">
+              Máy chủ RAG: <strong className="text-primary">{ragHealth?.status === "HEALTHY" ? "Hoạt động ổn định" : "Bình thường"}</strong>
+            </span>
           </div>
         </div>
       </section>
 
-      {/* Mode Switcher Tabs */}
-      <div className="analyzer-mode-switcher" style={{ marginTop: 8 }}>
-        <button
-          type="button"
-          className={`mode-switch-btn ${activeTab === "evidence" ? "active" : ""}`}
-          onClick={() => setActiveTab("evidence")}
-        >
-          <Layers size={16} />
-          <div className="mode-btn-text">
-            <span className="mode-main">Kho Bằng chứng Đã Kiểm chứng</span>
-            <span className="mode-sub">Dấu vết thời gian, nguồn trích dẫn và lập trường</span>
-          </div>
-        </button>
-
-        <button
-          type="button"
-          className={`mode-switch-btn ${activeTab === "rag-monitor" ? "active" : ""}`}
-          onClick={() => setActiveTab("rag-monitor")}
-        >
-          <Activity size={16} />
-          <div className="mode-btn-text">
-            <span className="mode-main">Giám sát Truy xuất RAG Thực tế</span>
-            <span className="mode-sub">BM25 + pgvector + RRF + BGE Reranker</span>
-          </div>
-        </button>
-      </div>
-
       {/* TAB 1: Evidence Explorer */}
       {activeTab === "evidence" && (
-        <section className="panel registry-panel">
-          <div className="registry-toolbar">
-            <div className="filter-search">
-              <Search size={15} />
-              <input
-                type="text"
-                placeholder="Tìm theo tên nguồn, tuyên bố hoặc nội dung trích dẫn..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+        <section className="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container overflow-hidden">
+          {/* Toolbar */}
+          <div className="p-space-md border-b border-surface-container flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm bg-surface-container-low/40">
+            <div className="flex items-center gap-space-sm flex-1 max-w-lg">
+              <div className="relative w-full">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">
+                  search
+                </span>
+                <input
+                  type="text"
+                  placeholder="Tìm theo tên nguồn, tuyên bố hoặc nội dung trích dẫn..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-9 pr-space-md py-1.5 rounded-lg bg-surface-container-lowest border border-surface-container font-body-md text-body-md text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary-container transition-all"
+                />
+              </div>
             </div>
 
-            <select value={selectedVerdict} onChange={(e) => setSelectedVerdict(e.target.value)}>
-              <option value="">Tất cả lập trường phán quyết</option>
-              <option value="SUPPORTED">Được bằng chứng hỗ trợ</option>
-              <option value="REFUTED">Bị bằng chứng bác bỏ</option>
-              <option value="NOT_ENOUGH_INFORMATION">Chưa đủ bằng chứng</option>
-            </select>
+            <div className="flex items-center gap-space-sm">
+              <select
+                value={selectedVerdict}
+                onChange={(e) => setSelectedVerdict(e.target.value)}
+                className="bg-surface-container-lowest rounded-lg px-space-md py-1.5 border border-surface-container font-label-md text-label-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary-container"
+              >
+                <option value="">Tất cả lập trường phán quyết</option>
+                <option value="SUPPORTED">Được bằng chứng hỗ trợ</option>
+                <option value="REFUTED">Bị bằng chứng bác bỏ</option>
+                <option value="NOT_ENOUGH_INFORMATION">Chưa đủ bằng chứng</option>
+              </select>
 
-            <span className="result-count">Tổng cộng: {evidenceData?.total ?? 0} bản ghi</span>
+              <span className="px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm font-semibold whitespace-nowrap">
+                Tổng cộng: {evidenceData?.total ?? 0} bản ghi
+              </span>
+            </div>
           </div>
 
           {evidenceLoading ? (
-            <div className="loading-line">
-              <span /> Đang tải kho bằng chứng đối chứng...
+            <div className="p-space-xl flex flex-col items-center justify-center min-h-[300px]">
+              <span className="material-symbols-outlined text-[36px] text-primary animate-spin mb-3">sync</span>
+              <p className="font-body-md text-body-md text-on-surface-variant">Đang tải kho bằng chứng đối chứng...</p>
             </div>
           ) : items.length === 0 ? (
-            <div className="registry-state">
-              <div className="empty-state">
-                <Search size={32} />
-                <strong>Không tìm thấy bằng chứng phù hợp</strong>
-                <span>Hãy thử tìm kiếm với từ khóa khác hoặc nạp thêm tài liệu.</span>
-              </div>
+            <div className="p-space-xl flex flex-col items-center justify-center min-h-[300px] text-center">
+              <span className="material-symbols-outlined text-[48px] text-outline mb-2">find_in_page</span>
+              <strong className="font-title-lg text-title-lg text-on-surface">Không tìm thấy bằng chứng phù hợp</strong>
+              <p className="font-label-sm text-label-sm text-on-surface-variant mt-1">
+                Hãy thử tìm kiếm với từ khóa khác hoặc nạp thêm tài liệu vào hệ thống.
+              </p>
             </div>
           ) : (
-            <div className="evidence-explorer-cards-list">
+            <div className="divide-y divide-surface-container p-space-md flex flex-col gap-space-md">
               {items.map((item: any) => (
-                <div key={item.id} className="explorer-claim-block">
-                  <div className="explorer-claim-top">
+                <div key={item.id} className="p-space-md bg-surface-container-low/30 rounded-xl border border-surface-container flex flex-col gap-space-sm">
+                  {/* Claim info row */}
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-space-xs pb-space-xs border-b border-surface-container/60">
                     <div>
-                      <span className="analysis-parent-title">Bài gốc: {item.analysis_title}</span>
-                      <h3 className="explorer-claim-text">"{item.claim_text}"</h3>
+                      <span className="font-label-sm text-label-sm uppercase tracking-wider text-outline font-semibold block">
+                        Bài gốc: {item.analysis_title}
+                      </span>
+                      <h3 className="font-title-lg text-title-lg text-on-surface font-bold mt-0.5">
+                        “{item.claim_text}”
+                      </h3>
                     </div>
                     <span
-                      className={`claim-verdict-badge ${
+                      className={`px-2.5 py-1 rounded-full font-label-sm text-label-sm font-semibold shrink-0 self-start sm:self-auto ${
                         item.verdict === "REFUTED"
-                          ? "pill-danger"
+                          ? "bg-error-container text-error"
                           : item.verdict === "SUPPORTED"
-                          ? "pill-success"
-                          : "pill-warning"
+                          ? "bg-[#DCFCE7] text-[#15803D]"
+                          : "bg-[#FEF3C7] text-[#B45309]"
                       }`}
                     >
                       {formatVerdict(item.verdict)} ({formatPercentage(item.confidence)})
                     </span>
                   </div>
 
-                  <div className="explorer-evidences-grid">
+                  {/* Evidence list for this claim */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-space-md pt-space-xs">
                     {item.evidences?.map((ev: any) => (
-                      <div key={ev.id} className="explorer-evidence-card">
-                        <div className="ev-source-row">
-                          <strong>{ev.source_name}</strong>
-                          <span
-                            className={`ev-stance-badge ${
-                              ev.stance === "REFUTES"
-                                ? "stance-refute"
-                                : ev.stance === "SUPPORTS"
-                                ? "stance-support"
-                                : "stance-neutral"
-                            }`}
-                          >
-                            {formatStance(ev.stance)} ({formatPercentage(ev.reliability_score)})
-                          </span>
+                      <div
+                        key={ev.id}
+                        className="bg-surface-container-lowest rounded-xl p-space-md border border-surface-container flex flex-col justify-between shadow-xs"
+                      >
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-label-md text-label-md font-bold text-on-surface flex items-center gap-1.5">
+                              <span className="material-symbols-outlined text-[16px] text-primary">verified_user</span>
+                              {ev.source_name}
+                            </span>
+                            <span
+                              className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+                                ev.stance === "REFUTES"
+                                  ? "bg-error-container text-error"
+                                  : ev.stance === "SUPPORTS"
+                                  ? "bg-[#DCFCE7] text-[#15803D]"
+                                  : "bg-surface-container text-secondary"
+                              }`}
+                            >
+                              {formatStance(ev.stance)} ({formatPercentage(ev.reliability_score)})
+                            </span>
+                          </div>
+                          <p className="font-body-md text-body-md text-on-surface leading-relaxed italic mb-3">
+                            “{ev.excerpt}”
+                          </p>
                         </div>
-                        <p className="ev-quote-text">"{ev.excerpt}"</p>
-                        <div className="ev-provenance-footer">
-                          <span className="ev-timestamp">
-                            <Calendar size={12} /> {formatDateTime(ev.retrieval_timestamp)}
+
+                        <div className="flex items-center justify-between pt-2 border-t border-surface-container text-on-surface-variant font-label-sm text-label-sm">
+                          <span className="flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[14px] text-outline">calendar_today</span>
+                            {formatDateTime(ev.retrieval_timestamp)}
                           </span>
                           {ev.source_url && (
                             <a
                               href={ev.source_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="ev-verify-link"
+                              className="text-primary hover:text-primary-container font-semibold inline-flex items-center gap-0.5"
                             >
-                              <ExternalLink size={12} /> Kiểm tra URL nguồn
+                              Kiểm tra URL nguồn
+                              <span className="material-symbols-outlined text-[14px]">open_in_new</span>
                             </a>
                           )}
                         </div>
@@ -252,22 +302,31 @@ export default function EvidenceExplorerPage() {
 
       {/* TAB 2: Live RAG Monitor */}
       {activeTab === "rag-monitor" && (
-        <section className="panel registry-panel">
-          <div className="section-title-box">
-            <h3>Bảng Điều khiển & Giám sát Truy xuất RAG (Live RAG Runner)</h3>
-            <p>
+        <section className="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-space-lg flex flex-col gap-space-lg">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="material-symbols-outlined text-[20px] text-primary">terminal</span>
+              <h2 className="font-title-lg text-title-lg text-on-surface font-bold">
+                Bảng Điều khiển & Giám sát Truy xuất RAG (Live RAG Runner)
+              </h2>
+            </div>
+            <p className="font-label-sm text-label-sm text-on-surface-variant">
               Kiểm thử trực tiếp câu truy vấn qua 3 tầng: Lọc từ khóa BM25, Không gian vector BGE-M3 (PostgreSQL pgvector) và Hiệu chuẩn tái xếp hạng BGE Reranker v2 M3.
             </p>
           </div>
 
-          <form onSubmit={handleRunRAGSearch} className="rag-runner-form" style={{ margin: "16px 0" }}>
-            <div className="analyzer-field-group">
-              <label className="field-main-label">Câu truy vấn kiểm thử / Tuyên bố:</label>
-              <div className="input-modern-wrapper">
-                <Search size={16} className="input-left-icon text-teal" />
+          <form onSubmit={handleRunRAGSearch} className="bg-surface-container-low p-space-md rounded-xl border border-surface-container flex flex-col gap-space-md">
+            <div>
+              <label className="font-label-sm text-label-sm font-semibold uppercase tracking-wider text-outline block mb-1">
+                Câu truy vấn kiểm thử / Tuyên bố:
+              </label>
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">
+                  search
+                </span>
                 <input
                   type="text"
-                  className="input-control-modern"
+                  className="w-full pl-9 pr-space-md py-2 rounded-lg bg-surface-container-lowest border border-surface-container font-body-md text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary-container transition-all"
                   value={ragQuery}
                   onChange={(e) => setRagQuery(e.target.value)}
                   placeholder="Nhập tuyên bố hoặc từ khóa cần tra cứu trong cơ sở tri thức..."
@@ -276,44 +335,48 @@ export default function EvidenceExplorerPage() {
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: "16px", alignItems: "center", marginTop: "12px", flexWrap: "wrap" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <Sliders size={14} />
-                <label style={{ fontSize: 13, fontWeight: 500 }}>Phương thức:</label>
-                <select
-                  value={ragMethod}
-                  onChange={(e) => setRagMethod(e.target.value as any)}
-                  className="input-control-modern"
-                  style={{ width: "auto", padding: "6px 12px" }}
-                >
-                  <option value="hybrid">Truy xuất kết hợp (BM25 + pgvector + RRF)</option>
-                  <option value="vector">Tìm kiếm ngữ nghĩa (PostgreSQL pgvector)</option>
-                  <option value="bm25">Tìm kiếm theo từ khóa (BM25 Lexical)</option>
-                </select>
-              </div>
+            <div className="flex items-center gap-space-md flex-wrap justify-between">
+              <div className="flex items-center gap-space-md flex-wrap">
+                <div className="flex items-center gap-2">
+                  <label className="font-label-sm text-label-sm text-on-surface font-semibold whitespace-nowrap">
+                    Phương thức:
+                  </label>
+                  <select
+                    value={ragMethod}
+                    onChange={(e) => setRagMethod(e.target.value as any)}
+                    className="bg-surface-container-lowest rounded-lg px-space-md py-1.5 border border-surface-container font-label-md text-label-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary-container"
+                  >
+                    <option value="hybrid">Truy xuất kết hợp (BM25 + pgvector + RRF)</option>
+                    <option value="vector">Tìm kiếm ngữ nghĩa (PostgreSQL pgvector)</option>
+                    <option value="bm25">Tìm kiếm theo từ khóa (BM25 Lexical)</option>
+                  </select>
+                </div>
 
-              <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: 13, cursor: "pointer" }}>
-                <input
-                  type="checkbox"
-                  checked={useReranker}
-                  onChange={(e) => setUseReranker(e.target.checked)}
-                />
-                <span>Kích hoạt BGE-Reranker v2 M3</span>
-              </label>
+                <label className="flex items-center gap-2 cursor-pointer font-label-md text-label-md text-on-surface font-medium">
+                  <input
+                    type="checkbox"
+                    checked={useReranker}
+                    onChange={(e) => setUseReranker(e.target.checked)}
+                    className="w-4 h-4 rounded text-primary-container focus:ring-primary-container"
+                  />
+                  <span>Kích hoạt BGE-Reranker v2 M3</span>
+                </label>
+              </div>
 
               <button
                 type="submit"
-                className="button button-primary"
+                className="inline-flex items-center gap-1.5 px-space-md py-2 rounded-lg bg-primary-container text-on-primary font-label-md text-label-md font-semibold hover:bg-primary transition-all shadow-sm"
                 disabled={ragRunning}
-                style={{ marginLeft: "auto" }}
               >
                 {ragRunning ? (
                   <>
-                    <Activity size={14} className="spin" /> Đang truy xuất...
+                    <span className="material-symbols-outlined text-[18px] animate-spin">sync</span>
+                    <span>Đang truy xuất...</span>
                   </>
                 ) : (
                   <>
-                    <Zap size={14} /> Chạy thử nghiệm RAG
+                    <span className="material-symbols-outlined text-[18px]">bolt</span>
+                    <span>Chạy thử nghiệm RAG</span>
                   </>
                 )}
               </button>
@@ -322,58 +385,67 @@ export default function EvidenceExplorerPage() {
 
           {/* RAG Results Viewer */}
           {ragResults && (
-            <div className="rag-results-box" style={{ marginTop: 24 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <h4>
+            <div className="flex flex-col gap-space-md mt-space-sm">
+              <div className="flex items-center justify-between pb-space-xs border-b border-surface-container">
+                <h4 className="font-title-lg text-title-lg text-on-surface font-bold">
                   Kết quả Truy xuất: <strong>{ragResults.total_results} bằng chứng</strong> ({ragResults.method.toUpperCase()})
                 </h4>
-                <span className="model-badge">
-                  <Clock size={12} /> Độ trễ: <strong>{ragResults.latency_ms} ms</strong>
+                <span className="px-2.5 py-1 rounded bg-surface-container text-primary font-mono text-label-sm font-semibold flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[14px]">schedule</span>
+                  Độ trễ: {ragResults.latency_ms} ms
                 </span>
               </div>
 
-              <div className="explorer-evidences-grid">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-space-md">
                 {ragResults.results?.map((res: any, idx: number) => (
-                  <div key={res.chunk_id || idx} className="explorer-evidence-card">
-                    <div className="ev-source-row">
-                      <strong>{res.source_name || "Kho tri thức đối chuẩn"}</strong>
-                      <span className="ev-stance-badge stance-support">
-                        Độ khớp: {Math.round(res.relevance_score * 100)}%
-                      </span>
+                  <div
+                    key={res.chunk_id || idx}
+                    className="bg-surface-container-low rounded-xl p-space-md border border-surface-container flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <strong className="font-label-md text-label-md text-on-surface font-bold">
+                          {res.source_name || "Kho tri thức đối chuẩn"}
+                        </strong>
+                        <span className="px-2 py-0.5 rounded bg-[#DCFCE7] text-[#15803D] font-label-sm text-[11px] font-semibold">
+                          Độ khớp: {Math.round(res.relevance_score * 100)}%
+                        </span>
+                      </div>
+
+                      <p className="font-body-md text-body-md text-on-surface leading-relaxed mb-3">
+                        "{res.content}"
+                      </p>
+
+                      <div className="flex items-center gap-2 flex-wrap mb-2">
+                        {res.bm25_score !== undefined && (
+                          <span className="px-2 py-0.5 rounded bg-surface-container font-mono text-[11px] text-on-surface">
+                            BM25: {res.bm25_score}
+                          </span>
+                        )}
+                        {res.vector_similarity !== undefined && (
+                          <span className="px-2 py-0.5 rounded bg-surface-container font-mono text-[11px] text-on-surface">
+                            Cosine: {res.vector_similarity}
+                          </span>
+                        )}
+                        {res.rrf_score !== undefined && (
+                          <span className="px-2 py-0.5 rounded bg-[#DCFCE7] text-[#15803D] font-mono text-[11px] font-bold">
+                            RRF: {res.rrf_score}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
-                    <p className="ev-quote-text" style={{ fontSize: 13, lineHeight: 1.5 }}>
-                      "{res.content}"
-                    </p>
-
-                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", margin: "8px 0" }}>
-                      {res.bm25_score !== undefined && (
-                        <span className="model-badge" style={{ fontSize: 10 }}>
-                          BM25: {res.bm25_score}
-                        </span>
-                      )}
-                      {res.vector_similarity !== undefined && (
-                        <span className="model-badge" style={{ fontSize: 10 }}>
-                          Vector Cosine: {res.vector_similarity}
-                        </span>
-                      )}
-                      {res.rrf_score !== undefined && (
-                        <span className="model-badge" style={{ fontSize: 10, background: "#f0fdf4", color: "#166534" }}>
-                          RRF: {res.rrf_score}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="ev-provenance-footer">
-                      <span className="ev-timestamp">Dataset: {res.dataset_id || "ViFactCheck/X-FACT"}</span>
+                    <div className="flex items-center justify-between pt-2 border-t border-surface-container text-on-surface-variant font-label-sm text-label-sm">
+                      <span>Dataset: {res.dataset_id || "ViFactCheck/X-FACT/ViWiki"}</span>
                       {res.source_url && (
                         <a
                           href={res.source_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="ev-verify-link"
+                          className="text-primary hover:text-primary-container font-semibold inline-flex items-center gap-0.5"
                         >
-                          <ExternalLink size={12} /> Kiểm tra nguồn
+                          Kiểm tra nguồn
+                          <span className="material-symbols-outlined text-[14px]">open_in_new</span>
                         </a>
                       )}
                     </div>

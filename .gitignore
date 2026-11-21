@@ -41,4 +41,7 @@ Thumbs.db
 !datasets/raw/pheme/PHEME_veracity.tar.bz2
 *.tar.gz
 *.zip
+*.gz
+*.bz2
+datasets/raw/wvs/*.parquet
 datasets/extracted/

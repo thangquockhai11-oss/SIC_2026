@@ -5,6 +5,7 @@ datasets (ViFactCheck, X-FACT, FEVER) with strict provenance and threshold gatin
 """
 
 from dataclasses import asdict, dataclass
+import json
 import logging
 from pathlib import Path
 import re
@@ -129,6 +130,75 @@ class HybridKnowledgeRetriever:
                     loaded_chunks.append(chunk)
             except Exception as e:
                 logger.error("Error reading X-FACT: %s", e)
+
+        # 3. Load Vietnamese Wikipedia corpus
+        viwiki_path = ROOT_DIR / "datasets" / "processed" / "fact_checking" / "viwiki_corpus.jsonl"
+        if viwiki_path.exists():
+            try:
+                with open(viwiki_path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        item = json.loads(line)
+                        title = str(item.get("title", "")).strip()
+                        content = str(item.get("content", "")).strip()
+                        clean_content = re.sub(r"\{\{[^}]*\}\}", "", content)
+                        clean_content = re.sub(r"\[\[(?:[^|\]]*\|)?([^\]]+)\]\]", r"\1", clean_content)
+                        clean_content = re.sub(r"&lt;ref.*?&gt;.*?&lt;/ref&gt;", "", clean_content)
+                        clean_content = re.sub(r"'''?", "", clean_content).strip()
+                        if not clean_content:
+                            continue
+                        chunk = EvidenceChunk(
+                            chunk_id=f"viwiki_{item.get('id', title)}",
+                            dataset_id="ViWiki-Corpus",
+                            record_id=str(item.get("id")),
+                            claim_text=title,
+                            evidence_text=clean_content[:1200],
+                            source_name=f"Bách khoa toàn thư Wikipedia Tiếng Việt ({title})",
+                            source_url=item.get("source_url") or f"https://vi.wikipedia.org/wiki/{title}",
+                            author="Ban Biên tập Wikipedia Tiếng Việt",
+                            topic="Bách khoa / Tra cứu",
+                            baseline_verdict="SUPPORTED",
+                            reliability_score=0.95,
+                        )
+                        loaded_chunks.append(chunk)
+            except Exception as e:
+                logger.error("Error reading ViWiki corpus: %s", e)
+
+        # 4. Load FEVER verification dataset
+        fever_path = RAW_DIR / "fever" / "paper_dev.jsonl"
+        if not fever_path.exists():
+            fever_path = RAW_DIR / "fever" / "train.jsonl"
+        if fever_path.exists():
+            try:
+                with open(fever_path, "r", encoding="utf-8") as f:
+                    for idx, line in enumerate(f):
+                        if idx >= 3000:
+                            break
+                        line = line.strip()
+                        if not line:
+                            continue
+                        item = json.loads(line)
+                        claim = str(item.get("claim", "")).strip()
+                        lbl = str(item.get("label", "")).upper()
+                        verdict = "SUPPORTED" if lbl == "SUPPORTS" else ("REFUTED" if lbl == "REFUTES" else "NOT_ENOUGH_INFORMATION")
+                        chunk = EvidenceChunk(
+                            chunk_id=f"fever_{item.get('id', idx)}",
+                            dataset_id="FEVER",
+                            record_id=str(item.get("id", idx)),
+                            claim_text=claim,
+                            evidence_text=claim,
+                            source_name="FEVER Fact Extraction & Verification Registry",
+                            source_url="https://fever.ai",
+                            author="FEVER Benchmark",
+                            topic="General Verification",
+                            baseline_verdict=verdict,
+                            reliability_score=0.92,
+                        )
+                        loaded_chunks.append(chunk)
+            except Exception as e:
+                logger.error("Error reading FEVER dataset: %s", e)
 
         self.chunks = loaded_chunks
         logger.info("Total Knowledge Base chunks indexed: %d", len(self.chunks))

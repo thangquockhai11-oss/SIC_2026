@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useAnalysis } from "../context/AnalysisContext";
 import {
   AlertCircle,
   AlertTriangle,
@@ -86,6 +87,8 @@ const SAMPLE_PRESETS = [
 ];
 
 export default function NewsAnalyzerPage() {
+  const navigate = useNavigate();
+  const { loadAnalysisDetail: loadContextAnalysis } = useAnalysis();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryId = searchParams.get("id");
 
@@ -157,9 +160,11 @@ export default function NewsAnalyzerPage() {
     try {
       const detail = await api.analyzer.getDetail(id);
       setResult(detail);
+      loadContextAnalysis(detail);
       setJobStatus("COMPLETED");
       setJobProgress(100);
       setSubmitting(false);
+      navigate(`/fact-checking?id=${id}`);
     } catch (err: any) {
       setErrorMessage("Không thể tải chi tiết phân tích: " + (err.response?.data?.detail || err.message));
       setSubmitting(false);

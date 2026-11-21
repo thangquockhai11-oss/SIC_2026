@@ -1,0 +1,228 @@
+<!DOCTYPE html><html lang="vi"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<meta content="web_blank" name="shell-type">
+<title>TrustMedia Academic - Đăng nhập hệ thống</title>
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<style>
+    @layer base {
+      html, body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+      }
+    }
+
+    @keyframes fadeInUp {
+      0% {
+        opacity: 0;
+        transform: translateY(22px) scale(0.985);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .animate-fade-in-up {
+      animation: fadeInUp 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .input-field-group:focus-within .input-icon {
+      color: #0d5c3a !important;
+      transform: scale(1.05);
+    }
+  </style>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#0d5c3a",
+            "primary-dark": "#08422a",
+            "primary-light": "#e8f5e9",
+            "primary-border": "#a7f3d0",
+            "surface-bg": "#f4f7f5",
+            "brand-emerald": "#006644"
+          },
+          fontFamily: {
+            sans: ['"Be Vietnam Pro"', 'sans-serif'],
+          }
+        },
+      },
+    }
+  </script>
+</head>
+<body class="bg-[#f4f7f5] text-slate-800 antialiased min-h-screen flex flex-col justify-between selection:bg-emerald-100 selection:text-emerald-900 relative" style="background-image: url(&quot;https://lh3.googleusercontent.com/aida/ALJJyrAkY5QDpAy8BbfHbNj11YkdTi4SH4SeSaEfRV_EPEug9ODRTbzPoDaR4KxLr-TCr1hDah_-opoHv3y7g5GN6VYTjsuCpBGFW5u0dXLUWkQTUQPohR8LsPxuqdszKYVTjx1OfH4pymfa_xCK1YQzaDmNfi3ik0Xbr0rkV7cOQ_1kAPBx30YwCxIdDClpeCtxJHSpQ6xs4CRQ2-C_GfqAfo2xSnoG7FT3IS6hih1lUcTD&quot;); background-size: cover; background-position: center center; background-attachment: fixed; background-repeat: no-repeat;">
+<!-- Subtle academic background grid & accent radial glow -->
+<div class="fixed inset-0 pointer-events-none bg-[radial-gradient(#0d5c3a_0.75px,transparent_0.75px)] [background-size:24px_24px] opacity-[0.06] z-0"></div>
+<div class="fixed top-0 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-emerald-200/25 blur-3xl pointer-events-none rounded-full z-0"></div>
+<!-- Header: Minimal TrustMedia Brand Bar -->
+<header class="relative z-10 w-full border-b border-slate-200/70 bg-white/70 backdrop-blur-md">
+<div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-lg bg-[#0d5c3a] flex items-center justify-center text-white shadow-sm transition-transform duration-300 hover:scale-105">
+<span class="material-symbols-outlined text-[20px]">verified</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="font-bold text-[18px] text-[#0d5c3a] tracking-tight">TrustMedia</span>
+<span class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-50 text-[#0d5c3a] border border-emerald-200 whitespace-nowrap">ACADEMIC</span>
+</div>
+</div>
+<div class="hidden sm:flex items-center gap-2 text-xs text-slate-500 font-medium">
+<span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+<span>Cổng kiểm chứng thông tin báo chí &amp; truyền thông</span>
+</div>
+</div>
+</header>
+<!-- Centered Login Stage -->
+<main class="relative z-10 flex-1 flex justify-center px-4 py-12 flex-col items-center">
+<div class="w-full max-w-[460px] animate-fade-in-up mx-auto">
+<!-- Main Glassmorphic/Clean Card with subtle gradient border & hover glow -->
+<div class="relative group/card rounded-2xl p-[1px] bg-gradient-to-b from-white/90 via-emerald-100/60 to-slate-200/60 shadow-[0_16px_40px_-8px_rgba(13,92,58,0.1),0_4px_20px_-2px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_50px_-6px_rgba(13,92,58,0.16),0_8px_24px_-4px_rgba(0,0,0,0.06)] transition-all duration-500 ease-out">
+<!-- Subtle ambient top highlight glow inside wrapper -->
+<div class="absolute -top-12 left-1/2 -translate-x-1/2 w-48 h-20 bg-emerald-400/20 blur-2xl pointer-events-none rounded-full opacity-60 group-hover/card:opacity-90 transition-opacity duration-700"></div>
+<div class="rounded-2xl p-8 sm:p-9 relative overflow-hidden backdrop-blur-md transition-all duration-300" style="background-color: rgba(255, 255, 255, 0.90); backdrop-filter: blur(16px);">
+<!-- Top institutional badge -->
+<div class="flex justify-center mb-6">
+<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e8f5e9] border border-[#a7f3d0] text-[#0d5c3a] shadow-xs transition-transform duration-300 hover:scale-105 select-none">
+<span class="material-symbols-outlined text-[15px]">verified_user</span>
+<span class="text-[11px] font-semibold tracking-wide uppercase">Hội Đồng Thẩm Định Báo Chí</span>
+</div>
+</div>
+<!-- Heading and subtext -->
+<div class="text-center mb-7">
+<h1 class="text-2xl font-bold text-slate-900 tracking-tight mb-2">Đăng nhập hệ thống</h1>
+<p class="text-sm text-slate-500 leading-relaxed">Cổng xác thực &amp; đối soát chứng cứ dành cho chuyên gia phản biện và hội đồng khoa học.</p>
+</div>
+<!-- Social SSO Buttons -->
+<div class="grid grid-cols-2 gap-3 mb-6">
+<button class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-slate-200 bg-white/80 hover:bg-white text-slate-700 text-xs font-medium shadow-xs hover:shadow-md hover:border-emerald-300 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 ease-out group" type="button">
+<svg class="w-4 h-4 shrink-0 transition-transform duration-200 group-hover:scale-110" viewBox="0 0 24 24">
+<path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
+<path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"></path>
+<path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"></path>
+<path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"></path>
+</svg>
+<span class="group-hover:text-slate-900 transition-colors">Google</span>
+</button>
+<button class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-slate-200 bg-white/80 hover:bg-white text-slate-700 text-xs font-medium shadow-xs hover:shadow-md hover:border-emerald-300 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 ease-out group" type="button">
+<svg class="w-4 h-4 shrink-0 transition-transform duration-200 group-hover:scale-110" viewBox="0 0 23 23">
+<path d="M1 1h10v10H1z" fill="#f35325"></path>
+<path d="M12 1h10v10H12z" fill="#81bc06"></path>
+<path d="M1 12h10v10H1z" fill="#05a6f0"></path>
+<path d="M12 12h10v10H12z" fill="#ffba08"></path>
+</svg>
+<span class="group-hover:text-slate-900 transition-colors">Microsoft 365</span>
+</button>
+</div>
+<!-- Divider -->
+<div class="relative flex items-center gap-3 my-5">
+<div class="flex-1 h-px bg-slate-200"></div>
+<span class="text-[11px] uppercase tracking-wider text-slate-400 font-medium px-1">Hoặc tài khoản công vụ</span>
+<div class="flex-1 h-px bg-slate-200"></div>
+</div>
+<!-- Form -->
+<form class="space-y-4" onsubmit="event.preventDefault(); (function(){ const btn = document.getElementById('submitBtn'); const spinner = document.getElementById('btnSpinner'); const text = document.getElementById('btnText'); const icon = document.getElementById('btnIcon'); if(btn.disabled) return; btn.disabled = true; btn.classList.add('opacity-90', 'cursor-not-allowed', 'pointer-events-none'); spinner.classList.remove('hidden'); icon.classList.add('hidden'); text.textContent = 'Đang xác thực...'; setTimeout(() =&gt; { text.textContent = 'Xác thực thành công'; spinner.classList.add('hidden'); icon.classList.remove('hidden'); icon.textContent = 'check_circle'; setTimeout(() =&gt; { text.textContent = 'Đăng nhập ngay'; icon.textContent = 'arrow_forward'; btn.classList.remove('opacity-90', 'cursor-not-allowed', 'pointer-events-none'); btn.disabled = false; }, 1500); }, 2200); })();">
+<!-- Email / Identifier Input -->
+<div class="input-field-group">
+<label class="block text-xs font-semibold text-slate-700 mb-1.5 transition-colors group-focus-within/input:text-[#0d5c3a]" for="emailInput">
+              Email công vụ / Mã thẩm định viên
+            </label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined input-icon absolute left-3.5 text-slate-400 text-[18px] pointer-events-none transition-all duration-200 ease-out">mail</span>
+<input class="w-full text-sm pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50/60 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#0d5c3a] focus:ring-4 focus:ring-[#0d5c3a]/15 transition-all duration-200 ease-out shadow-xs" id="emailInput" placeholder="chuyengia@trustmedia.edu.vn" required="" type="email">
+</div>
+</div>
+<!-- Password Input -->
+<div class="input-field-group">
+<div class="flex justify-between items-center mb-1.5">
+<label class="text-xs font-semibold text-slate-700 transition-colors" for="passwordInput">
+                Mật khẩu
+              </label>
+<a class="text-xs font-medium text-[#0d5c3a] hover:text-[#08422a] hover:underline underline-offset-2 transition-colors" href="#">Quên mật khẩu?</a>
+</div>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined input-icon absolute left-3.5 text-slate-400 text-[18px] pointer-events-none transition-all duration-200 ease-out">lock</span>
+<input class="w-full text-sm pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 bg-slate-50/60 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#0d5c3a] focus:ring-4 focus:ring-[#0d5c3a]/15 transition-all duration-200 ease-out shadow-xs" id="passwordInput" placeholder="••••••••••••" required="" type="password">
+<button aria-label="Ẩn / Hiện mật khẩu" class="absolute right-3 text-slate-400 hover:text-[#0d5c3a] p-1 rounded-md transition-all duration-200 hover:scale-110 active:scale-95 focus:outline-none" onclick="togglePasswordVisibility()" type="button">
+<span class="material-symbols-outlined text-[18px] transition-transform duration-200 block" id="passwordToggleIcon">visibility</span>
+</button>
+</div>
+</div>
+<!-- Remember Me Checkbox -->
+<div class="flex items-center justify-between pt-1">
+<label class="flex items-center gap-2 cursor-pointer select-none group">
+<input class="w-4 h-4 rounded text-[#0d5c3a] border-slate-300 focus:ring-[#0d5c3a]/30 focus:ring-offset-0 cursor-pointer transition-all duration-150" id="rememberSession" type="checkbox">
+<span class="text-xs text-slate-600 group-hover:text-slate-800 transition-colors">Ghi nhớ phiên đăng nhập (30 ngày)</span>
+</label>
+</div>
+<!-- Primary Submit CTA -->
+<button class="w-full mt-2 py-3 px-4 rounded-xl bg-gradient-to-r from-[#0d5c3a] via-[#0f6741] to-[#0d5c3a] hover:from-[#0f6741] hover:to-[#09462c] text-white text-sm font-semibold tracking-wide flex items-center justify-center gap-2 shadow-md shadow-[#0d5c3a]/25 hover:shadow-[0_6px_24px_rgba(13,92,58,0.4)] hover:brightness-105 active:scale-[0.985] transition-all duration-300 ease-out relative overflow-hidden group" id="submitBtn" type="submit"><div class="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div><svg class="hidden animate-spin h-4 w-4 text-white relative z-10" fill="none" id="btnSpinner" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" fill="currentColor"></path></svg><span class="relative z-10" id="btnText">Đăng nhập ngay</span><span class="material-symbols-outlined text-[18px] relative z-10 transition-transform duration-300 group-hover:translate-x-1" id="btnIcon">arrow_forward</span></button>
+</form>
+<!-- Academic Key / Passkey Option -->
+<div class="mt-4 pt-4 border-t border-slate-100">
+<button class="w-full py-2.5 px-3 rounded-xl border border-slate-200 bg-white/70 hover:bg-emerald-50/50 hover:border-emerald-300 hover:shadow-sm text-slate-700 text-xs font-medium flex items-center justify-center gap-2 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 group" onclick="triggerPasskeyAuth()" type="button">
+<span class="material-symbols-outlined text-[17px] text-[#0d5c3a] transition-transform duration-200 group-hover:scale-110">fingerprint</span>
+<span class="group-hover:text-slate-900 transition-colors">Sử dụng Khóa bảo mật Passkey / SmartCard</span>
+</button>
+</div>
+<!-- Footer inside card -->
+<div class="mt-6 pt-5 border-t border-slate-100 text-center">
+<p class="text-xs text-slate-500">
+            Cần cấp quyền thẩm định viên? 
+            <a class="font-semibold text-[#0d5c3a] hover:text-[#08422a] hover:underline underline-offset-2 ml-1 transition-colors" href="#">Liên hệ Ban thư ký</a>
+</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Trust note below card -->
+<div class="mt-6 text-center text-xs text-slate-400 flex items-center justify-center gap-4">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[15px] text-emerald-600">verified</span>
+          Chuẩn IFCN Standard v2.4
+        </span>
+<span>•</span>
+<span>Viện Nghiên cứu Báo chí &amp; Truyền thông</span>
+</div>
+</main>
+<!-- Clean Academic Footer -->
+<footer class="relative z-10 w-full border-t border-slate-200/80 bg-white/60 py-4 text-center sm:text-left">
+<div class="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
+<div>
+<span>© 2026 TrustMedia Academic. ĐH KHXH&amp;NV. Tất cả các quyền được bảo lưu.</span>
+</div>
+<div class="flex items-center gap-4">
+<a class="hover:text-[#0d5c3a] transition-colors" href="#">Quy chuẩn đạo đức báo chí</a>
+<a class="hover:text-[#0d5c3a] transition-colors" href="#">Bảo mật &amp; Dữ liệu</a>
+<a class="hover:text-[#0d5c3a] transition-colors" href="#">Hỗ trợ kỹ thuật</a>
+</div>
+</div>
+</footer>
+<script>
+    function togglePasswordVisibility() {
+      const passwordInput = document.getElementById('passwordInput');
+      const toggleIcon = document.getElementById('passwordToggleIcon');
+      if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        toggleIcon.textContent = 'visibility_off';
+      } else {
+        passwordInput.type = 'password';
+        toggleIcon.textContent = 'visibility';
+      }
+    }
+
+    function triggerPasskeyAuth() {
+      const email = document.getElementById('emailInput').value || 'chuyengia@trustmedia.edu.vn';
+      alert('Đang khởi tạo giao diện xác thực FIDO2 / Passkey cho: ' + email);
+    }
+  </script>
+
+
+</body></html>

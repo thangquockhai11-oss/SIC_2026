@@ -357,5 +357,67 @@
     "notes": "No instrument or observations exist. Define ethics, sampling, measures and consent before collection.",
     "license": null,
     "label_schema": []
+  },
+  {
+    "dataset_id": "viwiki",
+    "name": "Wikimedia viwiki (Vietnamese Wikipedia)",
+    "category": "fact_checking",
+    "source_url": "https://dumps.wikimedia.org/viwiki/latest/",
+    "languages": [
+      "vi"
+    ],
+    "intended_tasks": [
+      "claim verification",
+      "evidence retrieval",
+      "knowledge base"
+    ],
+    "dataset_version": "latest",
+    "license_status": "VERIFIED",
+    "schema_status": "VERIFIED",
+    "status": "VERIFIED",
+    "last_downloaded_at": "2026-11-21T08:37:26Z",
+    "preprocessing_configuration": {
+      "format": "xml.bz2 / txt.bz2",
+      "namespace": 0
+    },
+    "split_configuration": {},
+    "notes": "Downloaded and indexed: 1,623,870 Vietnamese Wikipedia articles & titles.",
+    "license": "CC-BY-SA-4.0",
+    "label_schema": [
+      "title",
+      "source_url",
+      "content"
+    ]
+  },
+  {
+    "dataset_id": "enwiki",
+    "name": "Wikimedia enwiki (English Wikipedia)",
+    "category": "fact_checking",
+    "source_url": "https://dumps.wikimedia.org/enwiki/latest/",
+    "languages": [
+      "en"
+    ],
+    "intended_tasks": [
+      "claim verification",
+      "evidence retrieval",
+      "knowledge base"
+    ],
+    "dataset_version": "latest",
+    "license_status": "VERIFIED",
+    "schema_status": "VERIFIED",
+    "status": "VERIFIED",
+    "last_downloaded_at": "2026-11-21T08:37:26Z",
+    "preprocessing_configuration": {
+      "format": "xml.bz2 / txt.bz2",
+      "namespace": 0
+    },
+    "split_configuration": {},
+    "notes": "Downloaded and indexed: 19,359,925 English Wikipedia articles & titles.",
+    "license": "CC-BY-SA-4.0",
+    "label_schema": [
+      "title",
+      "source_url",
+      "content"
+    ]
   }
 ]

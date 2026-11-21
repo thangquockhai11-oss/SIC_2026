@@ -57,7 +57,10 @@ async def process_analysis_job_async(
             analysis.summary = result["summary"]
             analysis.verdict = result["verdict"]
             analysis.confidence_score = result["confidence_score"]
-            analysis.fact_checking_report = result.get("fact_checking_report")
+            fc_report = result.get("fact_checking_report") or {}
+            if isinstance(fc_report, dict) and not fc_report.get("claims"):
+                fc_report["claims"] = result.get("claims", [])
+            analysis.fact_checking_report = fc_report
             analysis.ai_provider = result["ai_provider"]
             analysis.status = "COMPLETED"
             analysis.completed_at = utc_now()

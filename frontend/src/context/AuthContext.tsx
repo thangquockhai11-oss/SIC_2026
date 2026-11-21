@@ -6,6 +6,12 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   isLoading: boolean;
+  isAdmin: boolean;
+  isUser: boolean;
+  canManageDatasets: boolean;
+  canDeleteHistory: boolean;
+  roleLabel: string;
+  roleDescription: string;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, fullName: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -81,12 +87,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem("trustmedia_user", JSON.stringify(updated));
   };
 
+  const isAdmin = user?.role === "admin";
+  const isUser = user?.role === "user";
+  const canManageDatasets = isAdmin;
+  const canDeleteHistory = isAdmin;
+  const roleLabel = isAdmin
+    ? "Hội đồng Khoa học (Admin)"
+    : isUser
+    ? "Chuyên gia Thẩm định (Researcher)"
+    : "Khách vãng lai";
+  const roleDescription = isAdmin
+    ? "Toàn quyền quản trị học thuật: Kiểm chứng, Tòa soạn, Báo cáo, Giám sát AI, Kho bằng chứng, Quản lý dữ liệu và Lịch sử"
+    : isUser
+    ? "Quyền truy cập 3 chức năng cốt lõi: Kiểm chứng phát ngôn, Hồ sơ tòa soạn và Báo cáo người đọc"
+    : "Truy cập công khai các bài báo mẫu và biên bản đã công bố";
+
   return (
     <AuthContext.Provider
       value={{
         user,
         token,
         isLoading,
+        isAdmin,
+        isUser,
+        canManageDatasets,
+        canDeleteHistory,
+        roleLabel,
+        roleDescription,
         login,
         register,
         logout,

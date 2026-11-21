@@ -603,5 +603,73 @@
     "citation": "Wu et al., ACL 2020 (MIND: A Large-scale Dataset for News Recommendation)",
     "validation_status": "WAITING_USER_PERMISSION",
     "notes": "Requires accepting Microsoft Research License Terms. Used for news reading and click behavior analysis."
+  },
+  {
+    "dataset_id": "viwiki",
+    "name": "Wikimedia viwiki (Vietnamese Wikipedia Dump)",
+    "source_url": "https://dumps.wikimedia.org/viwiki/latest/",
+    "download_url": "https://dumps.wikimedia.org/viwiki/latest/",
+    "download_status": "DOWNLOADED",
+    "license_status": "VERIFIED_RESEARCH",
+    "license": "CC-BY-SA-4.0",
+    "language": [
+      "vi"
+    ],
+    "file_list": [
+      "datasets\\raw\\viwiki\\viwiki-latest-all-titles-in-ns0.gz",
+      "datasets\\raw\\viwiki\\viwiki-latest-pages-articles-multistream-index.txt.bz2",
+      "datasets\\raw\\viwiki\\viwiki-latest-pages-articles-multistream4.xml-p4565247p6065246.bz2",
+      "datasets\\raw\\viwiki\\viwiki-latest-pages-articles-multistream5.xml-p8180045p9680044.bz2"
+    ],
+    "total_bytes": 31323323,
+    "sha256": "95b2a9cf2946ff8d2dc827927b2603e571650e32d01372469118e44e2c32cc82",
+    "total_records": 1623870,
+    "splits": [
+      "full_dump",
+      "ns0_titles",
+      "multistream_index"
+    ],
+    "schema": [
+      "title",
+      "content",
+      "source_url"
+    ],
+    "downloaded_at": "2026-11-21T08:37:26Z",
+    "citation": "Wikimedia Foundation (viwiki database dumps, latest)",
+    "validation_status": "VALIDATED",
+    "notes": "Vietnamese Wikipedia full titles & article chunks extracted for TrustMedia AI fact-checking."
+  },
+  {
+    "dataset_id": "enwiki",
+    "name": "Wikimedia enwiki (English Wikipedia Dump)",
+    "source_url": "https://dumps.wikimedia.org/enwiki/latest/",
+    "download_url": "https://dumps.wikimedia.org/enwiki/latest/",
+    "download_status": "DOWNLOADED",
+    "license_status": "VERIFIED_RESEARCH",
+    "license": "CC-BY-SA-4.0",
+    "language": [
+      "en"
+    ],
+    "file_list": [
+      "datasets\\raw\\enwiki\\enwiki-latest-all-titles-in-ns0.gz",
+      "datasets\\raw\\enwiki\\enwiki-latest-pages-articles-multistream-index1.txt-p1p41242.bz2"
+    ],
+    "total_bytes": 110063074,
+    "sha256": "045c5561399d3947e02eb014f6f8889498681b3a949ba2c66248efaa1c2ace46",
+    "total_records": 19359925,
+    "splits": [
+      "full_dump",
+      "ns0_titles",
+      "multistream_index"
+    ],
+    "schema": [
+      "title",
+      "content",
+      "source_url"
+    ],
+    "downloaded_at": "2026-11-21T08:37:26Z",
+    "citation": "Wikimedia Foundation (enwiki database dumps, latest)",
+    "validation_status": "VALIDATED",
+    "notes": "English Wikipedia full titles & article multistream index for cross-lingual fact-checking."
   }
 ]

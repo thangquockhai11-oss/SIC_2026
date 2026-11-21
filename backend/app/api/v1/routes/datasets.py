@@ -100,6 +100,12 @@ def create_dataset(
     current_user: Annotated[User | None, Depends(get_optional_current_user)] = None,
 ) -> DatasetRecord:
     """Register a new research dataset in the database."""
+    if current_user and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Chỉ tài khoản Hội đồng Khoa học (Admin) mới có quyền tạo tập dữ liệu mới",
+        )
+
     existing = db.query(DatasetItem).filter(DatasetItem.dataset_id == data.dataset_id).first()
     if existing:
         raise HTTPException(status_code=400, detail="Dataset ID already exists")
@@ -149,8 +155,15 @@ def update_dataset(
     dataset_id: str,
     data: DatasetUpdate,
     db: Session = Depends(get_db_session),
+    current_user: Annotated[User | None, Depends(get_optional_current_user)] = None,
 ) -> DatasetRecord:
     """Update dataset metadata attributes."""
+    if current_user and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Chỉ tài khoản Hội đồng Khoa học (Admin) mới có quyền cập nhật tập dữ liệu",
+        )
+
     item = db.query(DatasetItem).filter(DatasetItem.dataset_id == dataset_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Dataset not found in database")
@@ -207,8 +220,15 @@ def update_dataset(
 def delete_dataset(
     dataset_id: str,
     db: Session = Depends(get_db_session),
+    current_user: Annotated[User | None, Depends(get_optional_current_user)] = None,
 ) -> dict[str, str]:
     """Remove a dataset entry from the database."""
+    if current_user and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Chỉ tài khoản Hội đồng Khoa học (Admin) mới có quyền xóa tập dữ liệu",
+        )
+
     item = db.query(DatasetItem).filter(DatasetItem.dataset_id == dataset_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Dataset not found in database")

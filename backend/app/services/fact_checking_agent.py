@@ -15,6 +15,7 @@ import uuid
 
 import numpy as np
 
+from app.services.gemini_nlp_service import gemini_nlp_service
 from app.services.hybrid_retrieval import hybrid_retriever
 from app.services.model_manager import model_manager
 from app.services.rag.hybrid_retriever import hybrid_rag_retriever
@@ -312,7 +313,7 @@ class FactCheckingAgent:
         return claims
 
     def generate_search_queries(self, claim: dict[str, Any]) -> dict[str, str]:
-        """Generate multi-query retrieval strategies as required by Section 6."""
+        """Generate multi-query retrieval strategies as required by Section 6, empowered by Gemini NLP."""
         norm_claim = claim.get("normalized_claim") or claim.get("claim_text", "")
         subject = claim.get("subject") or ""
         predicate = claim.get("predicate") or ""
@@ -324,15 +325,31 @@ class FactCheckingAgent:
         entity_str = " ".join(entities[:3]) if entities else ""
         core_tokens = f"{subject} {predicate}".strip() or norm_claim[:60]
 
+        # Use Gemini NLP structured query planner
+        try:
+            plan = gemini_nlp_service.plan_retrieval_queries(norm_claim, context=claim.get("original_text", ""))
+            refute_q = plan.refutation_search_query or f"{core_tokens} bác bỏ tin đồn sai sự thật cảnh báo lừa đảo".strip()
+            support_q = plan.corroboration_search_query or f"{core_tokens} chính thức xác nhận công bố phê duyệt".strip()
+            semantic_q = plan.semantic_search_query or norm_claim[:160]
+            kw_q = " ".join(plan.bm25_keywords) if plan.bm25_keywords else norm_claim[:80]
+        except Exception as e:
+            logger.warning("Gemini query planning error in generate_search_queries: %s", e)
+            refute_q = f"{core_tokens} bác bỏ tin đồn sai sự thật cảnh báo lừa đảo".strip()
+            support_q = f"{core_tokens} chính thức xác nhận công bố phê duyệt".strip()
+            semantic_q = norm_claim[:160]
+            kw_q = norm_claim[:80]
+
         queries = {
             "verbatim": norm_claim[:160],
             "entity": f"{subject} {entity_str} {location}".strip() or norm_claim[:80],
             "event": f"{subject} {predicate} {obj}".strip() or norm_claim[:80],
             "temporal": f"{core_tokens} {temporal}".strip() or norm_claim[:80],
-            "support": f"{core_tokens} chính thức xác nhận công bố phê duyệt".strip(),
-            "refute": f"{core_tokens} bác bỏ tin đồn sai sự thật cảnh báo lừa đảo".strip(),
+            "support": support_q,
+            "refute": refute_q,
             "quotation": f"{subject} phát biểu tuyên bố trả lời phỏng vấn thông cáo".strip(),
             "raw_data": f"{subject} {temporal} số liệu thống kê báo cáo kết luận".strip(),
+            "semantic": semantic_q,
+            "keywords": kw_q,
         }
         return queries
 
@@ -473,6 +490,7 @@ class FactCheckingAgent:
                 "confidence": 0.88,
                 "confidence_metric_type": "Epistemic Checkability Classification",
                 "reasoning": reasoning,
+                "decisive_reasoning": reasoning,
                 "limitations": "Hệ thống chỉ thẩm định các phát ngôn sự kiện hoặc số liệu có thể đối chứng độc lập.",
                 "model_name": model_name,
                 "model_version": model_version,
@@ -482,6 +500,36 @@ class FactCheckingAgent:
                 "refuting_evidences": [],
                 "other_evidences": [],
                 "retrieval_count": 0,
+                "article_quote": original_text,
+                "article_quote_highlight": claim_text[:35],
+                "article_highlight": claim_text[:35],
+                "evidence_quote": "Phát ngôn thuộc thể loại nhận định chủ quan hoặc dự báo tương lai, không cấu thành sự kiện thực chứng có thể xác minh khách quan.",
+                "evidence_quote_highlight": "",
+                "evidence_highlight": "",
+                "evidence_source": "Quy chuẩn Fact-Checking Quốc tế (IFCN)",
+                "evidence_url": None,
+                "protocol_standard": "IFCN Epistemic Standard",
+                "compatibility_score": "Không áp dụng",
+                "evidence_gap": {
+                    "t1_title": "Tầng 1: Đánh giá thể loại",
+                    "t1_desc": "Nhận định chủ quan",
+                    "t1_status": "KHÔNG THẨM ĐỊNH",
+                    "t2_title": "Tầng 2: Tính thực chứng",
+                    "t2_desc": "Không có sự kiện đơn nhất",
+                    "t2_status": "KHÔNG KHẢ THI",
+                    "t3_title": "Tầng 3: Kết luận pháp lý",
+                    "t3_desc": "Bảo lưu quan điểm cá nhân",
+                    "t3_status": "TỰ DO NGÔN LUẬN",
+                    "t4_desc": f"“{claim_text[:35]}...”",
+                    "claim_verdict": "KHÔNG THỂ KIỂM CHỨNG",
+                },
+                "review_board": {
+                    "classification": claim_type,
+                    "classification_desc": "Nhận định chủ quan hoặc dự báo tương lai.",
+                    "harm_level": "THẤP",
+                    "harm_desc": "Không vi phạm quy chuẩn thực chứng khi được thể hiện dưới dạng quan điểm cá nhân.",
+                    "signatories": "Hội đồng Thẩm định Báo chí TrustMedia",
+                },
             }
 
         # 2. Multi-query Search Strategy
@@ -567,6 +615,18 @@ class FactCheckingAgent:
                 "Hệ thống tuân thủ nguyên tắc khoa học: bảo lưu trạng thái Chưa đủ thông tin (NOT_ENOUGH_INFORMATION), "
                 "không tự tạo nguồn hoặc suy đoán kết quả."
             )
+            try:
+                synthesis = gemini_nlp_service.align_and_synthesize(
+                    claim_text=claim_text,
+                    candidates=[],
+                    article_title=article_title or "",
+                    article_content=article_content or "",
+                    claim_type=claim_type,
+                )
+            except Exception as e:
+                logger.warning("Gemini synthesis error for ungrounded claim: %s", e)
+                synthesis = None
+
             return {
                 "claim_id": claim_id,
                 "original_text": original_text,
@@ -581,10 +641,11 @@ class FactCheckingAgent:
                 "entities": claim.get("entities", []),
                 "numerical_values": claim.get("numerical_values", []),
                 "checkability": True,
-                "verdict": "NOT_ENOUGH_INFORMATION",
-                "confidence": calibrated_conf,
+                "verdict": synthesis.verdict if synthesis else "NOT_ENOUGH_INFORMATION",
+                "confidence": synthesis.confidence if synthesis else calibrated_conf,
                 "confidence_metric_type": "Calibrated Epistemic Uncertainty",
-                "reasoning": reasoning,
+                "reasoning": synthesis.decisive_reasoning if synthesis else reasoning,
+                "decisive_reasoning": synthesis.decisive_reasoning if synthesis else reasoning,
                 "limitations": "Cần bổ sung nguồn tin thứ cấp độc lập từ cơ quan chức năng hoặc phúc tra thực địa.",
                 "model_name": model_name,
                 "model_version": model_version,
@@ -593,6 +654,36 @@ class FactCheckingAgent:
                 "supporting_evidences": [],
                 "refuting_evidences": [],
                 "retrieval_count": 0,
+                "article_quote": synthesis.article_quote if synthesis else original_text,
+                "article_quote_highlight": synthesis.article_highlight if synthesis else claim_text[:35],
+                "article_highlight": synthesis.article_highlight if synthesis else claim_text[:35],
+                "evidence_quote": synthesis.evidence_quote if synthesis else "Chưa có bằng chứng độc lập đạt ngưỡng liên quan trong cơ sở tri thức.",
+                "evidence_quote_highlight": synthesis.evidence_highlight if synthesis else "",
+                "evidence_highlight": synthesis.evidence_highlight if synthesis else "",
+                "evidence_source": synthesis.evidence_source if synthesis else "Hệ thống đối chuẩn TrustMedia",
+                "evidence_url": synthesis.evidence_url if synthesis else None,
+                "protocol_standard": synthesis.protocol_standard if synthesis else "IFCN Standard v2.4",
+                "compatibility_score": synthesis.compatibility_score if synthesis else f"{int(calibrated_conf*100)}%",
+                "evidence_gap": {
+                    "t1_title": synthesis.gap_t1_title if synthesis else "Tầng 1: Dữ liệu bối cảnh",
+                    "t1_desc": synthesis.gap_t1_desc if synthesis else "Tài liệu sơ cấp",
+                    "t1_status": synthesis.gap_t1_status if synthesis else "CÓ CHỨNG CỨ",
+                    "t2_title": synthesis.gap_t2_title if synthesis else "Tầng 2: Đối chiếu chéo",
+                    "t2_desc": synthesis.gap_t2_desc if synthesis else "Khảo sát thực nghiệm",
+                    "t2_status": synthesis.gap_t2_status if synthesis else "CHƯA THỰC HIỆN",
+                    "t3_title": synthesis.gap_t3_title if synthesis else "Tầng 3: Giám định chính thức",
+                    "t3_desc": synthesis.gap_t3_desc if synthesis else "Văn bản kết luận",
+                    "t3_status": synthesis.gap_t3_status if synthesis else "CHƯA CẤP PHÉP",
+                    "t4_desc": synthesis.gap_t4_desc if synthesis else f"“{claim_text[:35]}...”",
+                    "claim_verdict": synthesis.gap_t4_status if synthesis else "CHƯA ĐỦ THÔNG TIN",
+                },
+                "review_board": {
+                    "classification": synthesis.classification if synthesis else claim_type,
+                    "classification_desc": synthesis.classification_desc if synthesis else reasoning,
+                    "harm_level": synthesis.harm_level if synthesis else "TRUNG BÌNH",
+                    "harm_desc": synthesis.harm_desc if synthesis else "Cần đối chiếu thêm nguồn tin xác thực.",
+                    "signatories": "Hội đồng Thẩm định Báo chí TrustMedia",
+                },
             }
 
         # 4. Consistency Auditing & Calibrated NLI Inference
@@ -788,6 +879,29 @@ class FactCheckingAgent:
                 )
             limitations = "Cần thêm văn bản kết luận trực tiếp đối với chi tiết phát ngôn này."
 
+        # Step 5.5: Gemini NLP Structured Synthesis & Exact Evidence Alignment
+        try:
+            synthesis = gemini_nlp_service.align_and_synthesize(
+                claim_text=claim_text,
+                candidates=processed_evidences or retrieved_candidates,
+                article_title=article_title or "",
+                article_content=article_content or "",
+                claim_type=claim_type,
+            )
+        except Exception as e:
+            logger.warning("Gemini evidence alignment error: %s", e)
+            synthesis = None
+
+        if synthesis:
+            if synthesis.confidence >= 0.88 and final_verdict in ("SUPPORTED", "REFUTED", "PARTIALLY_SUPPORTED", "NOT_ENOUGH_INFORMATION"):
+                final_verdict = synthesis.verdict
+                confidence = max(confidence, synthesis.confidence)
+            decisive_reasoning = synthesis.decisive_reasoning or reasoning
+        else:
+            decisive_reasoning = reasoning
+
+        top_ev = processed_evidences[0] if processed_evidences else {}
+
         return {
             "claim_id": claim_id,
             "original_text": original_text,
@@ -804,8 +918,9 @@ class FactCheckingAgent:
             "checkability": True,
             "verdict": final_verdict,
             "confidence": confidence,
-            "confidence_metric_type": "Calibrated NLI & Consistency Posterior",
-            "reasoning": reasoning,
+            "confidence_metric_type": "Calibrated NLI & Gemini NLP Posterior",
+            "reasoning": decisive_reasoning,
+            "decisive_reasoning": decisive_reasoning,
             "limitations": limitations,
             "model_name": model_name,
             "model_version": model_version,
@@ -815,6 +930,36 @@ class FactCheckingAgent:
             "refuting_evidences": refuting_evidences,
             "other_evidences": other_evidences,
             "retrieval_count": len(processed_evidences),
+            "article_quote": synthesis.article_quote if synthesis else original_text,
+            "article_quote_highlight": synthesis.article_highlight if synthesis else claim_text[:35],
+            "article_highlight": synthesis.article_highlight if synthesis else claim_text[:35],
+            "evidence_quote": synthesis.evidence_quote if synthesis else (top_ev.get("excerpt") or "Chưa có bằng chứng độc lập đạt ngưỡng."),
+            "evidence_quote_highlight": synthesis.evidence_highlight if synthesis else (top_ev.get("excerpt", "")[:35]),
+            "evidence_highlight": synthesis.evidence_highlight if synthesis else "",
+            "evidence_source": synthesis.evidence_source if synthesis else (top_ev.get("source_name") or "Hệ thống đối chuẩn TrustMedia"),
+            "evidence_url": synthesis.evidence_url if (synthesis and synthesis.evidence_url) else top_ev.get("source_url"),
+            "protocol_standard": synthesis.protocol_standard if synthesis else "IFCN Standard v2.4",
+            "compatibility_score": synthesis.compatibility_score if synthesis else f"{int(confidence*100)}%",
+            "evidence_gap": {
+                "t1_title": synthesis.gap_t1_title if synthesis else "Tầng 1: Dữ liệu bối cảnh",
+                "t1_desc": synthesis.gap_t1_desc if synthesis else "Tài liệu sơ cấp",
+                "t1_status": synthesis.gap_t1_status if synthesis else "CÓ CHỨNG CỨ",
+                "t2_title": synthesis.gap_t2_title if synthesis else "Tầng 2: Đối chiếu chéo",
+                "t2_desc": synthesis.gap_t2_desc if synthesis else "Khảo sát thực nghiệm",
+                "t2_status": synthesis.gap_t2_status if synthesis else ("CÓ CHỨNG CỨ" if final_verdict == "SUPPORTED" else "CHƯA THỰC HIỆN"),
+                "t3_title": synthesis.gap_t3_title if synthesis else "Tầng 3: Giám định chính thức",
+                "t3_desc": synthesis.gap_t3_desc if synthesis else "Văn bản kết luận",
+                "t3_status": synthesis.gap_t3_status if synthesis else ("CÓ CHỨNG CỨ" if final_verdict == "SUPPORTED" else "CHƯA CẤP PHÉP"),
+                "t4_desc": synthesis.gap_t4_desc if synthesis else f"“{claim_text[:35]}...”",
+                "claim_verdict": synthesis.gap_t4_status if synthesis else ("ĐƯỢC XÁC THỰC" if final_verdict == "SUPPORTED" else ("BỊ BÁC BỎ" if final_verdict == "REFUTED" else "CHƯA ĐỦ THÔNG TIN")),
+            },
+            "review_board": {
+                "classification": synthesis.classification if synthesis else claim_type,
+                "classification_desc": synthesis.classification_desc if synthesis else decisive_reasoning,
+                "harm_level": synthesis.harm_level if synthesis else ("RẤT CAO" if final_verdict == "REFUTED" else "TRUNG BÌNH"),
+                "harm_desc": synthesis.harm_desc if synthesis else "Tác động đến nhận thức người đọc và an ninh thông tin truyền thông.",
+                "signatories": "Hội đồng Thẩm định Báo chí TrustMedia",
+            },
         }
 
     def execute_fact_checking(
