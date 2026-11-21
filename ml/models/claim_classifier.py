@@ -212,3 +212,4 @@ class ClaimClassifierService:
 
 
 claim_classifier_service = ClaimClassifierService()
+

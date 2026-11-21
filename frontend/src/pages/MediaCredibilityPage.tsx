@@ -3,6 +3,29 @@ import { useSearchParams } from "react-router-dom";
 import { useAnalysis, type EditorialCriterion } from "../context/AnalysisContext";
 import { api } from "../api/client";
 
+function getReviewCouncil(category?: string, title?: string): string {
+  const combined = `${category || ""} ${title || ""}`.toLowerCase();
+  if (["ung thư", "y tế", "thuốc", "bệnh", "thảo dược", "điều trị", "sức khỏe", "dược", "bác sĩ"].some((w) => combined.includes(w))) {
+    return "Tiểu ban Thẩm định Y tế & Khoa học Sức khỏe ĐHQG";
+  }
+  if (["cư kuin", "đắk lắk", "daklak", "tấn công", "khủng bố", "công an", "an ninh", "trật tự", "bắt giữ", "hình sự", "pháp luật"].some((w) => combined.includes(w))) {
+    return "Tiểu ban Thẩm định An ninh, Pháp luật & Xã hội ĐHQG";
+  }
+  if (["kinh tế", "tài chính", "ngân hàng", "gdp", "thị trường", "giá điện", "evn", "doanh nghiệp", "chứng khoán"].some((w) => combined.includes(w))) {
+    return "Tiểu ban Thẩm định Kinh tế & Tài chính ĐHQG";
+  }
+  if (["công nghệ", "ai", "trí tuệ nhân tạo", "kỹ thuật", "lừa đảo", "an ninh mạng", "mạng xã hội", "streamer"].some((w) => combined.includes(w))) {
+    return "Tiểu ban Thẩm định Công nghệ & An ninh số ĐHQG";
+  }
+  if (["thủy điện", "vỡ đập", "mưa lũ", "thiên tai", "sạt lở", "môi trường"].some((w) => combined.includes(w))) {
+    return "Tiểu ban Thẩm định Môi trường & Phòng chống thiên tai ĐHQG";
+  }
+  if (["giáo dục", "học sinh", "sinh viên", "thi tốt nghiệp", "đại học", "học thuật"].some((w) => combined.includes(w))) {
+    return "Tiểu ban Thẩm định Giáo dục & Học thuật ĐHQG";
+  }
+  return "Hội đồng Thẩm định Báo chí & Nội dung Truyền thông ĐHQG";
+}
+
 export default function MediaCredibilityPage() {
   const [searchParams] = useSearchParams();
   const queryId = searchParams.get("id");
@@ -79,12 +102,21 @@ export default function MediaCredibilityPage() {
             <div className="lg:col-span-7 flex flex-col gap-y-space-md">
               <div className="flex items-start gap-space-md">
                 <div className="w-16 h-16 rounded-xl bg-surface-container-high flex-shrink-0 flex items-center justify-center text-primary shadow-sm overflow-hidden">
-                  <span className="material-symbols-outlined text-[34px]">corporate_fare</span>
+                  <span className="material-symbols-outlined text-[34px]">article</span>
                 </div>
                 <div className="flex flex-col">
                   <div className="flex flex-wrap items-center gap-space-xs">
                     <span className="font-headline-sm text-headline-sm text-on-surface font-bold">
-                      {article.source_name}
+                      {article.title}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                    <span className="px-2 py-0.5 rounded-full bg-surface-container-high text-secondary font-label-sm text-label-sm font-semibold">
+                      {article.category || "Tin tức & Thời sự"}
+                    </span>
+                    <span className="text-outline-variant">•</span>
+                    <span className="font-body-md text-body-md text-on-surface-variant">
+                      Tòa soạn xuất bản: <strong className="text-on-surface">{article.source_name || "Cơ quan báo chí"}</strong>
                     </span>
                     {article.source_url && (
                       <a
@@ -97,12 +129,9 @@ export default function MediaCredibilityPage() {
                         <span className="material-symbols-outlined text-[14px]">open_in_new</span>
                       </a>
                     )}
-                    <span className="px-2 py-0.5 rounded-full bg-surface-container-high text-secondary font-label-sm text-label-sm font-semibold">
-                      Báo điện tử Trung ương
-                    </span>
                   </div>
-                  <p className="font-body-md text-body-md text-on-surface-variant mt-1 leading-relaxed">
-                    Cơ quan ngôn luận của Đoàn TNCS Hồ Chí Minh TP. Hồ Chí Minh · Cấp phép hoạt động báo chí số 236/GP-BTTTT.
+                  <p className="font-body-md text-body-md text-on-surface-variant mt-1.5 leading-relaxed">
+                    {article.summary || "Hồ sơ thẩm định chất lượng nội dung bài viết: Đối soát tính khách quan, tính toàn vẹn của dữ liệu và các phát ngôn được phản ánh trong bài báo."}
                   </p>
                 </div>
               </div>
@@ -110,13 +139,13 @@ export default function MediaCredibilityPage() {
               {/* Academic & Protocol Scope Strip */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-sm pt-space-xs">
                 <div className="p-space-sm rounded-lg bg-surface-container-low flex items-start gap-space-sm border border-surface-container">
-                  <span className="material-symbols-outlined text-primary-container text-[20px] mt-0.5">chips</span>
+                  <span className="material-symbols-outlined text-primary-container text-[20px] mt-0.5">category</span>
                   <div className="flex flex-col">
                     <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider">
                       Lĩnh vực kiểm định
                     </span>
                     <span className="font-label-md text-label-md text-on-surface font-semibold">
-                      Báo chí Y tế & Khoa học đời sống
+                      {article.category || "Báo chí & Thời sự xã hội"}
                     </span>
                   </div>
                 </div>
@@ -127,7 +156,7 @@ export default function MediaCredibilityPage() {
                       Hội đồng phụ trách
                     </span>
                     <span className="font-label-md text-label-md text-on-surface font-semibold">
-                      Tiểu ban Truyền thông Sức khỏe ĐHQG
+                      {getReviewCouncil(article.category, article.title)}
                     </span>
                   </div>
                 </div>
@@ -138,7 +167,7 @@ export default function MediaCredibilityPage() {
                   menu_book
                 </span>
                 <p className="font-body-md text-body-md text-on-surface-variant italic leading-snug">
-                  “Đánh giá dựa trên 5 tiêu chí minh bạch báo chí quốc tế (The Trust Project & Đề án Báo chí Minh bạch ĐHQG). Báo cáo tập trung vào tính liêm chính dữ liệu gốc và khả năng truy hồi nguồn công bố.”
+                  “Đánh giá dựa trên các tiêu chuẩn kiểm chứng nội dung báo chí (Fact-checking Protocol & Chuẩn IFCN). Báo cáo tập trung vào tính liêm chính của các dữ liệu, phát ngôn và khả năng đối soát chứng cứ thực tế của bài viết.”
                 </p>
               </div>
             </div>
@@ -341,7 +370,7 @@ export default function MediaCredibilityPage() {
 
                       {item.actionRecommendation && (
                         <div className="p-space-sm rounded bg-surface-container-highest/60 font-label-sm text-label-sm text-on-surface flex items-center justify-between mt-1">
-                          <span>Đánh giá từ TS.BS Nguyễn Quốc Quân (Bệnh viện K Trung ương):</span>
+                          <span>Ý kiến đánh giá từ Hội đồng chuyên gia thẩm định nội dung:</span>
                           <span className="font-semibold text-error">{item.actionRecommendation}</span>
                         </div>
                       )}
@@ -379,7 +408,7 @@ export default function MediaCredibilityPage() {
                 Phương pháp thẩm định độc lập
               </h4>
               <p className="font-body-md text-body-md text-on-surface-variant max-w-2xl mt-0.5 leading-relaxed">
-                TrustMedia áp dụng quy trình bình duyệt chéo (Peer-Review) độc lập giữa các chuyên gia y dược học và giảng viên báo chí. Các cơ quan báo chí có quyền gửi khiếu nại hoặc dữ liệu bổ sung trong vòng 15 ngày làm việc.
+                TrustMedia áp dụng quy trình bình duyệt chéo (Peer-Review) độc lập giữa các chuyên gia kiểm chứng dữ liệu và hội đồng chuyên ngành theo chủ đề bài báo. Các nội dung phát ngôn được đối soát trực tiếp với cơ sở dữ liệu chứng cứ và nguồn tin lưu trữ xác thực.
               </p>
             </div>
           </div>

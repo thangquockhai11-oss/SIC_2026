@@ -102,7 +102,7 @@ export default function ReportsPage() {
                 type="button"
               >
                 <span className="material-symbols-outlined text-[18px]">verified_user</span>
-                <span>Trụ cột 1: Niềm tin vào nguồn</span>
+                <span>Trụ cột 1: Tiếp nhận nội dung bài báo</span>
                 {activePillar === 1 && <span className="w-1.5 h-1.5 rounded-full bg-primary-fixed"></span>}
               </button>
 

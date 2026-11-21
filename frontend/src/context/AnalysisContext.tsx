@@ -273,13 +273,13 @@ export const PROTOTYPE_ARTICLE: ActiveArticle = {
   ],
   surveyPillars: {
     1: {
-      indexTag: "Khảo sát uy tín báo chí • Câu 01/03",
+      indexTag: "Khảo sát tiếp nhận nội dung • Câu 01/03",
       validResponses: "118 phản hồi hợp lệ (98.3% tổng mẫu)",
-      question: "Trước bài viết này, mức độ tin cậy của anh/chị đối với thông tin sức khỏe xuất bản bởi Báo Tuổi Trẻ là như thế nào?",
-      opt1: { text: "Rất tin cậy / Thường xuyên tham khảo quyết định y tế", count: "72 lượt", pct: "61%", color: "bg-primary-container", pctClass: "text-primary", barWidth: "61%" },
-      opt2: { text: "Trung lập / Chỉ xem như nguồn tham khảo bổ sung", count: "33 lượt", pct: "28%", color: "bg-surface-tint", pctClass: "text-surface-tint", barWidth: "28%" },
-      opt3: { text: "Ít tin cậy / Cần chuyên gia độc lập đối chiếu", count: "13 lượt", pct: "11%", color: "bg-secondary", pctClass: "text-secondary", barWidth: "11%" },
-      academicNote: "Đa số độc giả (61%) đặt uy tín tiền nghiệm rất cao vào tòa soạn chính thống. Điều này vô tình hạ thấp rào cản phản biện khi tiếp nhận các bài đăng chưa phân biệt rõ giữa thí nghiệm phòng lab và ứng dụng điều trị.",
+      question: "Khi tiếp cận bài viết 'Nghiên cứu mới về chiết xuất thảo dược hỗ trợ ức chế tế bào ung thư tại Viện Hàn lâm Khoa học', mức độ tin cậy ban đầu của anh/chị đối với các thông tin và kết quả được phản ánh trong bài báo là như thế nào?",
+      opt1: { text: "Rất tin cậy / Cho rằng chiết xuất thảo dược thực sự có hiệu quả trị liệu như mô tả", count: "72 lượt", pct: "61%", color: "bg-primary-container", pctClass: "text-primary", barWidth: "61%" },
+      opt2: { text: "Phân vân / Cần kiểm chứng thêm công bố khoa học độc lập và thử nghiệm lâm sàng", count: "33 lượt", pct: "28%", color: "bg-surface-tint", pctClass: "text-surface-tint", barWidth: "28%" },
+      opt3: { text: "Nghi ngờ / Cho rằng bài viết có dấu hiệu phóng đại kết quả từ ống nghiệm lên cơ thể người", count: "13 lượt", pct: "11%", color: "bg-secondary", pctClass: "text-secondary", barWidth: "11%" },
+      academicNote: "Đa số độc giả (61%) ban đầu có xu hướng tin vào hiệu quả điều trị được bài báo nêu. Điều này cho thấy nguy cơ ngộ nhận rất cao khi nội dung bài báo phóng đại kết quả từ phòng thí nghiệm thành hiệu quả lâm sàng trên người mà không kèm theo cảnh báo rõ ràng.",
       aiPrediction: "64.2%",
       actualSurvey: "61.0%",
       deviation: "-3.2%",
@@ -313,8 +313,8 @@ export const PROTOTYPE_ARTICLE: ActiveArticle = {
 
 function buildDynamicSurveyPillars(
   detail: any,
-  sourceName: string,
-  category: string,
+  _sourceName: string,
+  _category: string,
   claims: ClaimItem[]
 ): Record<number, SurveyPillarData> {
   const survey = detail.survey || {};
@@ -328,7 +328,7 @@ function buildDynamicSurveyPillars(
   const compScore = Math.round(reception.comprehension_score || 85);
   const acceptanceRate = Math.round(reception.acceptance_rate || (isSupported ? 68 : isRefuted ? 58 : 50));
 
-  // --- PILLAR 1: Niềm tin vào nguồn xuất bản ---
+  // --- PILLAR 1: Tiếp nhận nội dung bài báo ---
   const p1Opt1Pct = Math.min(85, Math.max(45, trustSource));
   const p1Opt2Pct = Math.round((100 - p1Opt1Pct) * 0.65);
   const p1Opt3Pct = 100 - p1Opt1Pct - p1Opt2Pct;
@@ -338,11 +338,11 @@ function buildDynamicSurveyPillars(
   const p1Count3 = sampleSize - p1Count1 - p1Count2;
 
   const pillar1: SurveyPillarData = {
-    indexTag: "Khảo sát uy tín báo chí • Câu 01/03",
+    indexTag: "Khảo sát tiếp nhận nội dung • Câu 01/03",
     validResponses: `${Math.round(sampleSize * 0.98)} phản hồi hợp lệ (98.3% tổng mẫu)`,
-    question: `Trước bài viết này, mức độ tin cậy của anh/chị đối với thông tin về '${category}' xuất bản bởi ${sourceName} là như thế nào?`,
+    question: `Khi tiếp cận bài viết "${detail.title}", mức độ tin cậy ban đầu của anh/chị đối với các thông tin và diễn biến được phản ánh trong nội dung bài báo là như thế nào?`,
     opt1: {
-      text: "Rất tin cậy / Thường xuyên tham khảo quyết định và định hướng thông tin",
+      text: "Rất tin cậy / Cho rằng các tình tiết, số liệu và kết luận trong bài báo phản ánh đúng thực tế",
       count: `${p1Count1} lượt`,
       pct: `${p1Opt1Pct}%`,
       color: "bg-primary-container",
@@ -350,7 +350,7 @@ function buildDynamicSurveyPillars(
       barWidth: `${p1Opt1Pct}%`,
     },
     opt2: {
-      text: "Trung lập / Chỉ xem như nguồn tham khảo bổ sung, chờ cơ quan chức năng",
+      text: "Phân vân / Cần kiểm chứng thêm nguồn tin độc lập và tài liệu đối soát khách quan",
       count: `${p1Count2} lượt`,
       pct: `${p1Opt2Pct}%`,
       color: "bg-surface-tint",
@@ -358,7 +358,7 @@ function buildDynamicSurveyPillars(
       barWidth: `${p1Opt2Pct}%`,
     },
     opt3: {
-      text: "Ít tin cậy / Cần chuyên gia và tài liệu kiểm chứng độc lập đối chiếu",
+      text: "Nghi ngờ / Nhận thấy các thông tin, khẳng định trong bài báo có dấu hiệu thiếu căn cứ hoặc sai lệch",
       count: `${p1Count3} lượt`,
       pct: `${p1Opt3Pct}%`,
       color: "bg-secondary",
@@ -367,7 +367,7 @@ function buildDynamicSurveyPillars(
     },
     academicNote:
       survey.findings_summary ||
-      `Đa số độc giả (${p1Opt1Pct}%) đặt uy tín tiền nghiệm rất cao vào nguồn phát hành '${sourceName}'. Trong các chủ đề ${category.toLowerCase()}, độc giả có xu hướng tin cậy cao vào báo chí chính thống địa phương để nắm bắt thông tin chỉ đạo của cơ quan chức năng.`,
+      `Đa số độc giả (${p1Opt1Pct}%) khi tiếp cận bài viết '${detail.title}' có xu hướng tin tưởng các thông tin và diễn biến được phản ánh. Nghiên cứu thực nghiệm chỉ ra rằng bạn đọc thường tiếp nhận trực tiếp nội dung bài báo nếu chưa được cung cấp các chỉ dấu phản biện hoặc báo cáo đối soát chứng cứ.`,
     aiPrediction: `${(p1Opt1Pct + 2.5).toFixed(1)}%`,
     actualSurvey: `${p1Opt1Pct.toFixed(1)}%`,
     deviation: "-2.5%",
@@ -415,7 +415,7 @@ function buildDynamicSurveyPillars(
   const pillar2: SurveyPillarData = {
     indexTag: "Khảo sát tiếp nhận thông điệp • Câu 02/03",
     validResponses: `${Math.round(sampleSize * 0.96)} phản hồi hợp lệ (95.8% tổng mẫu)`,
-    question: `Sau khi đọc bài báo, anh/chị có tin rằng "${claimSnippet}" là một sự thật khách quan đã được chứng minh đầy đủ?`,
+    question: `Đối với luận điểm cốt lõi trong nội dung bài báo: "${claimSnippet}", anh/chị đánh giá mức độ xác thực của thông tin này như thế nào?`,
     opt1: {
       text: p2Opt1Text,
       count: `${p2Count1} lượt`,
@@ -442,7 +442,7 @@ function buildDynamicSurveyPillars(
     },
     academicNote:
       reception.cognitive_resistance_notes ||
-      `Khảo sát ghi nhận ${p2Opt1Pct}% độc giả có xu hướng tiếp nhận ngay thông điệp bài viết. Kết quả phân tích hành vi độc giả cho thấy việc cơ quan chức năng và báo chí chính thống kịp thời cung cấp diễn biến khách quan giúp nâng cao tính định hướng và giảm thiểu tin đồn thất thiệt.`,
+      `Khảo sát ghi nhận ${p2Opt1Pct}% độc giả có xu hướng tin vào luận điểm cốt lõi của bài viết. Việc hệ thống AI trích xuất và đối soát từng phát ngôn với dữ liệu thực chứng giúp bạn đọc nhận diện chính xác tính xác thực của nội dung bài báo.`,
     aiPrediction: `${(p2Opt1Pct + 3.1).toFixed(1)}%`,
     actualSurvey: `${p2Opt1Pct.toFixed(1)}%`,
     deviation: "-3.1%",
@@ -496,7 +496,7 @@ function buildDynamicSurveyPillars(
 function buildDynamicCriteria(
   detail: any,
   sourceName: string,
-  category: string,
+  _category: string,
   claims: ClaimItem[]
 ): EditorialCriterion[] {
   const cred = detail.credibility || {};
@@ -506,18 +506,18 @@ function buildDynamicCriteria(
   return [
     {
       id: 1,
-      title: "Minh bạch tài liệu nguồn & Căn cứ thẩm định",
+      title: "Tính xác thực của chứng cứ và dữ liệu nội dung bài báo",
       status: isLowRefuted ? "FAILED" : "PASSED",
-      statusText: isLowRefuted ? "CẢNH BÁO NGUỒN" : "ĐẠT CHUẨN",
+      statusText: isLowRefuted ? "CẢNH BÁO CHỨNG CỨ" : "ĐẠT CHUẨN",
       statusColor: isLowRefuted ? "bg-error-container text-error" : "bg-[#DCFCE7] text-[#15803D]",
-      summary: `Bài viết xuất bản trên ${sourceName} được đối chiếu chéo với các nguồn tin lưu trữ và báo cáo chuyên ngành thuộc lĩnh vực ${category}.`,
-      referenceTitle: `Quy chuẩn đối chiếu thực chứng báo chí · ${sourceName}`,
-      referenceDetail: `Đã đối soát ${claims.length} luận điểm với cơ sở dữ liệu học thuật và báo chí độc lập.`,
+      summary: `Các sự kiện, mốc thời gian và số liệu nêu trong nội dung bài báo '${detail.title}' được đối soát chéo trực tiếp với kho cơ sở dữ liệu thực chứng.`,
+      referenceTitle: "Quy chuẩn đối chiếu thực chứng nội dung báo chí",
+      referenceDetail: `Đã đối soát ${claims.length} luận điểm trong nội dung bài báo với cơ sở dữ liệu học thuật và báo chí độc lập.`,
       complianceNote: "Tuân thủ quy trình kiểm tra chéo nguồn tin sơ cấp theo chuẩn IFCN.",
-      actionRecommendation: isLowRefuted ? "Cần bổ sung văn bản chính thức hoặc chú thích nguồn độc lập." : "Duy trì tính minh bạch tài liệu tham chiếu.",
+      actionRecommendation: isLowRefuted ? "Cần đối chiếu thêm văn bản chính thức hoặc báo cáo điều tra độc lập." : "Duy trì tính minh bạch tài liệu tham chiếu.",
       contactLog: [
-        { time: "Hệ thống tự động", action: `Ghi nhận xuất bản từ ${sourceName}` },
-        { time: "Kiểm tra chéo", action: "Đã hoàn thành rà soát thực chứng qua mô hình Hybrid RAG" },
+        { time: "Hệ thống tự động", action: `Trích xuất và lập chỉ mục ${claims.length} phát ngôn từ nội dung bài báo` },
+        { time: "Kiểm tra chéo", action: "Đã hoàn thành rà soát thực chứng qua mô hình Hybrid RAG & NLI" },
       ],
     },
     {
@@ -527,8 +527,8 @@ function buildDynamicCriteria(
       statusText: isLowRefuted ? "SAI LỆCH PHÁT NGÔN" : "XÁC THỰC",
       statusColor: isLowRefuted ? "bg-error-container text-error" : "bg-[#DCFCE7] text-[#15803D]",
       summary: isLowRefuted
-        ? "Phát hiện luận điểm phóng đại hoặc thiếu bằng chứng xác thực so với dữ liệu thực tế."
-        : "Các số liệu và sự kiện được trích dẫn phù hợp với bối cảnh ghi nhận.",
+        ? "Phát hiện luận điểm trong bài báo phóng đại hoặc thiếu bằng chứng xác thực so với dữ liệu thực tế."
+        : "Các số liệu và sự kiện được trích dẫn trong bài báo phù hợp với bối cảnh ghi nhận.",
       referenceTitle: "Thẩm định tính toàn vẹn thông tin (Information Integrity)",
       referenceDetail: "Biên bản Hội đồng Thẩm định Báo chí TrustMedia.",
       complianceNote: "Yêu cầu tuyệt đối không giật tít vượt quá kết quả thực tế.",
@@ -536,14 +536,14 @@ function buildDynamicCriteria(
     },
     {
       id: 3,
-      title: "Minh bạch tác giả & Cơ chế phản hồi tòa soạn",
+      title: "Tính khách quan, cân bằng và toàn vẹn ngữ cảnh nội dung",
       status: "PASSED",
       statusText: "ĐẠT CHUẨN",
       statusColor: "bg-[#DCFCE7] text-[#15803D]",
-      summary: `Tác giả bài viết và cơ quan chủ quản ${sourceName} có định danh rõ ràng, hỗ trợ kênh tiếp nhận phản biện.`,
-      referenceTitle: "Hồ sơ tòa soạn & Đạo đức báo chí",
-      referenceDetail: `Cơ quan phát hành: ${sourceName}.`,
-      complianceNote: "Tuân thủ quy chế xuất bản báo chí số.",
+      summary: `Nội dung bài viết phản ánh thông tin có bối cảnh rõ ràng, hạn chế tối đa suy diễn chủ quan hoặc cắt xén phát ngôn.`,
+      referenceTitle: "Thẩm định tính toàn vẹn ngữ cảnh (Contextual Integrity)",
+      referenceDetail: `Bài báo: ${detail.title} · Xuất bản: ${sourceName}.`,
+      complianceNote: "Tuân thủ quy chuẩn đạo đức báo chí và kiểm chứng khách quan.",
     },
   ];
 }

@@ -94,3 +94,4 @@ Hệ thống đang sở hữu kho dữ liệu nghiên cứu đồ sộ tại th�
 5. **Bước 5:** Huấn luyện và Benchmark Model **NLI Verification** trên ViFactCheck 7,232 mẫu (`scripts/train_nli_verifier.py`).
 6. **Bước 6:** Hoàn thiện Engine **Evidence Aggregator & Calibrated Verdict Decision** với phát hiện nguồn trùng lặp/sao chép (`ml/models/evidence_aggregator.py`).
 7. **Bước 7:** Thực hiện toàn bộ **Ablation Study (Experiments A -> G)** và xuất báo cáo khoa học `docs/TRUSTMEDIA_AI_TRAINING_REPORT.md`.
+
