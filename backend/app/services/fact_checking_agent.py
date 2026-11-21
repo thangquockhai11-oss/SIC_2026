@@ -20,6 +20,11 @@ from app.services.hybrid_retrieval import hybrid_retriever
 from app.services.model_manager import model_manager
 from app.services.rag.hybrid_retriever import hybrid_rag_retriever
 from app.services.rag.live_retriever import live_evidence_retriever
+from app.services.rag.reranker import reranker_engine
+from ml.models.claim_classifier import claim_classifier_service
+from ml.models.nli_verifier import nli_verifier_service
+from ml.models.evidence_aggregator import evidence_aggregator
+from ml.models.citation_validator import citation_validator
 
 logger = logging.getLogger(__name__)
 
@@ -540,12 +545,63 @@ class FactCheckingAgent:
                 },
             }
 
-        # 2. Multi-query Search Strategy
+        # 2. Multi-query Search Strategy prioritizing Research Datasets (ViFactCheck, ViWiki, X-FACT, FEVER)
         queries = self.generate_search_queries(claim)
         retrieved_candidates: list[dict[str, Any]] = []
         seen_chunk_ids: set[str] = set()
 
-        # Pre-seed with story-level candidates if available
+        # Step 2.1: Always query the verified research dataset knowledge base first
+        dataset_queries = [claim_text]
+        if queries.get("verbatim") and queries["verbatim"] != claim_text:
+            dataset_queries.append(queries["verbatim"])
+        if queries.get("event") and queries["event"] != claim_text:
+            dataset_queries.append(queries["event"])
+
+        for dq in dataset_queries[:3]:
+            try:
+                dataset_cands = hybrid_retriever.retrieve(
+                    claim_text=dq,
+                    top_k=4,
+                    min_relevance_threshold=0.18,
+                )
+                for dc in dataset_cands:
+                    cid = dc.get("chunk_id") or dc.get("excerpt", "")[:40]
+                    if cid not in seen_chunk_ids:
+                        seen_chunk_ids.add(cid)
+                        dc["query_matched_strategy"] = "research_dataset_retriever"
+                        retrieved_candidates.append(dc)
+            except Exception as e:
+                logger.debug("Dataset retrieval error: %s", e)
+
+        # Step 2.2: pgvector hybrid retrieval if available
+        retrieval_targets = [
+            ("verbatim", queries["verbatim"]),
+            ("refute", queries["refute"]),
+            ("support", queries["support"]),
+            ("event", queries["event"]),
+            ("raw_data", queries["raw_data"]),
+        ]
+
+        for q_type, q_str in retrieval_targets:
+            if not q_str:
+                continue
+            try:
+                candidates = hybrid_rag_retriever.retrieve(
+                    query=q_str,
+                    top_k=2,
+                    min_relevance_threshold=0.20,
+                    agent_name="FactCheckingAgent",
+                )
+                for c in candidates:
+                    cid = c.get("chunk_id") or c.get("excerpt", "")[:40]
+                    if cid not in seen_chunk_ids:
+                        seen_chunk_ids.add(cid)
+                        c["query_matched_strategy"] = q_type
+                        retrieved_candidates.append(c)
+            except Exception:
+                pass
+
+        # Step 2.3: Pre-seed with story-level candidates and live web search
         if story_evidence_pool:
             for s_cand in story_evidence_pool:
                 cid = s_cand.get("chunk_id") or s_cand.get("source_url")
@@ -558,47 +614,6 @@ class FactCheckingAgent:
                     s_cand_copy["query_matched_strategy"] = "story_level_pool"
                     retrieved_candidates.append(s_cand_copy)
 
-        # Prioritize verbatim, event, refute, and raw_data queries
-        retrieval_targets = [
-            ("verbatim", queries["verbatim"]),
-            ("refute", queries["refute"]),
-            ("support", queries["support"]),
-            ("event", queries["event"]),
-            ("raw_data", queries["raw_data"]),
-        ]
-
-        for q_type, q_str in retrieval_targets:
-            if not q_str:
-                continue
-            candidates = hybrid_rag_retriever.retrieve(
-                query=q_str,
-                top_k=2,
-                min_relevance_threshold=0.20,
-                agent_name="FactCheckingAgent",
-            )
-            for c in candidates:
-                cid = c.get("chunk_id") or c.get("excerpt", "")[:40]
-                if cid not in seen_chunk_ids:
-                    seen_chunk_ids.add(cid)
-                    c["query_matched_strategy"] = q_type
-                    retrieved_candidates.append(c)
-
-        # Fallback to local in-memory dataset chunks if pgvector returned empty
-        if not retrieved_candidates:
-            local_cands = hybrid_retriever.retrieve(
-                claim_text=claim_text,
-                top_k=2,
-                min_relevance_threshold=0.22,
-            )
-            for lc in local_cands:
-                cid = lc.get("chunk_id") or lc.get("excerpt", "")[:40]
-                if cid not in seen_chunk_ids:
-                    seen_chunk_ids.add(cid)
-                    lc["query_matched_strategy"] = "local_memory_fallback"
-                    retrieved_candidates.append(lc)
-
-        # Step 2.5: Live Web, News & Encyclopedia Search
-        # Always execute live evidence retrieval to discover contemporary reporting, corroborations, or debunks
         if len(retrieved_candidates) < 4:
             live_cands = live_evidence_retriever.retrieve_for_claim(
                 claim_text=claim_text,
@@ -613,6 +628,16 @@ class FactCheckingAgent:
                     seen_chunk_ids.add(cid)
                     l_cand["query_matched_strategy"] = "live_news_web_retriever"
                     retrieved_candidates.append(l_cand)
+
+        # Step 2.4: BGE-Reranker v2 M3 cross-scoring across ALL retrieved candidates
+        for cand in retrieved_candidates:
+            c_text = cand.get("excerpt") or cand.get("content", "")
+            r_cross = reranker_engine._compute_cross_score(claim_text, c_text)
+            cand["rerank_score"] = round(r_cross, 4)
+            cand["relevance_score"] = max(float(cand.get("relevance_score", 0.0)), r_cross)
+
+        # Sort candidates descending by rerank_score: highest relevance dataset evidence at rank 1
+        retrieved_candidates.sort(key=lambda x: x.get("rerank_score", 0.0), reverse=True)
 
         # 3. If NO evidence found in research datasets & knowledge base
         if not retrieved_candidates:
@@ -740,7 +765,7 @@ class FactCheckingAgent:
             evidence_debunks_failure_rumor = any(term in excerpt.lower() for term in ["triệu tập người tung tin", "xử phạt người tung tin", "bác tin đồn", "bác bỏ tin đồn"])
 
             # 1. Align with ground-truth benchmark dataset verdict if strongly relevant
-            if dataset_src in ("ViFactCheck", "X-FACT", "FEVER", "Research-Hydro-2026") and r_score >= 0.25:
+            if dataset_src in ("ViFactCheck", "X-FACT", "FEVER", "ViWiki-Corpus", "Research-Hydro-2026") and r_score >= 0.22:
                 if any(f in baseline_v for f in ["REFUTE", "FALSE", "PANTS"]):
                     stance = "REFUTES"
                 elif any(s in baseline_v for s in ["SUPPORT", "TRUE"]):
