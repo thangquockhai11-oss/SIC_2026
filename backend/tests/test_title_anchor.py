@@ -2,9 +2,10 @@ import sys
 from pathlib import Path
 
 # Add root directory to path for ml and backend
-root_dir = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(root_dir))
-sys.path.insert(0, str(root_dir / "backend"))
+project_root = Path(__file__).resolve().parent.parent.parent
+backend_dir = project_root / "backend"
+sys.path.insert(0, str(project_root))
+sys.path.insert(0, str(backend_dir))
 
 from app.services.fact_checking_agent import fact_checking_agent
 

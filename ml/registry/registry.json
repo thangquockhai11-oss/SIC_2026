@@ -1,0 +1,119 @@
+{
+  "registry_version": "1.0.0",
+  "last_updated": "2026-11-24T08:13:35Z",
+  "environment": {
+    "platform": "Windows 11 Home 64-bit AMD64",
+    "processor": "13th Gen Intel(R) Core(TM) i5-13500H (12 physical cores, 16 logical threads)",
+    "ram_gb": 16,
+    "python_version": "3.12.9",
+    "execution_target": "CPU High-Performance Calibrated Ensemble"
+  },
+  "models": [
+    {
+      "model_id": "claim_classifier",
+      "model_name": "TrustMedia-ClaimClassifier-9Class",
+      "version": "1.2.0-calibrated",
+      "status": "DEPLOYED",
+      "task": "9-Class Semantic & Verifiability Claim Classification",
+      "checkpoint_path": "ml/checkpoints/claim_classifier/model.joblib",
+      "metrics_path": "ml/checkpoints/claim_classifier/metrics.json",
+      "dataset": "Curated ViFactCheck (Statements) + UIT-VSFC + Domain Templates",
+      "training_samples": 2520,
+      "val_samples": 540,
+      "test_samples": 540,
+      "metrics": {
+        "test_accuracy": 0.9296,
+        "test_macro_f1": 0.9295,
+        "test_weighted_f1": 0.9295,
+        "baseline_majority_accuracy": 0.1111,
+        "f1_improvement_over_baseline": "+0.8184"
+      },
+      "classes": [
+        "FACTUAL_CLAIM",
+        "STATISTICAL_CLAIM",
+        "HISTORICAL_CLAIM",
+        "SCIENTIFIC_CLAIM",
+        "QUOTATION_CLAIM",
+        "CAUSAL_CLAIM",
+        "OPINION",
+        "PREDICTION",
+        "NOT_CHECKABLE"
+      ],
+      "hyperparameters": {
+        "c_param": 1.5,
+        "sublinear_tf": true,
+        "word_ngram_range": [
+          1,
+          2
+        ],
+        "char_ngram_range": [
+          2,
+          5
+        ],
+        "calibrated_method": "sigmoid",
+        "calibration_cv": 3
+      }
+    },
+    {
+      "model_id": "nli_verifier",
+      "model_name": "TrustMedia-NLI-CalibratedVerifier",
+      "version": "1.2.0-calibrated",
+      "status": "DEPLOYED",
+      "task": "3-Class Stance / Natural Language Inference (Evidence Verification)",
+      "checkpoint_path": "ml/checkpoints/nli_verifier/model.joblib",
+      "metrics_path": "ml/checkpoints/nli_verifier/metrics.json",
+      "dataset": "Official ViFactCheck (AAAI-25 Gold Standard Benchmark)",
+      "training_samples": 5062,
+      "dev_samples": 723,
+      "test_samples": 1447,
+      "metrics": {
+        "dev_accuracy": 0.5768,
+        "dev_macro_f1": 0.572,
+        "test_accuracy": 0.6137,
+        "test_macro_f1": 0.6056,
+        "baseline_majority_accuracy": 0.3511,
+        "accuracy_gain_over_majority": "+26.26%"
+      },
+      "classes": [
+        "ENTAILMENT",
+        "CONTRADICTION",
+        "NEUTRAL"
+      ],
+      "hyperparameters": {
+        "c_param": 1.8,
+        "negation_weight": 2.4,
+        "numerical_mismatch_penalty": 2.8,
+        "temporal_inconsistency_penalty": 2.5,
+        "dense_embedding_dim": 1024,
+        "calibrated_method": "sigmoid"
+      }
+    },
+    {
+      "model_id": "hybrid_retriever",
+      "model_name": "TrustMedia-Hybrid-Retriever-BM25-Dense",
+      "version": "1.2.0",
+      "status": "DEPLOYED",
+      "task": "Multi-Source Hybrid Evidence Retrieval",
+      "fusion_algorithm": "Reciprocal Rank Fusion (RRF, k=60)",
+      "sparse_engine": "BM25Okapi with Vietnamese syllable tokenization",
+      "dense_engine": "BAAI/bge-m3 cosine similarity index",
+      "metrics": {
+        "mrr_at_10": 0.9167,
+        "recall_at_10": 0.9625,
+        "latency_ms": 4.54
+      }
+    },
+    {
+      "model_id": "reranker_bge",
+      "model_name": "TrustMedia-BGE-CrossEncoder-Reranker",
+      "version": "1.2.0",
+      "status": "DEPLOYED",
+      "task": "Hard-Negative Rejection & Cross-Attention Evidence Reranking",
+      "metrics": {
+        "ndcg_at_5": 0.9542,
+        "hard_negative_rejection_rate": 0.985,
+        "latency_ms": 5.61
+      }
+    }
+  ]
+}

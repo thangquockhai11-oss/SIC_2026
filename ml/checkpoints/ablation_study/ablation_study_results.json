@@ -17,7 +17,7 @@
     "Hallucination_Rate": 0.83,
     "Citation_Precision": 99.17,
     "Grounding_Rate": 99.17,
-    "Latency_ms": 3.4
+    "Latency_ms": 2.96
   },
   {
     "Experiment": "Exp C",
@@ -27,7 +27,7 @@
     "Hallucination_Rate": 1.67,
     "Citation_Precision": 98.33,
     "Grounding_Rate": 98.33,
-    "Latency_ms": 3.04
+    "Latency_ms": 3.11
   },
   {
     "Experiment": "Exp D",
@@ -37,7 +37,7 @@
     "Hallucination_Rate": 0.83,
     "Citation_Precision": 99.17,
     "Grounding_Rate": 99.17,
-    "Latency_ms": 3.02
+    "Latency_ms": 4.54
   },
   {
     "Experiment": "Exp E",
@@ -47,26 +47,26 @@
     "Hallucination_Rate": 0.0,
     "Citation_Precision": 100.0,
     "Grounding_Rate": 100.0,
-    "Latency_ms": 5.19
+    "Latency_ms": 5.61
   },
   {
     "Experiment": "Exp F",
     "Description": "Hybrid RAG + Reranker + NLI Verifier",
-    "Accuracy": 45.83,
-    "Macro_F1": 0.3329,
+    "Accuracy": 49.17,
+    "Macro_F1": 0.4001,
     "Hallucination_Rate": 0.0,
     "Citation_Precision": 100.0,
     "Grounding_Rate": 100.0,
-    "Latency_ms": 28.66
+    "Latency_ms": 21.38
   },
   {
     "Experiment": "Exp G",
     "Description": "Full TrustMedia AI (Calibrated System)",
     "Accuracy": 40.0,
-    "Macro_F1": 0.3223,
+    "Macro_F1": 0.3208,
     "Hallucination_Rate": 0.0,
     "Citation_Precision": 100.0,
     "Grounding_Rate": 100.0,
-    "Latency_ms": 62.11
+    "Latency_ms": 41.29
   }
 ]
