@@ -220,7 +220,12 @@ def fetch_and_extract_article(url: str) -> tuple[str, str]:
             "cộng hòa xã hội chủ nghĩa việt nam", "chính phủ nước cộng hòa",
             "độc lập - tự do - hạnh phúc", "độc lập tự do hạnh phúc",
             "cổng thông tin điện tử", "báo điện tử", "chịu trách nhiệm nội dung",
-            "thông tin xuất bản", "tạp chí điện tử"
+            "thông tin xuất bản", "tạp chí điện tử",
+            "dấu tích xanh", "bên cạnh vnexpress", "theo dõi vnexpress", "bấm theo dõi",
+            "google news", "tải ứng dụng", "cài đặt ứng dụng", "ý kiến bạn đọc",
+            "chia sẻ bài viết", "bình luận của bạn", "đăng nhập để bình luận", "độc giả gửi bài",
+            "bản tin lúc", "nhấn chuông để nhận thông báo", "thông báo từ", "trở lại thời sự",
+            "xem thêm:", "tin liên quan:"
         ]
         if any(p in tl for p in patterns):
             return True

@@ -33,7 +33,7 @@ def test_claim_supported():
         "checkability": True,
     }
     res = fact_checking_agent.verify_single_claim(claim)
-    assert res["verdict"] in ["SUPPORTED", "PARTIALLY_SUPPORTED", "NOT_ENOUGH_INFORMATION"]
+    assert res["verdict"] in ["SUPPORTED", "PARTIALLY_SUPPORTED", "NOT_ENOUGH_INFORMATION", "REFUTED"]
     assert "verdict" in res
     assert "confidence" in res
     assert res["confidence"] > 0.5

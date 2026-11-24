@@ -45,6 +45,34 @@ export default function FactCheckingPage() {
   const verifiedPctStr = verifiedPctVal.toFixed(1);
   const inconclusivePctStr = inconclusivePctVal.toFixed(1);
 
+  const getMatchStatusBadge = (status?: string) => {
+    switch ((status || "").toUpperCase()) {
+      case "MATCH":
+        return "bg-[#DCFCE7] text-[#15803D] border-[#86EFAC]";
+      case "PARTIAL":
+        return "bg-[#FEF3C7] text-[#B45309] border-[#FDE68A]";
+      case "MISMATCH":
+      case "EXAGGERATED":
+        return "bg-[#FEE2E2] text-[#B91C1C] border-[#FCA5A5]";
+      default:
+        return "bg-[#F3F4F6] text-[#4B5563] border-[#E5E7EB]";
+    }
+  };
+
+  const getFidelityBadge = (status?: string) => {
+    switch ((status || "").toUpperCase()) {
+      case "FAITHFUL":
+        return "bg-[#DCFCE7] text-[#15803D] border-[#86EFAC]";
+      case "OVERGENERALIZED":
+      case "EXTRAPOLATED":
+        return "bg-[#FEF3C7] text-[#B45309] border-[#FDE68A]";
+      case "DISTORTED":
+        return "bg-[#FEE2E2] text-[#B91C1C] border-[#FCA5A5]";
+      default:
+        return "bg-[#E0E7FF] text-[#4338CA] border-[#C7D2FE]";
+    }
+  };
+
   // Authoritative Trustworthiness Recommendation for the article
   const getRecommendation = () => {
     if (refutedCount > 0) {
@@ -456,6 +484,39 @@ export default function FactCheckingPage() {
                   <blockquote className="font-body-lg text-body-lg text-[#182824] leading-[1.6] mb-space-md italic">
                     “{renderHighlighted(currentClaim?.article_quote || currentClaim?.claim_text || "", currentClaim?.article_quote_highlight)}”
                   </blockquote>
+
+                  {/* Article Fidelity Check Badge & Callout */}
+                  {currentClaim?.article_fidelity && (
+                    <div className="mb-space-md p-space-sm rounded-lg bg-surface-container/60 border border-surface-container-high">
+                      <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
+                        <span className="font-label-sm text-[11px] font-bold text-outline uppercase tracking-wider flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[14px] text-primary">fact_check</span>
+                          Độ trung thực trích xuất (Article Fidelity):
+                        </span>
+                        <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${getFidelityBadge(currentClaim.article_fidelity.fidelity_status)}`}>
+                          {currentClaim.article_fidelity.fidelity_status === "FAITHFUL"
+                            ? "Khớp nguyên văn bài báo"
+                            : currentClaim.article_fidelity.fidelity_status === "DISTORTED"
+                            ? "Sai lệch ngữ nghĩa bài báo"
+                            : "Khái quát hóa quá đà"}
+                        </span>
+                      </div>
+                      {currentClaim.article_fidelity.explanation && (
+                        <p className="text-xs text-on-surface-variant leading-relaxed mb-1">
+                          {currentClaim.article_fidelity.explanation}
+                        </p>
+                      )}
+                      {currentClaim.article_fidelity.distortion_reasons && currentClaim.article_fidelity.distortion_reasons.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {currentClaim.article_fidelity.distortion_reasons.map((reason, idx) => (
+                            <span key={idx} className="px-1.5 py-0.5 rounded bg-error-container/70 text-error text-[10px] font-bold">
+                              {reason}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 {/* Direct Source Attribution Link */}
                 <div className="pt-space-sm bg-surface-container-low/50 -mx-space-lg -mb-space-lg p-space-md rounded-b-xl border-t border-surface-container">
@@ -478,9 +539,16 @@ export default function FactCheckingPage() {
                         Bằng chứng đối chiếu
                       </span>
                     </div>
-                    <span className="px-space-xs py-0.5 rounded bg-[#DCFCE7] text-[#15803D] font-label-sm text-label-sm font-semibold">
-                      {currentClaim?.evidence_source || "Cơ quan độc lập"}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="px-space-xs py-0.5 rounded bg-[#DCFCE7] text-[#15803D] font-label-sm text-label-sm font-semibold">
+                        {currentClaim?.evidence_source || "Cơ quan độc lập"}
+                      </span>
+                      {currentClaim?.independent_sources_count !== undefined && currentClaim.independent_sources_count > 0 && (
+                        <span className="px-space-xs py-0.5 rounded bg-surface-container-high text-secondary text-[11px] font-medium" title="Số cụm nguồn độc lập xác thực">
+                          {currentClaim.independent_sources_count} cụm nguồn độc lập
+                        </span>
+                      )}
+                    </div>
                   </div>
                   {/* Full Counter Evidence Text with Highlight */}
                   <blockquote className="font-body-lg text-body-lg text-[#182824] leading-[1.6] mb-space-md">
@@ -514,6 +582,89 @@ export default function FactCheckingPage() {
                 </div>
               </article>
             </section>
+
+            {/* CONFLICTING EVIDENCE WARNING (If any) */}
+            {currentClaim?.conflict_matrix && currentClaim.conflict_matrix.length > 0 && (
+              <section className="bg-error-container/20 border-2 border-error/40 rounded-xl p-space-md shadow-sm">
+                <div className="flex items-center gap-space-xs text-error font-bold mb-space-xs">
+                  <span className="material-symbols-outlined text-[20px]">warning</span>
+                  <h4 className="font-title-md text-title-md">Cảnh báo: Bằng chứng độc lập mâu thuẫn trực tiếp (Conflicting Evidence)</h4>
+                </div>
+                <div className="space-y-2">
+                  {currentClaim.conflict_matrix.map((cfl, idx) => (
+                    <div key={idx} className="bg-surface-container-lowest p-space-sm rounded-lg border border-error/30 text-xs">
+                      <div className="flex flex-wrap items-center justify-between gap-1 mb-1 font-semibold">
+                        <span className="text-on-surface">Nguồn A: <strong className="text-primary">{cfl.source_a}</strong> ({cfl.relation_a})</span>
+                        <span className="text-error font-bold">vs</span>
+                        <span className="text-on-surface">Nguồn B: <strong className="text-error">{cfl.source_b}</strong> ({cfl.relation_b})</span>
+                      </div>
+                      <p className="text-on-surface-variant">{cfl.explanation}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* EVIDENCE CROSS-COMPARISON MATRIX (Bảng Đối soát Thuộc tính Chéo) */}
+            {currentClaim?.comparison_matrix && currentClaim.comparison_matrix.length > 0 && (
+              <section className="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm border border-surface-container">
+                <div className="flex items-center justify-between mb-space-md">
+                  <div className="flex items-center gap-space-xs">
+                    <span className="material-symbols-outlined text-[20px] text-primary">table_chart</span>
+                    <h4 className="font-headline-sm text-headline-sm text-on-surface font-bold">
+                      Ma trận Đối soát Đa chiều (Article Claim vs External Evidence)
+                    </h4>
+                  </div>
+                  <span className="text-outline font-label-sm text-label-sm font-medium">
+                    Quy chuẩn IFCN Cross-Verification
+                  </span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-surface-container border-b border-surface-container-high text-on-surface-variant uppercase tracking-wider text-[11px]">
+                        <th className="py-2.5 px-3 font-bold w-1/6">Thuộc tính đối soát</th>
+                        <th className="py-2.5 px-3 font-bold w-1/4">Phát ngôn bài báo</th>
+                        <th className="py-2.5 px-3 font-bold w-1/4">Bằng chứng đối chiếu</th>
+                        <th className="py-2.5 px-3 font-bold w-1/8 text-center">Trạng thái khớp</th>
+                        <th className="py-2.5 px-3 font-bold w-1/4">Ghi chú đối soát</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-surface-container">
+                      {currentClaim.comparison_matrix.map((row, idx) => (
+                        <tr key={idx} className="hover:bg-surface-container/50 transition-colors">
+                          <td className="py-2.5 px-3 font-semibold text-on-surface">
+                            {row.attribute}
+                          </td>
+                          <td className="py-2.5 px-3 text-on-surface-variant font-medium">
+                            {row.claim_val || <span className="text-outline italic">Không đề cập</span>}
+                          </td>
+                          <td className="py-2.5 px-3 text-on-surface-variant font-medium">
+                            {row.evidence_val || <span className="text-outline italic">Không có trong dữ liệu</span>}
+                          </td>
+                          <td className="py-2.5 px-3 text-center">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold inline-block ${getMatchStatusBadge(row.match_status)}`}>
+                              {row.match_status === "MATCH"
+                                ? "KHỚP"
+                                : row.match_status === "MISMATCH"
+                                ? "SAI LỆCH"
+                                : row.match_status === "PARTIAL"
+                                ? "MỘT PHẦN"
+                                : row.match_status === "EXAGGERATED"
+                                ? "PHÓNG ĐẠI"
+                                : "CHƯA NÊU"}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-on-surface-variant text-[11px] leading-relaxed">
+                            {row.notes}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            )}
 
             {/* VISUAL SCIENTIFIC COMPARISON ARTIFACT (Evidence Gap) */}
             <section className="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm border border-surface-container">

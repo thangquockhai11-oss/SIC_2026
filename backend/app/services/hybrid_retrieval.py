@@ -38,6 +38,65 @@ class EvidenceChunk:
     reliability_score: float
 
 
+def clean_wikitext(text: str) -> str:
+    """Clean raw wikitext, stripping infoboxes, tables, templates, HTML, and refs."""
+    if not text:
+        return ""
+    # HTML entities decode
+    t = re.sub(r"&lt;", "<", text)
+    t = re.sub(r"&gt;", ">", t)
+    t = re.sub(r"&quot;", '"', t)
+    t = re.sub(r"&amp;", "&", t)
+    t = re.sub(r"&nbsp;", " ", t)
+
+    # Remove ref tags and contents
+    t = re.sub(r"<ref[\s\S]*?</ref>", "", t, flags=re.IGNORECASE)
+    t = re.sub(r"<ref[\s\S]*?/>", "", t, flags=re.IGNORECASE)
+    t = re.sub(r"<ref[^>]*>", "", t, flags=re.IGNORECASE)
+
+    # Remove HTML tags
+    t = re.sub(r"<[^>]+>", "", t)
+
+    # Remove tables {| ... |}
+    t = re.sub(r"\{\|[\s\S]*?\|\}", "", t)
+
+    # Remove templates {{ ... }} repeatedly to catch nested templates
+    for _ in range(4):
+        t = re.sub(r"\{\{[^{}]*\}\}", "", t)
+
+    # Remove media links [[File:...]], [[Image:...]], [[Tập tin:...]]
+    t = re.sub(r"\[\[(?:File|Image|Tập tin|Hình):[^\]]+\]\]", "", t, flags=re.IGNORECASE)
+    # Convert internal links [[Target|Label]] -> Label and [[Target]] -> Target
+    t = re.sub(r"\[\[(?:[^|\]]*\|)?([^\]]+)\]\]", r"\1", t)
+
+    # External links [http://... label] -> label or [http://...] -> ""
+    t = re.sub(r"\[https?://\S+\s+([^\]]+)\]", r"\1", t)
+    t = re.sub(r"\[https?://\S+\]", "", t)
+
+    # Section headings == Header == -> Header
+    t = re.sub(r"={2,6}\s*(.*?)\s*={2,6}", r"\n\1\n", t)
+
+    # Formatting '''bold''', ''italic''
+    t = re.sub(r"'{2,5}", "", t)
+
+    # Strip leftover infobox lines: e.g. "| territory2 = ", "| length = 4.209,3 km"
+    lines = []
+    for line in t.splitlines():
+        line_s = line.strip()
+        if not line_s:
+            continue
+        # Drop lines that are infobox parameters, pipes, or wiki table syntax
+        if line_s.startswith(("|", "!", "{", "}", "* |", "# |")):
+            continue
+        if re.match(r"^\|\s*[a-zA-Z0-9_\-]+\s*=", line_s):
+            continue
+        lines.append(line_s)
+
+    cleaned = " ".join(lines)
+    cleaned = re.sub(r"\s{2,}", " ", cleaned)
+    return cleaned.strip()
+
+
 class HybridKnowledgeRetriever:
     """Production Hybrid Retrieval engine combining BM25 and Vector space similarity."""
 
@@ -147,11 +206,8 @@ class HybridKnowledgeRetriever:
                         item = json.loads(line)
                         title = str(item.get("title", "")).strip()
                         content = str(item.get("content", "")).strip()
-                        clean_content = re.sub(r"\{\{[^}]*\}\}", "", content)
-                        clean_content = re.sub(r"\[\[(?:[^|\]]*\|)?([^\]]+)\]\]", r"\1", clean_content)
-                        clean_content = re.sub(r"&lt;ref.*?&gt;.*?&lt;/ref&gt;", "", clean_content)
-                        clean_content = re.sub(r"'''?", "", clean_content).strip()
-                        if not clean_content:
+                        clean_content = clean_wikitext(content)
+                        if not clean_content or len(clean_content) < 40:
                             continue
                         chunk = EvidenceChunk(
                             chunk_id=f"viwiki_{item.get('id', title)}",
@@ -221,11 +277,76 @@ class HybridKnowledgeRetriever:
         self.tfidf_matrix = self.vectorizer.fit_transform(corpus_texts)
         logger.info("Hybrid indices (BM25 + TF-IDF) built successfully.")
 
+    def generate_search_queries(
+        self,
+        claim_text: str,
+        attributes: dict[str, Any] | None = None,
+    ) -> list[dict[str, str]]:
+        """Generate diverse query strategies for comprehensive multi-angle verification.
+
+        Includes:
+        1. exact: Original statement
+        2. entity_focused: Main subject, entities, and location
+        3. numerical: Subject with numerical values and units
+        4. temporal: Subject with date/time anchor
+        5. primary_source: Official reports and government releases
+        6. supporting: Confirmation and verification assertions
+        7. contradicting: Refutation, fraud detection, and fact-check debunking
+        8. original_research: Scientific and experimental studies
+        """
+        queries: list[dict[str, str]] = [
+            {"strategy": "exact", "query": claim_text.strip()}
+        ]
+        
+        attrs = attributes or {}
+        subj = attrs.get("subject") or ""
+        val = attrs.get("value")
+        unit = attrs.get("unit") or ""
+        t_expr = attrs.get("time") or ""
+        loc = attrs.get("location") or ""
+        attr_src = attrs.get("attribution") or ""
+
+        # Extract keywords if subject is not explicitly parsed
+        if not subj:
+            tokens = self._tokenize(claim_text)
+            subj = " ".join(tokens[:4]) if len(tokens) >= 4 else claim_text
+
+        # 2. Entity-focused query
+        entity_parts = [p for p in [subj, loc] if p]
+        if entity_parts:
+            queries.append({"strategy": "entity_focused", "query": " ".join(entity_parts)})
+
+        # 3. Numerical query
+        if val is not None:
+            num_query = f"{subj} {val} {unit}".strip()
+            queries.append({"strategy": "numerical", "query": num_query})
+
+        # 4. Temporal query
+        if t_expr:
+            time_query = f"{subj} {t_expr}".strip()
+            queries.append({"strategy": "temporal", "query": time_query})
+
+        # 5. Primary source query
+        prim_parts = [p for p in [subj, attr_src, "công bố chính thức báo cáo"] if p]
+        queries.append({"strategy": "primary_source", "query": " ".join(prim_parts)})
+
+        # 6. Supporting query
+        queries.append({"strategy": "supporting", "query": f"{subj} xác nhận thực chứng kiểm định"})
+
+        # 7. Contradicting query (Active search for counter-evidence)
+        queries.append({"strategy": "contradicting", "query": f"{subj} bác bỏ sai sự thật cảnh báo lừa đảo"})
+
+        # 8. Original research query
+        queries.append({"strategy": "original_research", "query": f"{subj} nghiên cứu khoa học khảo sát thử nghiệm"})
+
+        return queries
+
     def retrieve(
         self,
         claim_text: str,
         top_k: int = 3,
         min_relevance_threshold: float = 0.22,
+        query_strategy: str = "exact",
     ) -> list[dict[str, Any]]:
         """Retrieve authentic evidence chunks specifically relevant to claim_text.
 
@@ -256,22 +377,32 @@ class HybridKnowledgeRetriever:
         top_indices = np.argsort(hybrid_scores)[::-1]
         results = []
 
-        for idx in top_indices[:top_k * 2]:
+        GEO_AND_ADMIN_STOPWORDS = {
+            "chính", "phủ", "nước", "cộng", "hòa", "xã", "hội", "chủ", "nghĩa", "việt", "nam",
+            "báo", "điện", "tử", "cổng", "thông", "tin", "ngày", "tháng", "năm", "tin", "tức",
+            "bài", "viết", "cho", "biết", "vừa", "qua", "ông", "bà", "các", "những", "với", "trong",
+            "đã", "sẽ", "đang", "một", "hai", "ba", "trung", "quốc", "hà", "nội", "sơn", "đông",
+            "phía", "tỉnh", "thành", "phố", "khu", "vực", "nga", "mỹ", "hoa", "kỳ", "pháp", "anh",
+            "đức", "nhật", "bản", "hàn", "quốc", "cư", "dân", "phát", "hiện", "hôm"
+        }
+
+        # Substantive domain tokens must exist in candidate text
+        substantive_query_tokens = [t for t in tokens if t not in GEO_AND_ADMIN_STOPWORDS and len(t) > 2]
+
+        for idx in top_indices[:top_k * 3]:
             score = float(hybrid_scores[idx])
             v_sim = float(vector_sims[idx])
-            # Strict gating: overall score >= threshold AND vector similarity >= 0.12
             if score < min_relevance_threshold or v_sim < 0.12:
                 continue
 
             chunk = self.chunks[idx]
-            # Check content token overlap ratio to prevent obscure queries matching unrelated text
-            ADMIN_STOPWORDS = {
-                "chính", "phủ", "nước", "cộng", "hòa", "xã", "hội", "chủ", "nghĩa", "việt", "nam",
-                "báo", "điện", "tử", "cổng", "thông", "tin", "ngày", "tháng", "năm", "tin", "tức",
-                "bài", "viết", "cho", "biết", "vừa", "qua", "ông", "bà", "các", "những", "với", "trong", "đã", "sẽ"
-            }
-            c_tokens = set(self._tokenize(chunk.evidence_text + " " + chunk.claim_text))
-            substantive_query_tokens = [t for t in tokens if t not in ADMIN_STOPWORDS and len(t) > 2]
+            c_text_lower = (chunk.evidence_text + " " + chunk.claim_text).lower()
+            c_tokens = set(self._tokenize(c_text_lower))
+
+            # CRITICAL TOPIC GATING:
+            # If the query contains core domain topic tokens (e.g. "trứng", "gà", "giả", "xăng", "động cơ"),
+            # the evidence MUST match at least one of these domain tokens.
+            # Matching only location or stopwords (e.g. "Trung Quốc", "phía đông") is REJECTED.
             if substantive_query_tokens:
                 sub_matched = set(substantive_query_tokens).intersection(c_tokens)
                 if not sub_matched:
@@ -286,7 +417,7 @@ class HybridKnowledgeRetriever:
                 "dataset_source": chunk.dataset_id,
                 "dataset_record_id": chunk.record_id,
                 "claim_matched": chunk.claim_text,
-                "excerpt": chunk.evidence_text[:400],
+                "excerpt": chunk.evidence_text[:600],
                 "source_name": chunk.source_name,
                 "source_url": chunk.source_url,
                 "author": chunk.author,
@@ -294,10 +425,41 @@ class HybridKnowledgeRetriever:
                 "baseline_verdict": chunk.baseline_verdict,
                 "relevance_score": round(score, 3),
                 "reliability_score": chunk.reliability_score,
+                "query_matched_strategy": query_strategy,
             })
             if len(results) >= top_k:
                 break
 
+        return results
+
+    def retrieve_multi_query(
+        self,
+        claim_text: str,
+        attributes: dict[str, Any] | None = None,
+        top_k: int = 5,
+        min_relevance_threshold: float = 0.22,
+    ) -> list[dict[str, Any]]:
+        """Multi-query retrieval across 8 query strategies with Reciprocal Rank Fusion."""
+        queries = self.generate_search_queries(claim_text, attributes)
+        aggregated: dict[str, dict[str, Any]] = {}
+        rrf_scores: dict[str, float] = {}
+
+        for q_item in queries:
+            strat = q_item["strategy"]
+            q_str = q_item["query"]
+            cands = self.retrieve(q_str, top_k=top_k, min_relevance_threshold=min_relevance_threshold, query_strategy=strat)
+            for rank, c in enumerate(cands):
+                cid = c["chunk_id"]
+                if cid not in aggregated:
+                    aggregated[cid] = c
+                    rrf_scores[cid] = 0.0
+                rrf_scores[cid] += 1.0 / (60.0 + rank + 1.0)
+                # Keep highest relevance score
+                aggregated[cid]["relevance_score"] = max(aggregated[cid]["relevance_score"], c["relevance_score"])
+
+        # Sort by RRF score
+        sorted_ids = sorted(rrf_scores.keys(), key=lambda x: rrf_scores[x], reverse=True)
+        results = [aggregated[cid] for cid in sorted_ids[:top_k]]
         return results
 
 

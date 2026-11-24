@@ -15,6 +15,8 @@ import uuid
 
 import numpy as np
 
+from app.services.claim_article_aligner import claim_article_aligner, ClaimAttributes
+from app.services.evidence_cross_comparator import evidence_cross_comparator, EvidenceCrossEvaluation
 from app.services.gemini_nlp_service import gemini_nlp_service
 from app.services.hybrid_retrieval import hybrid_retriever
 from app.services.model_manager import model_manager
@@ -54,7 +56,12 @@ class FactCheckingAgent:
             "báo điện tử chính phủ", "cổng thông tin điện tử chính phủ",
             "cơ quan của chính phủ", "tiếng nói của chính phủ", "tiếng nói của đảng",
             "diễn đàn của", "tạp chí điện tử", "thông tin xuất bản", "chịu trách nhiệm nội dung",
-            "phụ trách nội dung", "ban thời sự", "chuyên trang của", "báo điện tử", "cổng thông tin điện tử"
+            "phụ trách nội dung", "ban thời sự", "chuyên trang của", "báo điện tử", "cổng thông tin điện tử",
+            "dấu tích xanh", "bên cạnh vnexpress", "theo dõi vnexpress", "bấm theo dõi",
+            "google news", "tải ứng dụng", "cài đặt ứng dụng", "ý kiến bạn đọc",
+            "chia sẻ bài viết", "bình luận của bạn", "đăng nhập để bình luận", "độc giả gửi bài",
+            "bản tin lúc", "nhấn chuông để nhận thông báo", "thông báo từ", "trở lại thời sự",
+            "xem thêm:", "tin liên quan:"
         ]
         if any(p in s for p in patterns):
             return True
@@ -214,6 +221,17 @@ class FactCheckingAgent:
         slots: tuple[str | None, str | None, str | None],
     ) -> tuple[str, bool]:
         """Classify claim into one of the canonical taxonomy types and checkability."""
+        t_lower = text.lower()
+
+        # 1. OPINION check first: explicit subjective opinion markers
+        opinion_markers = [
+            "tôi nghĩ", "theo quan điểm của tôi", "cảm thấy", "thật tuyệt vời", "ước gì",
+            "dở tệ", "đẹp nhất", "xấu nhất", "có nên", "thế nào", "liệu rằng", "worth it", "tôi cho rằng",
+            "in my opinion", "personally", "i believe", "tùy thuộc vào"
+        ]
+        if any(m in t_lower for m in opinion_markers) or t_lower.endswith("?"):
+            return "OPINION", False
+
         try:
             from ml.models.claim_classifier import claim_classifier_service
             if claim_classifier_service.is_ready():
@@ -221,17 +239,6 @@ class FactCheckingAgent:
                 return res["claim_type"], res["is_checkable"]
         except Exception:
             pass
-
-        t_lower = text.lower()
-
-        # 1. OPINION: subjective sentiments, rhetorical questions, ungrounded appraisals
-        opinion_markers = [
-            "tôi nghĩ", "theo quan điểm của tôi", "cảm thấy", "thật tuyệt vời", "ước gì",
-            "dở tệ", "đẹp", "xấu", "có nên", "thế nào", "liệu rằng", "worth it", "tôi cho rằng",
-            "in my opinion", "personally", "i believe", "tùy thuộc vào"
-        ]
-        if any(m in t_lower for m in opinion_markers) or t_lower.endswith("?"):
-            return "OPINION", False
 
         # 2. PREDICTION: future forecasts, prospective estimates
         prediction_markers = [
@@ -487,7 +494,13 @@ class FactCheckingAgent:
         stopwords = {
             "và", "là", "của", "có", "trong", "cho", "được", "với", "các", "những", "này",
             "khi", "đã", "sẽ", "về", "như", "tại", "đến", "từ", "ở", "gì", "sao", "thế", "nào",
-            "theo", "bài", "báo", "tin", "tức", "ông", "bà", "vừa", "qua"
+            "theo", "bài", "báo", "tin", "tức", "ông", "bà", "vừa", "qua", "thấy", "nhìn",
+            "biết", "nghe", "đọc", "xem", "làm", "ra", "vào", "lại", "rồi", "ngay", "đang",
+            "bị", "rất", "quá", "lắm", "hơn", "nhất", "một", "hai", "ba", "bốn", "năm", "sáu",
+            "bảy", "tám", "chín", "mười", "người", "cái", "con", "chiếc", "quả", "trái",
+            "việc", "sự", "nơi", "chỗ", "lúc", "ngày", "tháng", "hôm", "nay", "mai", "kia",
+            "sau", "trước", "giữa", "bên", "cạnh", "trên", "dưới", "ngoài",
+            "trung", "quốc", "việt", "nam", "hà", "nội", "sơn", "đông", "tỉnh", "thành", "phố"
         }
         substantive_title_words = {w for w in title_words if len(w) > 2 and w not in stopwords}
 
@@ -755,6 +768,17 @@ class FactCheckingAgent:
         entities = claim.get("entities") or self._extract_entities(claim_text)
         location = claim.get("location") or self._extract_locations(claim_text)
 
+        # Article Fidelity & Claim Attribute Extraction
+        fidelity_report = claim_article_aligner.verify_article_fidelity(
+            original_sentence=original_text,
+            atomic_claim=claim_text,
+            article_context=article_content,
+        )
+        claim_attrs = claim_article_aligner.extract_claim_attributes(
+            text=claim_text,
+            claim_type=claim.get("claim_type") or "FACTUAL_CLAIM",
+        )
+
         # Check or classify claim type
         detected_type, detected_checkable = self._classify_claim_type(
             claim_text,
@@ -842,6 +866,11 @@ class FactCheckingAgent:
                     "harm_desc": "Không vi phạm quy chuẩn thực chứng khi được thể hiện dưới dạng quan điểm cá nhân.",
                     "signatories": "Hội đồng Thẩm định Báo chí TrustMedia",
                 },
+                "article_fidelity": fidelity_report.to_dict(),
+                "claim_attributes": claim_attrs.to_dict(),
+                "comparison_matrix": [],
+                "conflict_matrix": [],
+                "independent_sources_count": 0,
             }
 
         # 2. Multi-query Search Strategy prioritizing Research Datasets (ViFactCheck, ViWiki, X-FACT, FEVER)
@@ -936,7 +965,9 @@ class FactCheckingAgent:
             "chính", "phủ", "nước", "cộng", "hòa", "xã", "hội", "chủ", "nghĩa", "việt", "nam",
             "báo", "điện", "tử", "cổng", "thông", "tin", "ngày", "tháng", "năm", "tin", "tức",
             "bài", "viết", "cho", "biết", "vừa", "qua", "ông", "bà", "các", "những", "với", "trong", "đã", "sẽ",
-            "đại", "sứ", "pháp", "ngoại", "giao", "hội", "nghị", "thải", "nhật", "bản"
+            "đại", "sứ", "pháp", "ngoại", "giao", "hội", "nghị", "thải", "nhật", "bản",
+            "trung", "quốc", "phía", "đông", "nga", "mỹ", "sơn", "tỉnh", "cư", "dân", "hôm", "phát", "hiện",
+            "thành", "phố", "khu", "vực", "một", "hai", "ba", "bốn"
         }
         substantive_topic_words = {w for w in topic_words if len(w) > 2 and w not in generic_stopwords}
         is_fuel_water_topic = any(k in topic_target_text for k in ["xăng", "nước lã", "rác thải", "nhiên liệu", "động cơ"])
@@ -968,6 +999,29 @@ class FactCheckingAgent:
         retrieved_candidates.sort(key=lambda x: x.get("rerank_score", 0.0), reverse=True)
         # Retain only candidates with sufficient confidence
         retrieved_candidates = [c for c in retrieved_candidates if c.get("rerank_score", 0.0) >= 0.35]
+
+        # Step 2.5: Attribute-level Cross-Comparison with External Evidence
+        valid_evaluated_candidates = []
+        evaluations: list[EvidenceCrossEvaluation] = []
+        for cand in retrieved_candidates:
+            c_text = cand.get("excerpt") or cand.get("content", "")
+            s_nm = cand.get("source_name") or "Cơ quan báo chí độc lập"
+            s_url = cand.get("source_url")
+            cross_eval = evidence_cross_comparator.compare_evidence_against_claim(
+                claim_attrs=claim_attrs,
+                evidence_text=c_text,
+                source_name=s_nm,
+                source_url=s_url,
+                source_metadata=cand,
+            )
+            # Strictly discard irrelevant / off-topic evidence
+            if not cross_eval.is_topically_relevant or cross_eval.relation == "IRRELEVANT":
+                continue
+            cand["cross_eval"] = cross_eval
+            cand["comparison_matrix"] = [m.to_dict() for m in cross_eval.matrix]
+            evaluations.append(cross_eval)
+            valid_evaluated_candidates.append(cand)
+        retrieved_candidates = valid_evaluated_candidates
 
         # 3. If NO evidence found in research datasets & knowledge base
         if not retrieved_candidates:
@@ -1050,6 +1104,11 @@ class FactCheckingAgent:
                     "harm_desc": synthesis.harm_desc if synthesis else "Cần đối chiếu thêm nguồn tin xác thực.",
                     "signatories": "Hội đồng Thẩm định Báo chí TrustMedia",
                 },
+                "article_fidelity": fidelity_report.to_dict(),
+                "claim_attributes": claim_attrs.to_dict(),
+                "comparison_matrix": [],
+                "conflict_matrix": [],
+                "independent_sources_count": 0,
             }
 
         # 4. Consistency Auditing & Calibrated NLI Inference
@@ -1147,24 +1206,29 @@ class FactCheckingAgent:
             else:
                 other_evidences.append(ev_item)
 
-        # 5. Fine-grained 7-label Verdict Synthesis
+        # 5. Fine-grained 7-label Verdict Synthesis with Source Independence & Conflict Matrix
         has_support = len(supporting_evidences) > 0
         has_refute = len(refuting_evidences) > 0
+
+        # Cluster sources into independent groups
+        source_clusters = evidence_cross_comparator.cluster_source_independence(processed_evidences)
+        independent_sources_count = len(set(source_clusters.values()))
+
+        # Check for genuine divergence between independent sources
+        conflicts = evidence_cross_comparator.detect_conflicts(evaluations)
 
         # Check for numerical / temporal partial divergence
         any_num_mismatch = any(not ev.get("numerical_consistency", True) for ev in processed_evidences)
         any_temp_mismatch = any(not ev.get("temporal_consistency", True) for ev in processed_evidences)
 
-        if has_support and has_refute:
+        if conflicts:
             final_verdict = "CONFLICTING_EVIDENCE"
-            confidence = 0.82
+            confidence = 0.85
             primary_src = processed_evidences[0]["source_name"]
             reasoning = (
-                f"Phát hiện BẰNG CHỨNG MÂU THUẪN (CONFLICTING_EVIDENCE): Tồn tại cả tài liệu xác nhận "
-                f"({len(supporting_evidences)} nguồn) và tài liệu bác bỏ ({len(refuting_evidences)} nguồn) từ cơ sở đối chứng. "
-                "Chưa có sự đồng thuận tuyệt đối giữa các văn bản lưu trữ."
+                f"Phát hiện BẰNG CHỨNG MÂU THUẪN (CONFLICTING_EVIDENCE): {conflicts[0].explanation}"
             )
-            limitations = "Cần theo dõi thêm kết luận giám định chính thức cuối cùng."
+            limitations = "Cần theo dõi thêm kết luận giám định chính thức từ các cơ quan thẩm quyền độc lập."
 
         elif has_refute and not has_support:
             if any_num_mismatch and claim_type == "STATISTICAL_CLAIM":
@@ -1194,6 +1258,13 @@ class FactCheckingAgent:
                     "tuy nhiên phát hiện sai khác về mốc thời gian hoặc chi tiết định lượng đối chiếu."
                 )
                 limitations = "Chi tiết định lượng hoặc thời gian cần chuẩn hóa theo nguồn sơ cấp."
+            elif fidelity_report.distortion_detected and fidelity_report.distortion_type in ("CAUSAL_DISTORTION", "MODALITY_EXAGGERATION"):
+                final_verdict = "MISLEADING"
+                confidence = 0.86
+                reasoning = (
+                    f"Thông tin GÂY HIỂU LẦM (MISLEADING): {fidelity_report.explanation}"
+                )
+                limitations = "Bản tin gốc chỉ phản ánh tương quan/khả năng nhưng phát ngôn bị thổi phồng thành khẳng định nhân quả."
             else:
                 final_verdict = "SUPPORTED"
                 avg_conf = float(np.mean([e.get("nli_confidence", 0.90) for e in supporting_evidences]))
@@ -1315,6 +1386,11 @@ class FactCheckingAgent:
                 "harm_desc": synthesis.harm_desc if synthesis else "Tác động đến nhận thức người đọc và an ninh thông tin truyền thông.",
                 "signatories": "Hội đồng Thẩm định Báo chí TrustMedia",
             },
+            "article_fidelity": fidelity_report.to_dict(),
+            "claim_attributes": claim_attrs.to_dict(),
+            "comparison_matrix": [m.to_dict() for m in evaluations[0].matrix] if evaluations else [],
+            "conflict_matrix": [c.to_dict() for c in conflicts] if conflicts else [],
+            "independent_sources_count": len(set(source_clusters.values())) if processed_evidences else 0,
         }
 
     def execute_fact_checking(
@@ -1385,6 +1461,41 @@ class FactCheckingAgent:
 
         primary_verdict = verified_claims[0]["verdict"] if verified_claims else "NOT_ENOUGH_INFORMATION"
 
+        # Article-Level Fact-Checking Overview Synthesis
+        total_extracted = len(verified_claims)
+        checkable = [c for c in verified_claims if c.get("checkability", True)]
+        supported = [c for c in verified_claims if c.get("verdict") == "SUPPORTED"]
+        refuted = [c for c in verified_claims if c.get("verdict") == "REFUTED"]
+        partially_supported = [c for c in verified_claims if c.get("verdict") == "PARTIALLY_SUPPORTED"]
+        misleading = [c for c in verified_claims if c.get("verdict") == "MISLEADING"]
+        conflicting = [c for c in verified_claims if c.get("verdict") == "CONFLICTING_EVIDENCE"]
+        not_enough_info = [c for c in verified_claims if c.get("verdict") == "NOT_ENOUGH_INFORMATION"]
+        not_checkable = [c for c in verified_claims if c.get("verdict") == "NOT_CHECKABLE"]
+        
+        faithful_claims = [c for c in verified_claims if c.get("article_fidelity", {}).get("fidelity_status") == "FAITHFUL"]
+        distorted_claims = [c for c in verified_claims if c.get("article_fidelity", {}).get("fidelity_status") in ("DISTORTED", "OVERGENERALIZED", "EXTRAPOLATED")]
+
+        consistency_score = 0.0
+        if checkable:
+            consistency_score = round(((len(supported) + 0.5 * len(partially_supported)) / len(checkable)) * 100, 1)
+
+        article_level_report = {
+            "article_title": article_title or "Bản tin thẩm định",
+            "total_claims_extracted": total_extracted,
+            "checkable_claims_count": len(checkable),
+            "supported_count": len(supported),
+            "refuted_count": len(refuted),
+            "partially_supported_count": len(partially_supported),
+            "misleading_count": len(misleading),
+            "conflicting_count": len(conflicting),
+            "insufficient_evidence_count": len(not_enough_info),
+            "not_checkable_count": len(not_checkable),
+            "faithful_claims_count": len(faithful_claims),
+            "distorted_claims_count": len(distorted_claims),
+            "article_consistency_score": consistency_score,
+            "consistency_formula": "(Số claim xác thực + 0.5 * Đúng một phần) / Tổng số claim kiểm chứng được * 100",
+        }
+
         trace = {
             "execution_id": str(uuid.uuid4()),
             "agent_name": self.agent_name,
@@ -1401,10 +1512,11 @@ class FactCheckingAgent:
             "start_time": start_time,
             "end_time": end_time,
             "result_summary": f"Đã kiểm chứng {len(verified_claims)} claims độc lập. Kết luận chính: {primary_verdict}. Truy xuất {total_retrieval_count} bằng chứng.",
-            "disagreement_detected": False,
+            "disagreement_detected": len(conflicting) > 0,
             "errors": None,
             "output": {"claim_count": len(verified_claims), "primary_verdict": primary_verdict},
             "details": {"verified_claims_count": len(verified_claims)},
+            "article_level_report": article_level_report,
         }
 
         return verified_claims, trace

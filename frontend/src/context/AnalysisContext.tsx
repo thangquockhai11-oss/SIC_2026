@@ -51,6 +51,31 @@ export interface ClaimItem {
     signatories: string;
   };
   evidences?: any[];
+  article_fidelity?: {
+    fidelity_status: "FAITHFUL" | "DISTORTED" | "OVERGENERALIZED" | "EXTRAPOLATED" | string;
+    fidelity_score: number;
+    distortion_detected: boolean;
+    distortion_type?: string;
+    distortion_reasons?: string[];
+    explanation?: string;
+  };
+  comparison_matrix?: Array<{
+    attribute: string;
+    claim_val: string;
+    evidence_val: string;
+    match_status: "MATCH" | "PARTIAL" | "MISMATCH" | "NOT_MENTIONED" | string;
+    notes: string;
+  }>;
+  conflict_matrix?: Array<{
+    source_a: string;
+    relation_a: string;
+    source_b: string;
+    relation_b: string;
+    conflict_type: string;
+    explanation: string;
+  }>;
+  independent_sources_count?: number;
+  claim_attributes?: Record<string, any>;
 }
 
 export interface EditorialCriterion {
@@ -667,6 +692,11 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
           signatories: "Chủ tọa: PGS.TS. Trần Quốc Hùng · Thư ký: TS. Nguyễn Minh Anh",
         },
         evidences: c.evidences || [],
+        article_fidelity: cAny.article_fidelity,
+        comparison_matrix: cAny.comparison_matrix || [],
+        conflict_matrix: cAny.conflict_matrix || [],
+        independent_sources_count: cAny.independent_sources_count || 1,
+        claim_attributes: cAny.claim_attributes || {},
       };
     });
 
