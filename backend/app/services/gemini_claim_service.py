@@ -26,13 +26,24 @@ class HydrogenClaimCandidate(BaseModel):
     paragraph_index: int = Field(default=0, description="0-indexed paragraph index")
     sentence_index: int = Field(default=0, description="0-indexed sentence index")
     location_in_doc: str = Field(default="Đoạn 1, câu 1", description="Human readable location")
-    claim_type: Literal[
-        "FACTUAL_CLAIM",
-        "STATISTICAL_CLAIM",
-        "SCIENTIFIC_CLAIM",
-        "QUOTATION_CLAIM",
-        "CAUSAL_CLAIM",
-    ] = Field(default="FACTUAL_CLAIM")
+    claim_type: str = Field(
+        default="CHECKABLE_FACT",
+        description="CHECKABLE_FACT | CHECKABLE_EMPIRICAL_CLAIM | PREDICTION | "
+                    "ASTROLOGICAL_OR_SUPERNATURAL_CLAIM | OPINION | "
+                    "RHETORICAL_OR_CALL_TO_ACTION | NOT_A_CLAIM | PARTIALLY_CHECKABLE",
+    )
+    checkability_status: Literal[
+        "CHECKABLE",
+        "NOT_CHECKABLE",
+        "NOT_A_CLAIM",
+        "PARTIALLY_CHECKABLE",
+        "NEEDS_CLARIFICATION",
+    ] = Field(default="CHECKABLE")
+    checkability_reason: str = Field(default="")
+    measurable_conditions: list[str] = Field(default_factory=list)
+    evidence_requirements: list[str] = Field(default_factory=list)
+    extraction_confidence: float = Field(default=0.90, ge=0.0, le=1.0)
+    is_claim: bool = Field(default=True)
 
     # 11+ Slot Attributes
     subject: str = Field(default="", description="Subject entity")
@@ -191,9 +202,26 @@ class GeminiClaimService:
                 )
                 claims.append(candidate)
 
-        # Post-validation via ClaimArticleAligner to ensure rigorous fidelity consistency
+        # Post-validation via ClaimArticleAligner and ClaimCheckabilityClassifier
+        from app.services.claim_checkability_classifier import get_claim_checkability_classifier
+        classifier = get_claim_checkability_classifier()
+
         for c in claims:
-            # Run deterministic distortion check
+            # 1. Classify checkability taxonomy
+            check_res = classifier.classify_claim(
+                text=c.claim_text,
+                original_sentence=c.original_sentence or article_content,
+                article_title=article_title,
+            )
+            c.claim_type = check_res.claim_type
+            c.checkability_status = check_res.checkability_status
+            c.checkability_reason = check_res.checkability_reason
+            c.measurable_conditions = check_res.measurable_conditions
+            c.evidence_requirements = check_res.evidence_requirements
+            c.extraction_confidence = check_res.extraction_confidence
+            c.is_claim = check_res.is_claim
+
+            # 2. Run deterministic distortion check
             audit = self.aligner.verify_fidelity(
                 original_text=c.original_sentence or article_content,
                 claim_text=c.claim_text,

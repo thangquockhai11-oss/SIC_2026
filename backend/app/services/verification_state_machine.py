@@ -32,7 +32,7 @@ VALID_TRANSITIONS: dict[VerificationStage, set[VerificationStage]] = {
     VerificationStage.PENDING: {VerificationStage.ARTICLE_EXTRACTED, VerificationStage.FAILED},
     VerificationStage.ARTICLE_EXTRACTED: {VerificationStage.CLAIMS_EXTRACTED, VerificationStage.FAILED},
     VerificationStage.CLAIMS_EXTRACTED: {VerificationStage.CLAIM_FIDELITY_CHECKED, VerificationStage.FAILED},
-    VerificationStage.CLAIM_FIDELITY_CHECKED: {VerificationStage.EVIDENCE_RETRIEVED, VerificationStage.FAILED},
+    VerificationStage.CLAIM_FIDELITY_CHECKED: {VerificationStage.EVIDENCE_RETRIEVED, VerificationStage.VERDICT_READY, VerificationStage.FAILED},
     VerificationStage.EVIDENCE_RETRIEVED: {VerificationStage.EVIDENCE_RELEVANCE_VALIDATED, VerificationStage.FAILED},
     VerificationStage.EVIDENCE_RELEVANCE_VALIDATED: {VerificationStage.CROSS_VERIFICATION_COMPLETED, VerificationStage.FAILED},
     VerificationStage.CROSS_VERIFICATION_COMPLETED: {VerificationStage.VERDICT_READY, VerificationStage.FAILED},
@@ -93,6 +93,24 @@ class ClaimVerificationStateMachine:
         self.history.append(event)
         self.current_stage = target_stage
         return True
+
+    def resolve_non_checkable(
+        self,
+        checkability_status: str,
+        checkability_reason: str,
+    ) -> tuple[str, float, str]:
+        """
+        Directly resolve non-checkable statement or non-claim without evidence retrieval.
+        Stage Evidence Retrieval: NOT_APPLICABLE.
+        Stage Cross-Verification: NOT_APPLICABLE.
+        """
+        verdict = "NOT_A_CLAIM" if checkability_status == "NOT_A_CLAIM" else "NOT_CHECKABLE"
+        self.final_verdict = verdict
+        self.confidence = 0.95
+        self.abstention_reason = checkability_status
+        if self.current_stage != VerificationStage.VERDICT_READY:
+            self.transition_to(VerificationStage.VERDICT_READY, reason=f"Resolved as {verdict}: {checkability_reason}")
+        return verdict, 0.95, checkability_reason
 
     def resolve_conservative_verdict(
         self,
@@ -196,3 +214,4 @@ class ClaimVerificationStateMachine:
         self.confidence = conf
         self.transition_to(VerificationStage.VERDICT_READY, reason="Relevant evidence insufficient for definitive verdict")
         return verdict, conf, reason
+

@@ -54,7 +54,14 @@ export type Claim = {
   entities?: Array<string | Record<string, any>> | null;
   numerical_values?: Array<string | Record<string, any>> | null;
   checkability?: boolean;
-  verdict: "SUPPORTED" | "REFUTED" | "PARTIALLY_SUPPORTED" | "MISLEADING" | "CONFLICTING_EVIDENCE" | "NOT_ENOUGH_INFORMATION" | "NOT_CHECKABLE" | string;
+  checkability_status?: "CHECKABLE" | "NOT_CHECKABLE" | "NOT_A_CLAIM" | "PARTIALLY_CHECKABLE" | "NEEDS_CLARIFICATION" | string;
+  checkability_reason?: string | null;
+  measurable_conditions?: string[];
+  evidence_requirements?: string[];
+  extraction_confidence?: number;
+  original_sentence?: string | null;
+  is_claim?: boolean;
+  verdict: "SUPPORTED" | "REFUTED" | "PARTIALLY_SUPPORTED" | "MISLEADING" | "CONFLICTING_EVIDENCE" | "NOT_ENOUGH_INFORMATION" | "NOT_CHECKABLE" | "NOT_A_CLAIM" | string;
   confidence: number;
   reasoning: string;
   limitations: string | null;

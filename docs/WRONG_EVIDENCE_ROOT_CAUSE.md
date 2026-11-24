@@ -59,3 +59,4 @@ Sau khi truy vấn trực tiếp vào PostgreSQL engine (`postgresql+psycopg://t
 | **Bảo lưu phán quyết** | Cố ép verdict `REFUTED` | Tuân thủ `ClaimVerificationStateMachine`: Nếu 0 bằng chứng hợp lệ -> Bắt buộc ra `NOT_ENOUGH_INFORMATION`. |
 | **Xung đột số liệu** | Thiếu số liệu -> Đổi thành `REFUTES` | Sai khác định lượng trên cùng chủ đề -> `PARTIALLY_SUPPORTED`. Không cùng chủ đề -> `IRRELEVANT`. |
 | **Liên kết hiển thị** | `processed_evidences[0]` ngẫu nhiên | Bằng chứng hiển thị (`evidence_quote`, `evidence_source`, `evidence_url`) gắn chặt chẽ 1:1 với tài liệu quyết định phán quyết. |
+

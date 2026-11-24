@@ -78,3 +78,4 @@ Nhằm đảm bảo hệ thống không bao giờ bị gián đoạn kể cả k
 - Thiết lập từ điển chặn tương tác chéo miền:
   - Luận điểm về y tế / cà phê / ung thư tuyến tiền liệt tự động khóa 100% các tài liệu về `ChatGPT`, `mô hình ngôn ngữ`, `thoái hóa đốt sống`, `TikTok`.
   - Phân tích tương quan thực thể ngữ nghĩa chính (Substantive Entities), ngăn chặn việc ghép nối ngẫu nhiên dựa trên các hư từ học thuật.
+

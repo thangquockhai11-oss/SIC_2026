@@ -16,6 +16,7 @@ import uuid
 import numpy as np
 
 from app.services.claim_article_aligner import claim_article_aligner, ClaimAttributes
+from app.services.claim_checkability_classifier import get_claim_checkability_classifier
 from app.services.evidence_cross_comparator import evidence_cross_comparator, EvidenceCrossEvaluation
 from app.services.gemini_evidence_validator import get_gemini_evidence_validator
 from app.services.gemini_nlp_service import gemini_nlp_service
@@ -452,12 +453,11 @@ class FactCheckingAgent:
             location = self._extract_locations(norm_title)
             subject, predicate, obj = self._extract_syntactic_slots(norm_title)
 
-            claim_type, checkability = self._classify_claim_type(
-                norm_title,
-                has_numbers=bool(numerical_values),
-                temporal=temporal,
-                slots=(subject, predicate, obj),
-            )
+            classifier = get_claim_checkability_classifier()
+            chk_res = classifier.classify_claim(norm_title, orig_title, article_title)
+            claim_type = chk_res.claim_type
+            checkability = (chk_res.checkability_status == "CHECKABLE")
+
             # If about fuels, medicine, scientific experiments, classify as SCIENTIFIC_CLAIM
             if any(w in norm_title.lower() for w in ["xăng", "nước lã", "rác thải", "động cơ", "ung thư", "thuốc", "vắc xin"]):
                 claim_type = "SCIENTIFIC_CLAIM"
@@ -477,11 +477,19 @@ class FactCheckingAgent:
                 "entities": entities,
                 "numerical_values": numerical_values,
                 "source_article_id": source_article_id,
-                "checkability": True,
-                "is_checkable": True,
+                "checkability": checkability,
+                "is_checkable": checkability,
                 "is_key_claim": True,
                 "is_title_anchor": True,
                 "location_in_doc": "Tiêu đề bài báo (Luận điểm chủ chốt)",
+                "checkability_status": chk_res.checkability_status,
+                "checkability_reason": chk_res.checkability_reason,
+                "measurable_conditions": chk_res.measurable_conditions,
+                "evidence_requirements": chk_res.evidence_requirements,
+                "extraction_confidence": chk_res.extraction_confidence,
+                "original_sentence": chk_res.original_sentence or orig_title,
+                "is_claim": chk_res.is_claim,
+                "verdict": chk_res.checkability_status if chk_res.checkability_status in ("NOT_CHECKABLE", "NOT_A_CLAIM") else "NOT_ENOUGH_INFORMATION",
             })
 
         # 2. Các luận điểm tiếp theo (#02, #03, #04...): Lọc từ thân bài nhưng PHẢI liên quan trực tiếp đến Tiêu đề
@@ -534,10 +542,15 @@ class FactCheckingAgent:
             relevance_score = (overlap_count * 3.0) + (1.5 if has_nums else 0.0) + (1.0 if has_entities else 0.0)
             scored_sentences.append((relevance_score, s))
 
-        # Sort descending by relevance to title topic
-        scored_sentences.sort(key=lambda x: x[0], reverse=True)
+        # If raw sentences are few (<= max_claims), preserve natural flow from article; else sort by topic relevance
+        if len(raw_sentences) <= max_claims:
+            candidate_list = [(0.0, s) for s in raw_sentences if not clean_title_low or (clean_title_low not in s.lower() and s.lower() not in clean_title_low)]
+        else:
+            # Sort descending by relevance to title topic
+            scored_sentences.sort(key=lambda x: x[0], reverse=True)
+            candidate_list = scored_sentences
 
-        for _, sentence in scored_sentences:
+        for _, sentence in candidate_list:
             if len(claims) >= max_claims:
                 break
             
@@ -547,12 +560,10 @@ class FactCheckingAgent:
             location = self._extract_locations(sentence)
             subject, predicate, obj = self._extract_syntactic_slots(sentence)
 
-            claim_type, checkability = self._classify_claim_type(
-                sentence,
-                has_numbers=bool(numerical_values),
-                temporal=temporal,
-                slots=(subject, predicate, obj),
-            )
+            classifier = get_claim_checkability_classifier()
+            chk_res = classifier.classify_claim(sentence, sentence, article_title or "")
+            claim_type = chk_res.claim_type
+            checkability = (chk_res.checkability_status == "CHECKABLE")
 
             norm_claim = sentence.strip(" \"'“”«»")
             claim_id = str(uuid.uuid4())
@@ -575,6 +586,14 @@ class FactCheckingAgent:
                 "is_key_claim": False,
                 "is_title_anchor": False,
                 "location_in_doc": f"Đoạn văn thân bài (Luận điểm #{len(claims)+1})",
+                "checkability_status": chk_res.checkability_status,
+                "checkability_reason": chk_res.checkability_reason,
+                "measurable_conditions": chk_res.measurable_conditions,
+                "evidence_requirements": chk_res.evidence_requirements,
+                "extraction_confidence": chk_res.extraction_confidence,
+                "original_sentence": chk_res.original_sentence or sentence,
+                "is_claim": chk_res.is_claim,
+                "verdict": chk_res.checkability_status if chk_res.checkability_status in ("NOT_CHECKABLE", "NOT_A_CLAIM") else "NOT_ENOUGH_INFORMATION",
             })
 
         # 3. If there are fewer than 3 claims, DEDUCE subsequent claims directly from the Title & Topic
@@ -788,17 +807,25 @@ class FactCheckingAgent:
         )
 
         # Check or classify claim type
-        detected_type, detected_checkable = self._classify_claim_type(
-            claim_text,
-            has_numbers=bool(numerical_values),
-            temporal=temporal,
-            slots=(subject, predicate, obj),
-        )
-        claim_type = claim.get("claim_type") or detected_type
-        if claim_type in ("OPINION", "PREDICTION"):
+        classifier = get_claim_checkability_classifier()
+        chk_status = claim.get("checkability_status")
+        if not chk_status:
+            chk_res = classifier.classify_claim(claim_text, original_text, article_title or "")
+            chk_status = chk_res.checkability_status
+            claim["checkability_status"] = chk_status
+            claim["checkability_reason"] = chk_res.checkability_reason
+            claim["is_claim"] = chk_res.is_claim
+            claim["claim_type"] = chk_res.claim_type
+            claim["measurable_conditions"] = chk_res.measurable_conditions
+            claim["evidence_requirements"] = chk_res.evidence_requirements
+            claim["extraction_confidence"] = chk_res.extraction_confidence
+
+        claim_type = claim.get("claim_type") or "FACTUAL_CLAIM"
+        is_claim_val = claim.get("is_claim", True)
+        if chk_status in ("NOT_CHECKABLE", "NOT_A_CLAIM") or not is_claim_val or claim_type in ("OPINION", "ASTROLOGICAL_OR_SUPERNATURAL_CLAIM", "RHETORICAL_OR_CALL_TO_ACTION"):
             checkability = False
         else:
-            checkability = claim.get("checkability", detected_checkable)
+            checkability = claim.get("checkability", True)
 
         nli_model_meta = model_manager.get_model("fact_verification_nli")
         model_name = nli_model_meta.model_name if nli_model_meta else "TrustMedia-NLI-HybridVerifier"
@@ -806,13 +833,19 @@ class FactCheckingAgent:
         now = datetime.now(timezone.utc)
         now_iso = now.isoformat()
 
-        # 1. Non-checkable claims (OPINION, subjective, ungrounded PREDICTION)
-        if not checkability or claim_type in ("OPINION", "PREDICTION"):
-            reasoning = (
-                f"Phát ngôn thuộc phân loại '{claim_type}' ('{claim_text[:75]}...'). "
-                "Đây là nhận định mang tính chủ quan hoặc dự báo tương lai, "
-                "không cấu thành sự kiện đơn nhất có thể xác thực khách quan Đúng/Sai bằng tài liệu thực chứng."
+        # 1. Non-checkable claims and non-assertions (bypasses retrieval & cross-verification)
+        if not checkability or chk_status in ("NOT_CHECKABLE", "NOT_A_CLAIM") or not is_claim_val:
+            v_verdict = "NOT_A_CLAIM" if (chk_status == "NOT_A_CLAIM" or not is_claim_val) else "NOT_CHECKABLE"
+            reasoning = claim.get("checkability_reason") or (
+                "Phát ngôn không chứa khẳng định sự thật độc lập cần kiểm chứng (câu kêu gọi hoặc câu hỏi tu từ)."
+                if v_verdict == "NOT_A_CLAIM"
+                else "Khẳng định mang tính chiêm tinh, tử vi, bói toán hoặc dự đoán tương lai không có phương pháp đo lường thực nghiệm khách quan."
             )
+            v_state.resolve_non_checkable(v_verdict, reasoning)
+
+            gap_t1_status = "KHÔNG PHẢI PHÁT NGÔN" if v_verdict == "NOT_A_CLAIM" else "KHÔNG THỂ KIỂM CHỨNG"
+            gap_claim_verdict = "KHÔNG PHẢI PHÁT NGÔN" if v_verdict == "NOT_A_CLAIM" else "KHÔNG THỂ KIỂM CHỨNG"
+
             return {
                 "claim_id": claim_id,
                 "is_key_claim": claim.get("is_key_claim", False),
@@ -830,15 +863,22 @@ class FactCheckingAgent:
                 "entities": entities,
                 "numerical_values": numerical_values,
                 "checkability": False,
-                "verdict": "NOT_CHECKABLE",
-                "confidence": 0.88,
+                "checkability_status": chk_status,
+                "checkability_reason": reasoning,
+                "measurable_conditions": claim.get("measurable_conditions", []),
+                "evidence_requirements": claim.get("evidence_requirements", []),
+                "extraction_confidence": claim.get("extraction_confidence", 0.95),
+                "original_sentence": claim.get("original_sentence", original_text),
+                "is_claim": is_claim_val if v_verdict != "NOT_A_CLAIM" else False,
+                "verdict": v_verdict,
+                "confidence": 0.95,
                 "confidence_metric_type": "Epistemic Checkability Classification",
                 "reasoning": reasoning,
                 "decisive_reasoning": reasoning,
                 "limitations": "Hệ thống chỉ thẩm định các phát ngôn sự kiện hoặc số liệu có thể đối chứng độc lập.",
                 "model_name": model_name,
                 "model_version": model_version,
-                "verification_status": "NOT_CHECKABLE",
+                "verification_status": v_verdict,
                 "evidences": [],
                 "supporting_evidences": [],
                 "refuting_evidences": [],
@@ -847,7 +887,7 @@ class FactCheckingAgent:
                 "article_quote": original_text,
                 "article_quote_highlight": claim_text[:35],
                 "article_highlight": claim_text[:35],
-                "evidence_quote": "Phát ngôn thuộc thể loại nhận định chủ quan hoặc dự báo tương lai, không cấu thành sự kiện thực chứng có thể xác minh khách quan.",
+                "evidence_quote": "Không tiến hành truy xuất bằng chứng đối với phát ngôn không thể kiểm chứng thực nghiệm hoặc không phải claim sự thật.",
                 "evidence_quote_highlight": "",
                 "evidence_highlight": "",
                 "evidence_source": "Quy chuẩn Fact-Checking Quốc tế (IFCN)",
@@ -856,22 +896,22 @@ class FactCheckingAgent:
                 "compatibility_score": "Không áp dụng",
                 "evidence_gap": {
                     "t1_title": "Tầng 1: Đánh giá thể loại",
-                    "t1_desc": "Nhận định chủ quan",
-                    "t1_status": "KHÔNG THẨM ĐỊNH",
-                    "t2_title": "Tầng 2: Tính thực chứng",
-                    "t2_desc": "Không có sự kiện đơn nhất",
-                    "t2_status": "KHÔNG KHẢ THI",
-                    "t3_title": "Tầng 3: Kết luận pháp lý",
-                    "t3_desc": "Bảo lưu quan điểm cá nhân",
-                    "t3_status": "TỰ DO NGÔN LUẬN",
+                    "t1_desc": "Kiểm tra tính kiểm chứng",
+                    "t1_status": gap_t1_status,
+                    "t2_title": "Tầng 2: Truy xuất bằng chứng",
+                    "t2_desc": "Bằng chứng thực nghiệm",
+                    "t2_status": "KHÔNG ÁP DỤNG",
+                    "t3_title": "Tầng 3: Đối chiếu khoa học",
+                    "t3_desc": "Giám định đối chuẩn",
+                    "t3_status": "KHÔNG ÁP DỤNG",
                     "t4_desc": f"“{claim_text[:35]}...”",
-                    "claim_verdict": "KHÔNG THỂ KIỂM CHỨNG",
+                    "claim_verdict": gap_claim_verdict,
                 },
                 "review_board": {
                     "classification": claim_type,
-                    "classification_desc": "Nhận định chủ quan hoặc dự báo tương lai.",
+                    "classification_desc": reasoning,
                     "harm_level": "THẤP",
-                    "harm_desc": "Không vi phạm quy chuẩn thực chứng khi được thể hiện dưới dạng quan điểm cá nhân.",
+                    "harm_desc": "Nội dung giải trí hoặc quan điểm, không vi phạm quy chuẩn thực chứng khi không mạo danh thông tin khoa học.",
                     "signatories": "Hội đồng Thẩm định Báo chí TrustMedia",
                 },
                 "article_fidelity": fidelity_report.to_dict(),
@@ -1453,11 +1493,9 @@ class FactCheckingAgent:
         model_name = nli_model_meta.model_name if nli_model_meta else "TrustMedia-NLI-HybridVerifier"
         model_version = nli_model_meta.model_version if nli_model_meta else "1.2.0-calibrated"
 
-        primary_verdict = verified_claims[0]["verdict"] if verified_claims else "NOT_ENOUGH_INFORMATION"
-
         # Article-Level Fact-Checking Overview Synthesis
         total_extracted = len(verified_claims)
-        checkable = [c for c in verified_claims if c.get("checkability", True)]
+        checkable = [c for c in verified_claims if c.get("checkability") is True and c.get("verdict") not in ("NOT_CHECKABLE", "NOT_A_CLAIM")]
         supported = [c for c in verified_claims if c.get("verdict") == "SUPPORTED"]
         refuted = [c for c in verified_claims if c.get("verdict") == "REFUTED"]
         partially_supported = [c for c in verified_claims if c.get("verdict") == "PARTIALLY_SUPPORTED"]
@@ -1465,28 +1503,43 @@ class FactCheckingAgent:
         conflicting = [c for c in verified_claims if c.get("verdict") == "CONFLICTING_EVIDENCE"]
         not_enough_info = [c for c in verified_claims if c.get("verdict") == "NOT_ENOUGH_INFORMATION"]
         not_checkable = [c for c in verified_claims if c.get("verdict") == "NOT_CHECKABLE"]
-        
+        not_a_claim = [c for c in verified_claims if c.get("verdict") == "NOT_A_CLAIM"]
+
         faithful_claims = [c for c in verified_claims if c.get("article_fidelity", {}).get("fidelity_status") == "FAITHFUL"]
         distorted_claims = [c for c in verified_claims if c.get("article_fidelity", {}).get("fidelity_status") in ("DISTORTED", "OVERGENERALIZED", "EXTRAPOLATED")]
 
-        consistency_score = 0.0
-        if checkable:
+        # Entertainment / Astrology handling: when >= 50% claims or all claims are not checkable/not claims
+        is_entertainment = (len(not_checkable) + len(not_a_claim) >= total_extracted * 0.5) or len(checkable) == 0
+
+        consistency_score = None
+        if not is_entertainment and checkable:
             consistency_score = round(((len(supported) + 0.5 * len(partially_supported)) / len(checkable)) * 100, 1)
+
+        if is_entertainment:
+            primary_verdict = "NOT_CHECKABLE"
+            entertainment_notice = "Nội dung bài viết chủ yếu mang tính dự đoán hoặc giải trí; không đủ cơ sở để xác minh khách quan các luận điểm này."
+            result_summary = entertainment_notice
+        else:
+            primary_verdict = verified_claims[0]["verdict"] if verified_claims else "NOT_ENOUGH_INFORMATION"
+            entertainment_notice = None
+            result_summary = f"Đã kiểm chứng {len(verified_claims)} claims độc lập. Kết luận chính: {primary_verdict}. Truy xuất {total_retrieval_count} bằng chứng."
 
         article_level_report = {
             "article_title": article_title or "Bản tin thẩm định",
             "total_claims_extracted": total_extracted,
             "checkable_claims_count": len(checkable),
+            "non_checkable_claims_count": len(not_checkable),
+            "not_a_claim_count": len(not_a_claim),
             "supported_count": len(supported),
             "refuted_count": len(refuted),
             "partially_supported_count": len(partially_supported),
             "misleading_count": len(misleading),
             "conflicting_count": len(conflicting),
             "insufficient_evidence_count": len(not_enough_info),
-            "not_checkable_count": len(not_checkable),
             "faithful_claims_count": len(faithful_claims),
             "distorted_claims_count": len(distorted_claims),
             "article_consistency_score": consistency_score,
+            "entertainment_notice": entertainment_notice,
             "consistency_formula": "(Số claim xác thực + 0.5 * Đúng một phần) / Tổng số claim kiểm chứng được * 100",
         }
 
@@ -1505,7 +1558,7 @@ class FactCheckingAgent:
             "retrieval_count": total_retrieval_count,
             "start_time": start_time,
             "end_time": end_time,
-            "result_summary": f"Đã kiểm chứng {len(verified_claims)} claims độc lập. Kết luận chính: {primary_verdict}. Truy xuất {total_retrieval_count} bằng chứng.",
+            "result_summary": result_summary,
             "disagreement_detected": len(conflicting) > 0,
             "errors": None,
             "output": {"claim_count": len(verified_claims), "primary_verdict": primary_verdict},

@@ -59,3 +59,4 @@ Phương thức `resolve_conservative_verdict()` áp dụng 6 quy tắc khoa h�
 4. **Quy tắc 4 (Sai khác định lượng cùng chủ đề):** Sự kiện là có thật nhưng số liệu có sự chênh lệch (ví dụ: bài báo nói giảm 50%, nghiên cứu chỉ giảm 20%) -> Phán quyết `PARTIALLY_SUPPORTED` kèm chú giải sai lệch số liệu, không được gán nhãn `REFUTED`.
 5. **Quy tắc 5 (Bác bỏ thực chứng):** Tồn tại văn bản kết luận chính thức hoặc hồ sơ khoa học phản bác trực tiếp luận điểm -> `REFUTED`.
 6. **Quy tắc 6 (Xác thực đầy đủ):** Các tài liệu đối chứng độc lập xác thực toàn diện mệnh đề -> `SUPPORTED`.
+

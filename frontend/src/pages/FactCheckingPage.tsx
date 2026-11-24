@@ -148,6 +148,12 @@ export default function FactCheckingPage() {
 
   const getGapStatusBadge = (status: string, fallbackType: "success" | "neutral" | "danger" = "neutral") => {
     const s = (status || "").toUpperCase();
+    if (s.includes("KHÔNG ÁP DỤNG") || s.includes("NOT_APPLICABLE")) {
+      return "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400";
+    }
+    if (s.includes("KHÔNG THỂ KIỂM CHỨNG") || s.includes("KHÔNG PHẢI PHÁT NGÔN")) {
+      return "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300";
+    }
     if (s.includes("CÓ") || s.includes("XÁC") || s.includes("AN TOÀN") || s.includes("ĐỒNG") || s.includes("HỢP LỆ") || s.includes("CHUẨN")) {
       return "bg-[#DCFCE7] text-[#15803D]";
     }
@@ -173,6 +179,30 @@ export default function FactCheckingPage() {
         return (
           <span className="px-2 py-0.5 rounded-full bg-[#DCFCE7] text-[#15803D] font-label-sm text-label-sm font-semibold uppercase tracking-wider inline-flex items-center gap-1">
             <span className="material-symbols-outlined text-[13px]">check_circle</span> Được xác nhận
+          </span>
+        );
+      case "PARTIALLY_SUPPORTED":
+        return (
+          <span className="px-2 py-0.5 rounded-full bg-[#FEF3C7] text-[#B45309] font-label-sm text-label-sm font-semibold uppercase tracking-wider inline-flex items-center gap-1">
+            <span className="material-symbols-outlined text-[13px]">rule</span> Đúng một phần
+          </span>
+        );
+      case "CONFLICTING_EVIDENCE":
+        return (
+          <span className="px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 font-label-sm text-label-sm font-semibold uppercase tracking-wider inline-flex items-center gap-1">
+            <span className="material-symbols-outlined text-[13px]">compare_arrows</span> Chứng cứ mâu thuẫn
+          </span>
+        );
+      case "NOT_CHECKABLE":
+        return (
+          <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300 font-label-sm text-label-sm font-semibold uppercase tracking-wider inline-flex items-center gap-1">
+            <span className="material-symbols-outlined text-[13px]">visibility_off</span> Không thể kiểm chứng
+          </span>
+        );
+      case "NOT_A_CLAIM":
+        return (
+          <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 font-label-sm text-label-sm font-semibold uppercase tracking-wider inline-flex items-center gap-1">
+            <span className="material-symbols-outlined text-[13px]">short_text</span> Không phải phát ngôn
           </span>
         );
       case "MISLEADING":
@@ -207,6 +237,38 @@ export default function FactCheckingPage() {
           pillIcon: "check_circle",
           label: "ĐƯỢC XÁC NHẬN",
           compatColor: "text-[#15803D]",
+        };
+      case "PARTIALLY_SUPPORTED":
+        return {
+          bannerBorder: "bg-[#B45309]",
+          pillBg: "bg-[#FEF3C7] text-[#B45309]",
+          pillIcon: "rule",
+          label: "ĐÚNG MỘT PHẦN",
+          compatColor: "text-[#B45309]",
+        };
+      case "CONFLICTING_EVIDENCE":
+        return {
+          bannerBorder: "bg-orange-600",
+          pillBg: "bg-orange-100 text-orange-800",
+          pillIcon: "compare_arrows",
+          label: "CHỨNG CỨ MÂU THUẪN",
+          compatColor: "text-orange-700",
+        };
+      case "NOT_CHECKABLE":
+        return {
+          bannerBorder: "bg-purple-600",
+          pillBg: "bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300",
+          pillIcon: "visibility_off",
+          label: "KHÔNG THỂ KIỂM CHỨNG",
+          compatColor: "text-purple-700",
+        };
+      case "NOT_A_CLAIM":
+        return {
+          bannerBorder: "bg-slate-500",
+          pillBg: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+          pillIcon: "short_text",
+          label: "KHÔNG PHẢI PHÁT NGÔN",
+          compatColor: "text-slate-600",
         };
       case "MISLEADING":
         return {
@@ -267,6 +329,19 @@ export default function FactCheckingPage() {
             </button>
           </div>
         </div>
+
+        {/* Entertainment / Astrology Disclaimer Banner */}
+        {(article.overall_verdict === "NOT_CHECKABLE" || (claims.length > 0 && claims.every((c) => c.verdict === "NOT_CHECKABLE" || c.verdict === "NOT_A_CLAIM"))) && (
+          <div className="mb-space-md p-space-md rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-900 dark:text-purple-200 flex items-start gap-space-sm animate-fadeIn">
+            <span className="material-symbols-outlined text-purple-600 dark:text-purple-400 text-[22px] flex-shrink-0 mt-0.5">auto_awesome</span>
+            <div className="flex-1">
+              <span className="font-bold text-title-sm block">Thông báo phân loại nội dung giải trí / dự đoán:</span>
+              <p className="font-body-md text-body-md mt-0.5 text-purple-800 dark:text-purple-300">
+                Nội dung bài viết chủ yếu mang tính dự đoán hoặc giải trí; không đủ cơ sở để xác minh khách quan các luận điểm này. Hệ thống bảo lưu trạng thái <strong>KHÔNG THỂ KIỂM CHỨNG</strong> và không suy diễn sai lệch thành phản bác (REFUTED).
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Main Presentation 2-Column Workstation Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-start">

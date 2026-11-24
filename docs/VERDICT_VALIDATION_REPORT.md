@@ -47,3 +47,4 @@ backend/tests/test_claim_evidence_validator.py::test_verdict_claim_evidence_cros
 - Core Claim-Evidence Cross-Verification Engine đã vận hành chính xác theo đúng các tôn chỉ khoa học và quy chuẩn báo chí quốc tế.
 - Khắc phục hoàn toàn hiện tượng lệch nguồn, gán nhầm bằng chứng phi chủ đề và các phán quyết sai lệch.
 - Giao diện người dùng và cơ sở dữ liệu đã đồng bộ 100%.
+

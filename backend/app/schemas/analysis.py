@@ -53,6 +53,13 @@ class ClaimResponse(BaseModel):
     entities: list[str] | list[dict] | None = None
     numerical_values: list[str] | list[dict] | None = None
     checkability: bool = True
+    checkability_status: str | None = None
+    checkability_reason: str | None = None
+    measurable_conditions: list[str] | None = None
+    evidence_requirements: list[str] | None = None
+    extraction_confidence: float | None = None
+    original_sentence: str | None = None
+    is_claim: bool = True
     verdict: str
     confidence: float
     reasoning: str

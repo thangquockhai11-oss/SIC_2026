@@ -728,17 +728,17 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
         evidence_source: evSource,
         evidence_url: evUrl,
         evidence_gap: cAny.evidence_gap || {
-          t1_title: "Tầng 1: Dữ liệu bối cảnh",
-          t1_desc: "Tài liệu sơ cấp",
-          t1_status: "CÓ CHỨNG CỨ",
+          t1_title: "Tầng 1: Đánh giá thể loại",
+          t1_desc: c.verdict === "NOT_CHECKABLE" ? "Không có tiêu chuẩn thực chứng" : c.verdict === "NOT_A_CLAIM" ? "Không phải khẳng định sự thật" : "Tài liệu sơ cấp",
+          t1_status: c.verdict === "NOT_A_CLAIM" ? "KHÔNG PHẢI PHÁT NGÔN" : c.verdict === "NOT_CHECKABLE" ? "KHÔNG THỂ KIỂM CHỨNG" : "CÓ CHỨNG CỨ",
           t2_title: "Tầng 2: Đối chiếu chéo",
-          t2_desc: "Cơ quan báo chí độc lập",
-          t2_status: c.verdict === "SUPPORTED" ? "CÓ CHỨNG CỨ" : "CHƯA THỰC HIỆN",
+          t2_desc: c.verdict === "NOT_CHECKABLE" || c.verdict === "NOT_A_CLAIM" ? "Không áp dụng đối chiếu chéo" : "Cơ quan báo chí độc lập",
+          t2_status: c.verdict === "NOT_CHECKABLE" || c.verdict === "NOT_A_CLAIM" ? "KHÔNG ÁP DỤNG" : (c.verdict === "SUPPORTED" ? "CÓ CHỨNG CỨ" : "CHƯA THỰC HIỆN"),
           t3_title: "Tầng 3: Giám định chính thức",
-          t3_desc: "Văn bản kết luận",
-          t3_status: c.verdict === "SUPPORTED" ? "CÓ CHỨNG CỨ" : "CHƯA CẤP PHÉP",
+          t3_desc: c.verdict === "NOT_CHECKABLE" || c.verdict === "NOT_A_CLAIM" ? "Không áp dụng giám định" : "Văn bản kết luận",
+          t3_status: c.verdict === "NOT_CHECKABLE" || c.verdict === "NOT_A_CLAIM" ? "KHÔNG ÁP DỤNG" : (c.verdict === "SUPPORTED" ? "CÓ CHỨNG CỨ" : "CHƯA CẤP PHÉP"),
           t4_desc: `“${claimText.slice(0, 35)}...”`,
-          claim_verdict: c.verdict === "SUPPORTED" ? "ĐƯỢC XÁC THỰC" : c.verdict === "REFUTED" ? "BỊ BÁC BỎ" : "CHƯA ĐỦ THÔNG TIN",
+          claim_verdict: c.verdict === "NOT_A_CLAIM" ? "KHÔNG PHẢI PHÁT NGÔN" : c.verdict === "NOT_CHECKABLE" ? "KHÔNG THỂ KIỂM CHỨNG" : (c.verdict === "SUPPORTED" ? "ĐƯỢC XÁC THỰC" : c.verdict === "REFUTED" ? "BỊ BÁC BỎ" : "CHƯA ĐỦ THÔNG TIN"),
         },
         ai_log: cAny.ai_log || {
           model: "TrustMedia-NLI-HybridVerifier",
@@ -815,6 +815,8 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
       category = "AN NINH TRẬT TỰ & AN TOÀN XÃ HỘI";
     } else if (["bếp gas", "lừa đảo", "chiêu trò", "bẫy lừa"].some((w) => combined.includes(w))) {
       category = "AN NINH MẠNG & CẢNH BÁO LỪA ĐẢO";
+    } else if (["con giáp", "đào hoa", "tử vi", "cung hoàng đạo", "vận mệnh", "bói toán"].some((w) => combined.includes(w))) {
+      category = "CHIÊM TINH HỌC & GIẢI TRÍ VĂN HÓA";
     } else if (["thủy điện", "vỡ đập", "mưa lũ", "thiên tai", "hồ đập", "sạt lở"].some((w) => combined.includes(w))) {
       category = "PHÒNG CHỐNG THIÊN TAI & AN TOÀN HỒ ĐẬP";
     } else if (["streamer", "chu nhị lỗi", "livestream", "mạng xã hội"].some((w) => combined.includes(w))) {
