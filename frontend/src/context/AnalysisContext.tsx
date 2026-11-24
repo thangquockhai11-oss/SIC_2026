@@ -295,6 +295,16 @@ const PROTOTYPE_ARTICLE: ActiveArticle = {
       ],
       complianceNote: "Thời hạn xử lý chuẩn theo quy định: 48 giờ làm việc kể từ lúc tiếp nhận",
     },
+    {
+      id: 5,
+      title: "Tính khách quan, cân bằng và toàn vẹn ngữ cảnh",
+      status: "PASSED",
+      statusText: "Đạt yêu cầu",
+      statusColor: "emerald",
+      summary: "Bài báo dẫn lời các chuyên gia và cơ quan thẩm quyền, không sử dụng từ ngữ kích động hoặc giật gân sai lệch.",
+      referenceTitle: "Xem quy chuẩn kiểm tra bối cảnh IFCN & COPE",
+      referenceDetail: "Báo cáo giám sát ngữ cảnh truyền thông TrustMedia AI.",
+    },
   ],
   surveyPillars: {
     1: {
@@ -524,22 +534,52 @@ function buildDynamicCriteria(
   _category: string,
   claims: ClaimItem[]
 ): EditorialCriterion[] {
-  const cred = detail.credibility || {};
+  const cred = detail.credibility || detail.fact_checking_report?.media_credibility_isolated || {};
   const isHighCred = (cred.overall_credibility_score || 80) >= 75;
-  const isLowRefuted = claims.some((c) => c.verdict === "REFUTED") || !isHighCred;
+  const hasRefuted = claims.some((c) => c.verdict === "REFUTED");
+  const hasMisleading = claims.some((c) => c.verdict === "MISLEADING" || c.article_fidelity?.distortion_detected);
+  const hasPartial = claims.some((c) => c.verdict === "PARTIALLY_SUPPORTED" || c.verdict === "CONFLICTING_EVIDENCE");
+  const hasUncertain = claims.some((c) => c.verdict === "NOT_ENOUGH_INFORMATION");
+
+  // Criterion 1: Empirical Grounding & Evidence Verification
+  const c1Status: "PASSED" | "FAILED" | "IN_REVIEW" = hasRefuted ? "FAILED" : hasPartial || hasUncertain ? "IN_REVIEW" : "PASSED";
+  const c1Text = hasRefuted ? "CHƯA ĐẠT (SAI LỆCH)" : hasPartial || hasUncertain ? "ĐANG ĐỐI SOÁT" : "ĐẠT YÊU CẦU";
+
+  // Criterion 2: Factual and Quantitative Claim Accuracy
+  const hasNumericDistortion = claims.some((c) =>
+    (c.comparison_matrix || []).some((m: any) => m.attribute?.includes("Số liệu") && m.match_status === "MISMATCH") ||
+    c.article_fidelity?.distortion_type === "NUMERICAL_DISTORTION"
+  );
+  const c2Status: "PASSED" | "FAILED" | "IN_REVIEW" = hasRefuted || hasNumericDistortion ? "FAILED" : hasPartial ? "IN_REVIEW" : "PASSED";
+  const c2Text = hasRefuted || hasNumericDistortion ? "CHƯA ĐẠT (SAI LỆCH)" : hasPartial ? "ĐANG ĐỐI SOÁT" : "ĐẠT YÊU CẦU";
+
+  // Criterion 3: Byline, Author, and Publisher Transparency
+  const hasAuthor = Boolean(detail.author || detail.media_credibility?.author_name || sourceName);
+  const c3Status: "PASSED" | "FAILED" | "IN_REVIEW" = hasAuthor && isHighCred ? "PASSED" : hasAuthor ? "IN_REVIEW" : "FAILED";
+  const c3Text = c3Status === "PASSED" ? "ĐẠT YÊU CẦU" : c3Status === "IN_REVIEW" ? "ĐANG ĐỐI SOÁT" : "CHƯA ĐẠT";
+
+  // Criterion 4: Correction Policy and Complaint Due Diligence
+  const c4Status: "PASSED" | "FAILED" | "IN_REVIEW" = isHighCred ? "PASSED" : "IN_REVIEW";
+  const c4Text = c4Status === "PASSED" ? "ĐẠT YÊU CẦU" : "ĐANG ĐỐI SOÁT";
+
+  // Criterion 5: Contextual Balance, Objectivity and Anti-Distortion
+  const c5Status: "PASSED" | "FAILED" | "IN_REVIEW" = hasMisleading ? "FAILED" : hasRefuted ? "IN_REVIEW" : "PASSED";
+  const c5Text = c5Status === "PASSED" ? "ĐẠT YÊU CẦU" : c5Status === "IN_REVIEW" ? "ĐANG ĐỐI SOÁT" : "CHƯA ĐẠT";
 
   return [
     {
       id: 1,
       title: "Tính xác thực của chứng cứ và dữ liệu nội dung bài báo",
-      status: isLowRefuted ? "FAILED" : "PASSED",
-      statusText: isLowRefuted ? "CẢNH BÁO CHỨNG CỨ" : "ĐẠT CHUẨN",
-      statusColor: isLowRefuted ? "bg-error-container text-error" : "bg-[#DCFCE7] text-[#15803D]",
-      summary: `Các sự kiện, mốc thời gian và số liệu nêu trong nội dung bài báo '${detail.title}' được đối soát chéo trực tiếp với kho cơ sở dữ liệu thực chứng.`,
-      referenceTitle: "Quy chuẩn đối chiếu thực chứng nội dung báo chí",
-      referenceDetail: `Đã đối soát ${claims.length} luận điểm trong nội dung bài báo với cơ sở dữ liệu học thuật và báo chí độc lập.`,
+      status: c1Status,
+      statusText: c1Text,
+      statusColor: c1Status === "PASSED" ? "emerald" : c1Status === "FAILED" ? "rose" : "amber",
+      summary: hasRefuted
+        ? `Phát hiện luận điểm trong bài báo '${detail.title}' mâu thuẫn trực tiếp với hồ sơ thực chứng độc lập.`
+        : `Các sự kiện, mốc thời gian và số liệu nêu trong bài báo '${detail.title}' được đối soát chéo trực tiếp với kho cơ sở dữ liệu học thuật.`,
+      referenceTitle: "Quy chuẩn đối chiếu thực chứng nội dung báo chí (IFCN Standard v2.4)",
+      referenceDetail: `Đã đối soát ${claims.length} luận điểm trong nội dung bài báo với cơ sở dữ liệu học thuật và mạng lưới báo chí độc lập.`,
       complianceNote: "Tuân thủ quy trình kiểm tra chéo nguồn tin sơ cấp theo chuẩn IFCN.",
-      actionRecommendation: isLowRefuted ? "Cần đối chiếu thêm văn bản chính thức hoặc báo cáo điều tra độc lập." : "Duy trì tính minh bạch tài liệu tham chiếu.",
+      actionRecommendation: hasRefuted ? "Cần đối chiếu thêm văn bản chính thức hoặc báo cáo điều tra độc lập." : "Duy trì tính minh bạch tài liệu tham chiếu.",
       contactLog: [
         { time: "Hệ thống tự động", action: `Trích xuất và lập chỉ mục ${claims.length} phát ngôn từ nội dung bài báo` },
         { time: "Kiểm tra chéo", action: "Đã hoàn thành rà soát thực chứng qua mô hình Hybrid RAG & NLI" },
@@ -548,27 +588,53 @@ function buildDynamicCriteria(
     {
       id: 2,
       title: "Tính chính xác của phát ngôn và định lượng số liệu",
-      status: isLowRefuted ? "FAILED" : "PASSED",
-      statusText: isLowRefuted ? "SAI LỆCH PHÁT NGÔN" : "XÁC THỰC",
-      statusColor: isLowRefuted ? "bg-error-container text-error" : "bg-[#DCFCE7] text-[#15803D]",
-      summary: isLowRefuted
-        ? "Phát hiện luận điểm trong bài báo phóng đại hoặc thiếu bằng chứng xác thực so với dữ liệu thực tế."
-        : "Các số liệu và sự kiện được trích dẫn trong bài báo phù hợp với bối cảnh ghi nhận.",
+      status: c2Status,
+      statusText: c2Text,
+      statusColor: c2Status === "PASSED" ? "emerald" : c2Status === "FAILED" ? "rose" : "amber",
+      summary: hasNumericDistortion
+        ? "Phát hiện sai lệch về tỷ lệ phần trăm hoặc số liệu thống kê giữa phát ngôn bài báo và tài liệu nguồn."
+        : hasRefuted
+        ? "Phát hiện luận điểm trong bài báo phóng đại hoặc thiếu căn cứ thực nghiệm so với dữ liệu thực tế."
+        : "Các số liệu định lượng và phát ngôn được trích dẫn phù hợp với bối cảnh ghi nhận.",
       referenceTitle: "Thẩm định tính toàn vẹn thông tin (Information Integrity)",
-      referenceDetail: "Biên bản Hội đồng Thẩm định Báo chí TrustMedia.",
+      referenceDetail: "Biên bản đối chuẩn Hội đồng Thẩm định Báo chí TrustMedia.",
       complianceNote: "Yêu cầu tuyệt đối không giật tít vượt quá kết quả thực tế.",
-      actionRecommendation: "Cần đính chính hoặc bổ sung ngữ cảnh cho các luận điểm gây hiểu lầm.",
+      actionRecommendation: hasNumericDistortion ? "Cần hiệu đính lại mốc số liệu chính xác theo báo cáo gốc." : undefined,
     },
     {
       id: 3,
+      title: "Minh bạch nguồn tin xuất bản và danh tính tác giả",
+      status: c3Status,
+      statusText: c3Text,
+      statusColor: c3Status === "PASSED" ? "emerald" : c3Status === "FAILED" ? "rose" : "amber",
+      summary: `Bài báo xuất bản bởi '${sourceName}'. Tòa soạn có pháp nhân và danh tính phóng viên / ban biên tập được định danh rõ ràng.`,
+      referenceTitle: "Quy chuẩn minh bạch tòa soạn báo chí và kiểm tra giấy phép xuất bản",
+      referenceDetail: `Đơn vị xuất bản: ${sourceName}. Kiểm tra định danh domain và quy chuẩn tòa soạn.`,
+      complianceNote: "Đạt chuẩn công khai danh tính tác giả và thông tin liên hệ ban biên tập.",
+    },
+    {
+      id: 4,
+      title: "Cơ chế đính chính, phản hồi và đối thoại độc giả",
+      status: c4Status,
+      statusText: c4Text,
+      statusColor: c4Status === "PASSED" ? "emerald" : "amber",
+      summary: "Tòa soạn duy trì cơ chế tiếp nhận phản hồi đóng góp bạn đọc. Hệ thống giám sát đối soát quy trình tiếp nhận và xử lý khiếu nại báo chí.",
+      referenceTitle: "Hồ sơ đối thoại và cơ chế đính chính thông tin (COPE Guidelines)",
+      referenceDetail: `Ghi nhận kênh tiếp nhận phản biện báo chí từ ${sourceName}.`,
+      complianceNote: "Thời hạn phản hồi chuẩn theo quy định: 48 giờ làm việc kể từ lúc tiếp nhận.",
+    },
+    {
+      id: 5,
       title: "Tính khách quan, cân bằng và toàn vẹn ngữ cảnh nội dung",
-      status: "PASSED",
-      statusText: "ĐẠT CHUẨN",
-      statusColor: "bg-[#DCFCE7] text-[#15803D]",
-      summary: `Nội dung bài viết phản ánh thông tin có bối cảnh rõ ràng, hạn chế tối đa suy diễn chủ quan hoặc cắt xén phát ngôn.`,
-      referenceTitle: "Thẩm định tính toàn vẹn ngữ cảnh (Contextual Integrity)",
+      status: c5Status,
+      statusText: c5Text,
+      statusColor: c5Status === "PASSED" ? "emerald" : c5Status === "FAILED" ? "rose" : "amber",
+      summary: hasMisleading
+        ? "Bài báo có dấu hiệu đánh tráo quan hệ tương quan thành nhân quả hoặc cường điệu hóa kết luận giả thuyết."
+        : "Nội dung bài viết phản ánh thông tin có bối cảnh khách quan, hạn chế tối đa suy diễn chủ quan hoặc cắt xén câu chữ.",
+      referenceTitle: "Thẩm định tính toàn vẹn ngữ cảnh (Contextual Integrity & Anti-Distortion)",
       referenceDetail: `Bài báo: ${detail.title} · Xuất bản: ${sourceName}.`,
-      complianceNote: "Tuân thủ quy chuẩn đạo đức báo chí và kiểm chứng khách quan.",
+      complianceNote: "Tuân thủ quy chuẩn đạo đức báo chí và nguyên tắc khách quan khoa học.",
     },
   ];
 }
@@ -700,8 +766,41 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
       };
     });
 
-    const credScore = detailAny.media_credibility?.overall_credibility_score ?? 82;
-    const credRank = credScore >= 80 ? "HẠNG A- (KHÁ TỐT)" : credScore >= 70 ? "HẠNG B (TRUNG BÌNH KHÁ)" : "HẠNG C (CẦN KIỂM SOÁT)";
+    const credObj = (detail as any).credibility || (detail as any).media_credibility || (detail as any).fact_checking_report?.media_credibility_isolated || {};
+
+    let credScore = credObj.transparency_score ?? credObj.overall_credibility_score;
+    if (credScore === undefined || credScore === null) {
+      if (claimsMapped.length > 0) {
+        const claimWeights = claimsMapped.map((c) => {
+          if (c.verdict === "SUPPORTED") return 92;
+          if (c.verdict === "PARTIALLY_SUPPORTED") return 74;
+          if (c.verdict === "NOT_ENOUGH_INFORMATION") return 65;
+          if (c.verdict === "NOT_CHECKABLE") return 70;
+          if (c.verdict === "MISLEADING") return 40;
+          if (c.verdict === "REFUTED") return 25;
+          if (c.verdict === "CONFLICTING_EVIDENCE") return 50;
+          return 70;
+        });
+        credScore = Math.round(claimWeights.reduce((a, b) => a + b, 0) / claimWeights.length);
+      } else {
+        credScore = 80;
+      }
+    } else {
+      // Calibrate transparency with claim refutation penalty if present
+      const refutedCount = claimsMapped.filter((c) => c.verdict === "REFUTED").length;
+      if (refutedCount > 0 && claimsMapped.length > 0) {
+        const penalty = (refutedCount / claimsMapped.length) * 40;
+        credScore = Math.max(20, Math.round(credScore - penalty));
+      }
+    }
+
+    const credRank = credScore >= 85
+      ? "HẠNG A+ (XUẤT SẮC)"
+      : credScore >= 75
+      ? "HẠNG A- (KHÁ TỐT)"
+      : credScore >= 60
+      ? "HẠNG B (TRUNG BÌNH)"
+      : "HẠNG C (CẦN KIỂM SOÁT)";
 
     const titleLower = (detail.title || "").toLowerCase();
     const contentLower = (detail.content || "").toLowerCase();

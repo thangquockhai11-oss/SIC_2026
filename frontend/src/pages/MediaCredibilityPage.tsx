@@ -52,6 +52,50 @@ export default function MediaCredibilityPage() {
 
   const criteria: EditorialCriterion[] = article.criteria || [];
 
+  // Dynamic calculations for the transparency metric visualizer
+  const score = Math.round(article.transparency_score ?? 82);
+
+  // Dynamic gauge radial circumference & stroke-dashoffset (Radius = 40, C = 2*PI*40 = 251.2)
+  const circumference = 251.2;
+  const strokeDashoffset = Math.max(0, Math.min(circumference, circumference * (1 - score / 100)));
+
+  // Dynamic criteria breakdown counts and percentages
+  const passedCount = criteria.filter((c) => c.status === "PASSED").length;
+  const failedCount = criteria.filter((c) => c.status === "FAILED").length;
+  const inReviewCount = criteria.filter((c) => c.status === "IN_REVIEW").length;
+  const totalCriteria = criteria.length || 1;
+  const passedPct = Math.round((passedCount / totalCriteria) * 100);
+  const inReviewPct = Math.round((inReviewCount / totalCriteria) * 100);
+  const failedPct = Math.max(0, 100 - passedPct - inReviewPct);
+
+  // Dynamic rank label and responsive color palettes
+  let rankLabel = article.transparency_rank;
+  let rankBadgeClass = "bg-emerald-700 text-white";
+  let ringColorClass = "text-emerald-600";
+  let scoreColorClass = "text-primary";
+
+  if (score >= 85) {
+    rankLabel = rankLabel || "HẠNG A+ (XUẤT SẮC)";
+    rankBadgeClass = "bg-emerald-700 text-white";
+    ringColorClass = "text-emerald-600";
+    scoreColorClass = "text-emerald-700";
+  } else if (score >= 75) {
+    rankLabel = rankLabel || "HẠNG A- (KHÁ TỐT)";
+    rankBadgeClass = "bg-teal-700 text-white";
+    ringColorClass = "text-teal-600";
+    scoreColorClass = "text-teal-700";
+  } else if (score >= 60) {
+    rankLabel = rankLabel || "HẠNG B (TRUNG BÌNH)";
+    rankBadgeClass = "bg-amber-600 text-white";
+    ringColorClass = "text-amber-500";
+    scoreColorClass = "text-amber-700";
+  } else {
+    rankLabel = rankLabel || "HẠNG C (CẦN KIỂM SOÁT)";
+    rankBadgeClass = "bg-rose-700 text-white";
+    ringColorClass = "text-rose-600";
+    scoreColorClass = "text-rose-700";
+  }
+
   const handleExportPDF = () => {
     window.print();
   };
@@ -183,8 +227,8 @@ export default function MediaCredibilityPage() {
                 <span className="font-label-md text-label-md text-on-surface-variant font-medium">
                   Chỉ số minh bạch tổng thể
                 </span>
-                <span className="px-2.5 py-0.5 rounded-full bg-primary-container text-on-primary font-label-sm text-label-sm font-semibold tracking-wide">
-                  {article.transparency_rank || "HẠNG A- (KHÁ TỐT)"}
+                <span className={`px-2.5 py-0.5 rounded-full font-label-sm text-label-sm font-semibold tracking-wide ${rankBadgeClass}`}>
+                  {rankLabel}
                 </span>
               </div>
 
@@ -192,8 +236,8 @@ export default function MediaCredibilityPage() {
               <div className="flex items-center justify-between py-space-sm">
                 <div className="flex flex-col">
                   <div className="flex items-baseline gap-1">
-                    <span className="font-display-lg text-display-lg text-primary tracking-tight font-bold">
-                      {article.transparency_score || 82}
+                    <span className={`font-display-lg text-display-lg tracking-tight font-bold ${scoreColorClass}`}>
+                      {score}
                     </span>
                     <span className="font-headline-sm text-headline-sm text-outline">/100</span>
                   </div>
@@ -213,21 +257,21 @@ export default function MediaCredibilityPage() {
                       strokeWidth="8"
                     ></circle>
                     <circle
-                      className="text-primary-container transition-all duration-1000 ease-out"
+                      className={`${ringColorClass} transition-all duration-1000 ease-out`}
                       cx="50"
                       cy="50"
                       fill="transparent"
                       r="40"
                       stroke="currentColor"
-                      strokeDasharray="251.2"
-                      strokeDashoffset="45.2"
+                      strokeDasharray={circumference}
+                      strokeDashoffset={strokeDashoffset}
                       strokeLinecap="round"
                       strokeWidth="8"
                     ></circle>
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="material-symbols-outlined text-[20px] text-primary-container">
-                      verified_user
+                    <span className={`material-symbols-outlined text-[20px] ${ringColorClass}`}>
+                      {score >= 75 ? "verified_user" : score >= 60 ? "shield" : "warning"}
                     </span>
                   </div>
                 </div>
@@ -237,12 +281,32 @@ export default function MediaCredibilityPage() {
               <div className="pt-space-sm flex flex-col gap-1.5">
                 <div className="flex justify-between text-label-sm font-label-sm text-on-surface-variant">
                   <span>Tiến độ tiêu chí đã thẩm định</span>
-                  <span className="font-semibold text-on-surface">3 Đạt · 1 Chưa đạt · 1 Đang đối soát</span>
+                  <span className="font-semibold text-on-surface">
+                    {passedCount} Đạt · {failedCount} Chưa đạt · {inReviewCount} Đang đối soát
+                  </span>
                 </div>
                 <div className="w-full h-2 rounded-full bg-surface-container-highest overflow-hidden flex">
-                  <div className="h-full bg-emerald-600" style={{ width: "60%" }} title="Đạt: 60%"></div>
-                  <div className="h-full bg-amber-500" style={{ width: "20%" }} title="Đang đối soát: 20%"></div>
-                  <div className="h-full bg-rose-600" style={{ width: "20%" }} title="Chưa đạt: 20%"></div>
+                  {passedPct > 0 && (
+                    <div
+                      className="h-full bg-emerald-600 transition-all duration-500"
+                      style={{ width: `${passedPct}%` }}
+                      title={`Đạt: ${passedCount}/${totalCriteria} (${passedPct}%)`}
+                    />
+                  )}
+                  {inReviewPct > 0 && (
+                    <div
+                      className="h-full bg-amber-500 transition-all duration-500"
+                      style={{ width: `${inReviewPct}%` }}
+                      title={`Đang đối soát: ${inReviewCount}/${totalCriteria} (${inReviewPct}%)`}
+                    />
+                  )}
+                  {failedPct > 0 && (
+                    <div
+                      className="h-full bg-rose-600 transition-all duration-500"
+                      style={{ width: `${failedPct}%` }}
+                      title={`Chưa đạt: ${failedCount}/${totalCriteria} (${failedPct}%)`}
+                    />
+                  )}
                 </div>
               </div>
             </div>
