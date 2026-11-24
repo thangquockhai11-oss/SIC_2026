@@ -18,6 +18,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 from app.core.config import get_settings
+from app.services.gemini_model_router import GeminiTaskType, get_model_router
 
 logger = logging.getLogger(__name__)
 
@@ -90,8 +91,8 @@ class GeminiNLPService:
 
     def __init__(self):
         self.settings = get_settings()
-        self.client = None
-        self._init_gemini_client()
+        self.router = get_model_router()
+        self.client = self.router.client
 
     def _init_gemini_client(self):
         api_key = (
@@ -122,7 +123,7 @@ class GeminiNLPService:
                     f"Bối cảnh bài báo: \"{context[:300]}\"\n"
                 )
                 response = self.client.models.generate_content(
-                    model="gemini-2.5-flash",
+                    model=self.router.hydrogen_model,
                     contents=prompt,
                     config=types.GenerateContentConfig(
                         response_mime_type="application/json",
@@ -192,7 +193,7 @@ class GeminiNLPService:
                 )
 
                 response = self.client.models.generate_content(
-                    model="gemini-2.5-flash",
+                    model=self.router.hydrogen_model,
                     contents=prompt,
                     config=types.GenerateContentConfig(
                         response_mime_type="application/json",

@@ -28,7 +28,11 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 1440
     gemini_api_key: str | None = None
-    ai_model: str = "gemini-2.5-flash"
+    gemini_hydrogen_model: str = "gemini-4-hydrogen"
+    gemini_neon_model: str = "gemini-4-neon"
+    gemini_default_model: str = "gemini-4-hydrogen"
+    gemini_complex_model: str = "gemini-4-neon"
+    ai_model: str = "gemini-4-hydrogen"
 
 
 @lru_cache(maxsize=1)

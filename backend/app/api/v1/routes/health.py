@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.database.dependencies import get_db_session, get_redis_client
 from app.schemas.health import HealthResponse, ReadinessResponse
+from app.services.gemini_model_router import get_model_router
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -48,3 +49,10 @@ def readiness(
             detail={"status": "not_ready", "checks": checks},
         )
     return ReadinessResponse(status="ready", checks=checks)
+
+
+@router.get("/gemini", summary="Check Gemini 4 Hydrogen and Neon dual-model routing status")
+def gemini_routing_health():
+    """Report status of Gemini 4 Hydrogen (Primary) and Gemini 4 Neon (Critic)."""
+    router_svc = get_model_router()
+    return router_svc.get_routing_status()
