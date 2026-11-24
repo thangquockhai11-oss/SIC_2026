@@ -1,7 +1,8 @@
 """News Analyzer endpoints: submit, polling, and results."""
 
+import json
 import logging
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
