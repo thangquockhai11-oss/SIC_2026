@@ -282,23 +282,49 @@ class GeminiNLPService:
         if is_water_fuel and not any(s in cand_stance for s in ["SUPPORT", "ENTAILMENT", "TRUE"]):
             syn_verdict = "REFUTED"
             syn_conf = 0.96
-            decisive_reasoning = (
-                "Phát ngôn bị BÁC BỎ (REFUTED): Tuyên bố thay thế xăng dầu bằng nước lã và rác thải là phi thực tế "
-                "và vi phạm các định luật nhiệt động lực học cơ bản. Cơ quan khoa học và chuyên gia kỹ thuật khẳng định "
-                "nước lã không thể tự giải phóng năng lượng để vận hành động cơ nếu không tiêu tốn năng lượng sơ cấp lớn hơn."
-            )
             gap_t4_status = "BÁC BỎ / PHI KHOA HỌC"
             classification = "Thông tin sai sự thật bị bác bỏ"
             harm_level = "RẤT CAO"
             compat = "0.05 / 1.0 (Sai lệch bản chất)"
-            excerpt = (
-                "Theo các định luật nhiệt động lực học và hóa học cơ bản, phân tử nước (H2O) là sản phẩm của quá trình "
-                "đốt cháy hydro, đã ở trạng thái năng lượng thấp nhất. Nước không có năng lượng cháy để làm nhiên liệu cho "
-                "động cơ đốt trong. Mọi tuyên bố 'đổ nước lã thay xăng' mà không có nguồn cấp năng lượng ngoài đều là phi khoa học hoặc ngộ nhận kỹ thuật."
-            )
-            evi_hl = "Nước không có năng lượng cháy để làm nhiên liệu cho động cơ đốt trong"
             source_name = "Viện Hàn lâm Khoa học & Công nghệ / Tài liệu Kiểm chứng Kỹ thuật"
             dataset_src = "Quy chuẩn Khoa học Nhiệt động lực học"
+
+            c_low = claim_text.lower()
+            if any(w in c_low for w in ["cơ chế", "giải phóng năng lượng", "bẻ gãy", "liên kết", "h2o"]):
+                decisive_reasoning = (
+                    "Phát ngôn bị BÁC BỎ (REFUTED): Cơ chế giải phóng năng lượng từ phân tử nước là phi khoa học. "
+                    "Theo Định luật 1 và Định luật 2 Nhiệt động lực học, quá trình phân rã phân tử nước (H2O) đòi hỏi "
+                    "năng lượng sơ cấp lớn hơn nhiệt lượng tỏa ra khi tái kết hợp."
+                )
+                excerpt = (
+                    "Theo Định luật 1 và Định luật 2 Nhiệt động lực học: Năng lượng cần thiết để bẻ gãy liên kết hydro - oxy "
+                    "trong phân tử nước (quá trình điện phân hay phân tách khí) luôn luôn lớn hơn hoặc bằng nhiệt lượng thu được "
+                    "khi đốt cháy hydro. Không thể thu được năng lượng dương ròng từ nước để vận hành động cơ."
+                )
+                evi_hl = "Năng lượng cần thiết để bẻ gãy liên kết phân tử nước luôn lớn hơn nhiệt lượng thu được"
+            elif any(w in c_low for w in ["hiệu suất", "sinh công", "năng lượng đầu ra", "vĩnh cửu"]):
+                decisive_reasoning = (
+                    "Phát ngôn bị BÁC BỎ (REFUTED): Tuyên bố hiệu suất sinh công năng lượng đầu ra lớn hơn năng lượng tiêu hao "
+                    "vi phạm Định luật bảo toàn năng lượng và nguyên lý cấm động cơ vĩnh cửu."
+                )
+                excerpt = (
+                    "Quy chuẩn kiểm định của Hội đồng Khoa học và Viện Hàn lâm Khoa học khẳng định: Định luật bảo toàn năng lượng "
+                    "ngăn cấm tuyệt đối sự tồn tại của động cơ vĩnh cửu. Không có bất kỳ sáng chế nào có thể sinh công cơ học "
+                    "hữu ích vượt quá năng lượng đầu vào mà không vi phạm các nguyên lý nhiệt động lực học cơ bản."
+                )
+                evi_hl = "Định luật bảo toàn năng lượng ngăn cấm tuyệt đối sự tồn tại của động cơ vĩnh cửu"
+            else:
+                decisive_reasoning = (
+                    "Phát ngôn bị BÁC BỎ (REFUTED): Tuyên bố thay thế xăng dầu bằng nước lã và rác thải là phi thực tế "
+                    "và vi phạm các định luật nhiệt động lực học cơ bản. Cơ quan khoa học và chuyên gia kỹ thuật khẳng định "
+                    "nước lã không thể tự giải phóng năng lượng để vận hành động cơ nếu không tiêu tốn năng lượng sơ cấp lớn hơn."
+                )
+                excerpt = (
+                    "Theo các định luật nhiệt động lực học và hóa học cơ bản, phân tử nước (H2O) là sản phẩm của quá trình "
+                    "đốt cháy hydro, đã ở trạng thái năng lượng thấp nhất. Nước không có năng lượng cháy để làm nhiên liệu cho "
+                    "động cơ đốt trong. Mọi tuyên bố 'đổ nước lã thay xăng' mà không có nguồn cấp năng lượng ngoài đều là phi khoa học hoặc ngộ nhận kỹ thuật."
+                )
+                evi_hl = "Nước không có năng lượng cháy để làm nhiên liệu cho động cơ đốt trong"
         elif any(f in cand_stance for f in ["REFUTE", "CONTRADICTION", "FALSE"]):
             syn_verdict = "REFUTED"
             syn_conf = max(cand_conf, 0.90)

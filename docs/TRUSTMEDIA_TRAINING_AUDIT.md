@@ -151,3 +151,4 @@ Do môi trường không có GPU NVIDIA CUDA khả dụng:
 4. **Phase 8 & 12 — Evaluation & Benchmark:** Đánh giá trên tập Test độc lập (Accuracy, Macro-F1, Confusion Matrix, Per-class metrics, Latency).
 5. **Phase 10 & 11 — Model Registry & Integration:** Lưu trữ checkpoint phiên bản mới vào `ml/checkpoints/` và tích hợp trực tiếp vào `fact_checking_agent.py` và `model_manager.py`.
 6. **Phase 13 — Final Report:** Lập báo cáo tổng kết thực nghiệm hoàn chỉnh tại `docs/TRUSTMEDIA_AI_TRAINING_REPORT.md`.
+

@@ -194,29 +194,39 @@ def fetch_and_extract_article(url: str) -> tuple[str, str]:
     for tag in soup(["script", "style", "nav", "footer", "header", "form", "iframe", "noscript", "aside", "svg", "button", "figure", "figcaption"]):
         tag.decompose()
 
-    # Also decompose footer/boilerplate containers by class and id
+    # Also decompose footer/boilerplate/header/masthead containers by class and id
     for selector in [
         "[class*='footer']", "[id*='footer']", "[class*='bottom']", "[class*='copyright']",
         "[class*='license']", "[class*='lien-he']", "[class*='contact']", "[class*='toa-soan']",
         "[class*='toasoan']", "[class*='ban-quyen']", "[class*='meta-bottom']", "[class*='social']",
         "[class*='share']", "[class*='breadcrumb']", "[class*='comment']", "[class*='author-bio']",
-        "[class*='box-info']", "[class*='thong-tin-toa-soan']", "[id*='copyright']"
+        "[class*='box-info']", "[class*='thong-tin-toa-soan']", "[id*='copyright']",
+        "[class*='masthead']", "[id*='masthead']", "[class*='site-header']", "[id*='site-header']",
+        "[class*='topbar']", "[class*='top-bar']", "[class*='banner']", "[class*='header-top']"
     ]:
         for el in soup.select(selector):
             el.decompose()
 
     def is_boilerplate_text(t: str) -> bool:
-        """Filter out press license, address, hotline, copyright, and footer metadata."""
-        tl = t.lower()
+        """Filter out press license, address, hotline, copyright, masthead, and footer metadata."""
+        tl = t.lower().strip()
         patterns = [
             "trụ sở:", "trụ sở chính", "điện thoại:", "đt:", "fax:", "email:",
             "đường dây nóng", "hotline", "giấy phép hoạt động", "giấy phép xuất bản",
             "giấy phép số", "bản quyền thuộc", "©", "copyright", "tổng biên tập",
             "phó tổng biên tập", "cơ quan chủ quản", "ghi rõ nguồn", "mọi hành vi sao chép",
             "cục thông tin và truyền thông", "toà soạn:", "tòa soạn:", "liên hệ quảng cáo",
-            "phát hành lại thông tin", "báo điện tử của chính phủ"
+            "phát hành lại thông tin", "báo điện tử của chính phủ", "báo điện tử chính phủ",
+            "cộng hòa xã hội chủ nghĩa việt nam", "chính phủ nước cộng hòa",
+            "độc lập - tự do - hạnh phúc", "độc lập tự do hạnh phúc",
+            "cổng thông tin điện tử", "báo điện tử", "chịu trách nhiệm nội dung",
+            "thông tin xuất bản", "tạp chí điện tử"
         ]
-        return any(p in tl for p in patterns)
+        if any(p in tl for p in patterns):
+            return True
+        if "cộng hòa xã hội chủ nghĩa" in tl:
+            return True
+        return False
 
     # Extract title with multi-layer fallback
     title = ""
