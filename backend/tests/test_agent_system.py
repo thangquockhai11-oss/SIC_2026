@@ -29,7 +29,9 @@ def test_claim_supported_by_evidence():
     relation, conf, probs = model_manager.run_nli_inference(claim_text, evidence_text)
     assert relation == "SUPPORTS"
     assert conf > 0.5
-    assert probs["SUPPORTS"] > probs["REFUTES"]
+    sup_prob = probs.get("SUPPORTS", probs.get("ENTAILMENT", 0.0))
+    ref_prob = probs.get("REFUTES", probs.get("CONTRADICTION", 0.0))
+    assert sup_prob > ref_prob
 
 
 # ---------------------------------------------------------------------------
@@ -42,7 +44,9 @@ def test_claim_refuted_by_evidence():
     relation, conf, probs = model_manager.run_nli_inference(claim_text, evidence_text)
     assert relation == "REFUTES"
     assert conf > 0.5
-    assert probs["REFUTES"] > probs["SUPPORTS"]
+    sup_prob = probs.get("SUPPORTS", probs.get("ENTAILMENT", 0.0))
+    ref_prob = probs.get("REFUTES", probs.get("CONTRADICTION", 0.0))
+    assert ref_prob > sup_prob
 
 
 # ---------------------------------------------------------------------------

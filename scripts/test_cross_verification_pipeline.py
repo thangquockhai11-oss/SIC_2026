@@ -32,3 +32,4 @@ print("\n=== ARTICLE LEVEL REPORT ===")
 rep = trace.get("article_level_report", {})
 for k, v in rep.items():
     print(f"  {k}: {v}")
+

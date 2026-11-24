@@ -34,3 +34,4 @@
 - **Đánh giá thực nghiệm:**
   - Trong thẩm định tin tức, **False Positive (Kéo nhầm tài liệu không liên quan rồi kết luận mâu thuẫn/bác bỏ)** là lỗi gây tổn hại nghiêm trọng nhất đến uy tín hệ thống (như trường hợp bài báo trứng gà giả lại kéo bài viết biên giới Trung–Nga).
   - Việc áp dụng tỷ lệ từ khóa chuyên môn cốt lõi $\ge 30\%$ và loại trừ từ dừng địa lý giúp giảm tỷ lệ phản chứng giả (False Contradiction Rate) từ **34.2% xuống 0.0%**, trong khi vẫn bảo toàn đầy đủ các bằng chứng thực sự liên quan.
+

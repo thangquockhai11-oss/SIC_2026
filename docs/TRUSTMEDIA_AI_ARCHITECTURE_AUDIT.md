@@ -97,3 +97,4 @@ flowchart TD
   - `CONFLICTING_EVIDENCE`: Tồn tại tài liệu mâu thuẫn giữa các cơ quan độc lập.
   - `NOT_ENOUGH_INFORMATION`: Kho tri thức ngoại vi không đủ dữ liệu để khẳng định.
   - `NOT_CHECKABLE`: Ý kiến chủ quan, nhận định cảm tính hoặc dự báo tương lai.
+

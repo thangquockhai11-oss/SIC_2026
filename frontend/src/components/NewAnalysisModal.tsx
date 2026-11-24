@@ -47,6 +47,7 @@ export default function NewAnalysisModal({ isOpen, onClose }: NewAnalysisModalPr
   const [sourceUrl, setSourceUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [statusText, setStatusText] = useState("");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const showModal = isOpen !== undefined ? isOpen : isModalOpen;
   const handleClose = onClose || closeModal;
@@ -57,6 +58,7 @@ export default function NewAnalysisModal({ isOpen, onClose }: NewAnalysisModalPr
     e.preventDefault();
     if (!content.trim() && !sourceUrl.trim()) return;
 
+    setErrorMessage(null);
     setLoading(true);
     setStatusText("Đang khởi tạo tác nhân AI & truy xuất bằng chứng đối chiếu...");
 
@@ -92,7 +94,15 @@ export default function NewAnalysisModal({ isOpen, onClose }: NewAnalysisModalPr
       }
       throw new Error("Quá thời gian chờ phân tích (Timeout).");
     } catch (err: any) {
-      alert("Lỗi khi thẩm định: " + (err.message || String(err)));
+      const detailMsg =
+        err.response?.data?.detail ||
+        err.response?.data?.message ||
+        err.message ||
+        String(err);
+      setErrorMessage(detailMsg);
+      if (mode === "url" && (detailMsg.includes("JavaScript") || detailMsg.includes("liên kết") || detailMsg.includes("dán trực tiếp"))) {
+        setMode("text");
+      }
       setLoading(false);
     }
   };
@@ -130,6 +140,17 @@ export default function NewAnalysisModal({ isOpen, onClose }: NewAnalysisModalPr
 
         {/* Body */}
         <form onSubmit={handleSubmit} className="p-space-lg flex flex-col gap-space-md">
+          {/* Error Banner */}
+          {errorMessage && (
+            <div className="p-3.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300 flex items-start gap-2.5 font-body-sm text-body-sm animate-fadeIn">
+              <span className="material-symbols-outlined text-red-500 text-[20px] flex-shrink-0 mt-0.5">error</span>
+              <div className="flex-1">
+                <span className="font-semibold block text-red-800 dark:text-red-200">Thông báo từ hệ thống thẩm định:</span>
+                <span className="mt-0.5 block leading-relaxed">{errorMessage}</span>
+              </div>
+            </div>
+          )}
+
           {/* Presets */}
           <div>
             <label className="font-label-sm text-label-sm font-semibold uppercase tracking-wider text-outline block mb-1.5">
@@ -206,6 +227,9 @@ export default function NewAnalysisModal({ isOpen, onClose }: NewAnalysisModalPr
                 placeholder="https://tuoitre.vn/... hoặc https://cafef.vn/..."
                 className="w-full px-3 py-2 rounded-lg bg-surface-container-low border border-outline-variant/40 font-body-md text-body-md text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary-container"
               />
+              <p className="text-[12px] text-on-surface-variant/70 mt-1">
+                Hệ thống tự động bóc tách từ các trang báo chí (VnExpress, Tuổi Trẻ, Dân Trí, CafeF, MSN, v.v.). Nếu trang có tường phí hoặc chặn bot, bạn có thể chuyển sang tab &quot;Dán nội dung bài báo&quot;.
+              </p>
             </div>
           ) : (
             <div>

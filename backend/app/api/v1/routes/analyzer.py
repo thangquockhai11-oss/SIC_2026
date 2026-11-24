@@ -58,7 +58,7 @@ def submit_analysis(
     # If URL is provided, fetch and extract safely if content or title is missing
     if source_url and (not content or not title):
         try:
-            extracted_title, extracted_body = fetch_and_extract_article(source_url)
+            extracted_title, extracted_body = fetch_and_extract_article(source_url, hint_title=title)
             if not title:
                 title = extracted_title
             if not content:
@@ -67,7 +67,7 @@ def submit_analysis(
             if not content:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"URL Extraction Error: {str(e)}",
+                    detail=str(e),
                 ) from e
 
     if not content or len(content) < 5:

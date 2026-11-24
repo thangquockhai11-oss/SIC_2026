@@ -71,3 +71,4 @@ Tài liệu này được biên soạn nhằm đóng vai trò kim chỉ nam vậ
 1. **Nguyên tắc Thận trọng Khoa học (Epistemic Humility):** Khi độ liên quan của tài liệu kiểm chứng thấp hơn 0.35, hệ thống luôn ưu tiên xuất ra **`CHƯA ĐỦ CHỨNG CỨ (NOT_ENOUGH_INFORMATION)`**, tuyệt đối không suy đoán hoặc suy luận bắc cầu.
 2. **Minh bạch Thuộc tính Đối soát:** Luôn hiển thị đầy đủ Ma trận Đối soát 7 chiều (Bảng đối chiếu chéo) trên giao diện Frontend để chuyên gia kiểm chứng và độc giả có thể trực tiếp giám định từng tham số.
 3. **Cơ chế Kháng rác định kỳ:** Định kỳ cập nhật danh mục từ khóa lọc giao diện báo chí và danh mục cơ quan thông tấn trong `FactCheckingAgent` và `EvidenceCrossComparator` theo các biến thể mới của các tòa soạn.
+

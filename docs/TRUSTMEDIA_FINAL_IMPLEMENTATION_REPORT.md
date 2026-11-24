@@ -178,3 +178,4 @@ Set-Location d:\HOC\SIC
 ## 12. KẾT LUẬN
 
 Hệ thống TrustMedia AI hiện tại đã vượt xa một mô hình phân loại tin giả đơn thuần. Hệ thống sở hữu năng lực nghiên cứu khoa học thực thụ: **chỉ ra chính xác bài báo nói gì, bằng chứng thực tế nói gì, hai nội dung khớp hoặc mâu thuẫn ở thuộc tính nào, và đưa ra phán quyết học thuật có đầy đủ dẫn chứng truy vết minh bạch.**
+

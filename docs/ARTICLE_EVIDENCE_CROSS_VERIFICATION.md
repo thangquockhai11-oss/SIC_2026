@@ -148,3 +148,4 @@ Tại giao diện người dùng `frontend/src/pages/FactCheckingPage.tsx`:
    - `ĐỘ TIN CẬY CAO` (NÊN TIN CẬY)
    - `ĐỘ TIN CẬY TRUNG BÌNH` (THAM KHẢO CÓ CHỌN LỌC)
    - `KHÔNG NÊN TIN CẬY` (CẢNH BÁO SAI SỰ THẬT)
+

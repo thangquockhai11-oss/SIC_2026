@@ -84,3 +84,4 @@ Báo cáo đo lường định lượng năng lực của hệ thống đối so
 - **Recall on Boilerplate / Administrative Filtering:** 100% (Loại bỏ triệt để các câu như *"Khi nhìn thấy dấu tích xanh...", "Trụ sở: 16 Lê Hồng Phong...", "Bấm theo dõi Google News..."*)
 - **False Contradiction Rate:** Giảm từ **34.2% xuống 0.0%** trên bộ dữ liệu kiểm chuẩn nhờ cơ chế Topic Domain Gating và Wikitext Sanitization.
 - **Abstention Appropriateness (Tỷ lệ kiềm chế hợp lý khi thiếu chứng cứ):** 100% đối với các thông tin không có cơ sở dữ liệu đối chiếu hoặc tài liệu ngoại vi không cùng chủ đề.
+

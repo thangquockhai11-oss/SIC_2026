@@ -54,3 +54,4 @@ Hệ thống tuân thủ nghiêm ngặt nguyên tắc **Zero Data Leakage**:
 1. **Disjoint Source Partitioning:** Tập kiểm thử (Test Set) của ViFactCheck được giữ nguyên vẹn từ bản phát hành chính thức của AAAI-25, bảo đảm không có bài báo hoặc ngữ cảnh trùng lặp giữa tập Train và tập Test.
 2. **Temporal Split Validation:** Không sử dụng các bài báo tương lai để huấn luyện mô hình dự đoán quá khứ.
 3. **No Test Set Feedback:** Quá trình tinh chỉnh siêu tham số (Hyperparameter Tuning) và lựa chọn đặc trưng chỉ sử dụng tập Validation / Cross-Validation (K-Fold CV, $K=3$), tập Test chỉ được mở ra ở bước đánh giá cuối cùng.
+

@@ -36,3 +36,4 @@ Do môi trường phần cứng máy chủ hiện tại sử dụng đồ họa 
 3. **Phân tích Thuộc tính & Ngữ nghĩa Kép (Task A + Task B):**
    - Thuật toán trích xuất thuộc tính cấu trúc 7 chiều kết hợp rule-based tri thức IFCN và NLI đã hiệu chuẩn.
    - Hoàn toàn độc lập với GPU, đảm bảo tính tái lập (Reproducible) 100% trên mọi máy chủ tiêu chuẩn.
+

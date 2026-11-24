@@ -72,3 +72,4 @@ D:\HOC\SIC
 ### 3.2. Thành phần cần duy trì và giám sát
 1. **Giám sát kết nối Live Web (Google RSS / DuckDuckGo Lite):** Cần duy trì cơ chế fallback khi các dịch vụ bên ngoài kích hoạt CAPTCHA/HTTP 202 bằng cách ưu tiên kho dữ liệu cục bộ ViFactCheck.
 2. **Quản lý phiên bản mô hình (Model Versioning):** Duy trì `ml/registry/registry.json` để dễ dàng rollback khi cập nhật trọng số mới.
+
