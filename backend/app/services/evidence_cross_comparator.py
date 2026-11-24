@@ -156,7 +156,8 @@ class EvidenceCrossComparator:
             "rồi", "ngay", "đang", "đã", "sẽ", "được", "bị", "lấy", "mang", "đưa", "đến",
             "đi", "về", "ở", "có", "là", "của", "và", "như", "theo", "tại", "với", "các",
             "những", "này", "khu", "vực", "thành", "phố", "tỉnh", "cư", "dân", "hôm", "phát", "hiện",
-            "phía", "tây", "bắc", "nam", "đường", "biên", "giới", "mô", "tả", "thế", "kỷ"
+            "phía", "tây", "bắc", "nam", "đường", "biên", "giới", "mô", "tả", "thế", "kỷ",
+            "núi", "đỉnh", "sông", "hồ", "biển", "đảo", "rừng", "thung", "lũng", "dãy", "đồi", "dòng", "ngọn"
         }
         claim_tokens = [w for w in re.findall(r"\w+", claim_low) if len(w) > 2 and w not in GENERIC_AND_GEO_TERMS]
         ev_tokens_set = set(re.findall(r"\w+", ev_low))
@@ -189,21 +190,37 @@ class EvidenceCrossComparator:
 
         # 2. Entity Matching
         subject_match = "NOT_MENTIONED"
-        if claim_attrs.subject:
-            s_low = claim_attrs.subject.lower()
+        notes = "Không nêu thực thể."
+        s_low = (claim_attrs.subject or "").lower().strip()
+        o_low = (claim_attrs.object or "").lower().strip()
+
+        if s_low:
+            s_words = [w for w in s_low.split() if len(w) > 2 and w not in ["mới", "cũ", "vừa", "qua", "một", "các", "những"]]
             if s_low in ev_low:
                 subject_match = "MATCH"
                 notes = "Thực thể chính trùng khớp với hồ sơ kiểm chứng."
-            elif any(part in ev_low for part in s_low.split() if len(part) > 2):
+            elif any(part in ev_low for part in s_words):
                 subject_match = "PARTIAL"
                 notes = "Trùng khớp một phần thực thể hoặc thuộc cùng nhóm thực thể liên quan."
             else:
                 subject_match = "MISMATCH"
                 notes = "Không tìm thấy thực thể chính xác trong văn bản tài liệu."
+        elif o_low:
+            if o_low in ev_low or any(phrase in ev_low for phrase in [p.strip() for p in o_low.split(",") if len(p.strip()) > 5]):
+                subject_match = "MATCH"
+                notes = "Chủ đề / đối tượng phát ngôn trùng khớp với hồ sơ kiểm chứng."
+            elif any(part in ev_low for part in o_low.split() if len(part) > 3 and part not in GENERIC_AND_GEO_TERMS):
+                subject_match = "PARTIAL"
+                notes = "Đối tượng phát ngôn có sự tương đồng ngữ cảnh."
+            else:
+                subject_match = "MISMATCH"
+                notes = "Không tìm thấy đối tượng phát ngôn trong tài liệu."
+
+        if claim_attrs.subject or claim_attrs.object:
             matrix.append(ComparisonMatrixRow(
                 attribute="Thực thể chính (Subject / Entity)",
-                claim_val=claim_attrs.subject,
-                evidence_val=ev_attrs.subject or "Được đối chiếu trong ngữ cảnh",
+                claim_val=claim_attrs.subject or claim_attrs.object or "",
+                evidence_val=ev_attrs.subject or ev_attrs.object or "Được đối chiếu trong ngữ cảnh",
                 match_status=subject_match,
                 notes=notes,
             ))
@@ -233,8 +250,8 @@ class EvidenceCrossComparator:
         if loc_match == "MISMATCH":
             entity_match = "PARTIAL" if subject_match == "MATCH" else "MISMATCH"
 
-        # If subject is a complete mismatch, document is irrelevant for claim verification
-        if subject_match == "MISMATCH" and not (has_refute_kw and any(w in ev_low for w in claim_attrs.claim_text.lower().split() if len(w) > 3)):
+        # If subject is a complete mismatch AND document has no core domain overlap, document is irrelevant
+        if subject_match == "MISMATCH" and not is_topically_relevant and not (has_refute_kw and any(w in ev_low for w in claim_attrs.claim_text.lower().split() if len(w) > 3)):
             return EvidenceCrossEvaluation(
                 evidence_id=str(source_metadata.get("chunk_id", "")) if source_metadata else "",
                 source_name=source_name,
@@ -343,15 +360,28 @@ class EvidenceCrossComparator:
         ]
         has_support_kw = any(sk in ev_low for sk in support_keywords)
 
+        # Content words coverage
+        stopwords_vi = {"là", "của", "và", "các", "có", "trong", "được", "cho", "với", "về", "những", "này", "ở", "tại", "theo", "đang", "thì", "mà"}
+        c_words = [w for w in re.findall(r"\w+", claim_attrs.claim_text.lower()) if len(w) > 1 and w not in stopwords_vi]
+        c_cov = sum(1 for w in c_words if w in ev_low) / len(c_words) if c_words else 0.0
+
         if has_refute_kw or relationship_match == "MISMATCH" or negation_match == "MISMATCH":
             relation = "CONTRADICTS"
             confidence = 0.92
             explanation = f"Tài liệu từ '{source_name}' trực tiếp bác bỏ phát ngôn hoặc chỉ ra sai lệch thực chứng nghiêm trọng."
-        elif has_support_kw and entity_match == "MATCH" and numerical_match in ("MATCH", "NOT_MENTIONED"):
-            if numerical_match == "MATCH":
+        elif temporal_match == "MISMATCH":
+            relation = "CONTRADICTS"
+            confidence = 0.90
+            explanation = f"Tài liệu từ '{source_name}' mâu thuẫn về mốc thời gian thực chứng ({claim_attrs.time} vs {ev_attrs.time})."
+        elif numerical_match == "MISMATCH":
+            relation = "PARTIALLY_CONTRADICTS"
+            confidence = 0.88
+            explanation = f"Tài liệu xác nhận sự kiện diễn ra nhưng mâu thuẫn về số liệu/đơn vị tính so với phát ngôn."
+        elif (has_support_kw or c_cov >= 0.65) and entity_match in ("MATCH", "PARTIAL") and numerical_match in ("MATCH", "NOT_MENTIONED") and temporal_match in ("MATCH", "NOT_MENTIONED") and negation_match == "MATCH":
+            if numerical_match == "MATCH" or c_cov >= 0.75:
                 relation = "SUPPORTS"
                 confidence = 0.94
-                explanation = f"Tài liệu từ '{source_name}' xác nhận hoàn toàn phát ngôn về cả thực thể và số liệu thực chứng."
+                explanation = f"Tài liệu từ '{source_name}' xác nhận hoàn toàn phát ngôn về cả thực thể và nội dung sự kiện."
             else:
                 relation = "PARTIALLY_SUPPORTS"
                 confidence = 0.85

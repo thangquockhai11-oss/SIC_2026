@@ -118,8 +118,9 @@ class ClaimArticleAligner:
         # 2. Causal vs Associational
         has_causality = any(cw in t_low for cw in self.causal_words)
 
-        # 3. Negation
-        has_negation = any(re.search(rf"\b{nw}\b", t_low) for nw in self.negation_words)
+        # 3. Negation (exclude non-negation compound nouns like 'không khí', 'hàng không', 'khoảng không')
+        t_neg_clean = re.sub(r"\b(không khí|hàng không|khoảng không|chân không|hư không|khí quyển)\b", " ", t_low)
+        has_negation = any(re.search(rf"\b{nw}\b", t_neg_clean) for nw in self.negation_words)
 
         # 4. Numerical values and units
         num_val, unit = self._extract_first_numerical(text)
