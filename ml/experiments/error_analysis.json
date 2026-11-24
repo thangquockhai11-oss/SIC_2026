@@ -1,0 +1,365 @@
+{
+  "claim_classifier_errors": {
+    "total_errors": 38,
+    "error_rate": 0.0704,
+    "failure_mode_breakdown": {
+      "Numerical/Statistical Ambiguity": 29,
+      "Semantic Ambiguity": 7,
+      "Negation Complexity": 2
+    },
+    "samples": [
+      {
+        "index": 14,
+        "text": "Bên cạnh ông Nguyễn Văn Đạt, còn có 2 người khác phù trách việc giám sát trực tiếp tại kho xe vi phạm.",
+        "true_label": "STATISTICAL_CLAIM",
+        "pred_label": "FACTUAL_CLAIM",
+        "failure_mode": "Numerical/Statistical Ambiguity"
+      },
+      {
+        "index": 24,
+        "text": "TikTok ảnh hưởng tiêu cực đến trẻ vị thanh niên như rơi vào trầm cảm, đau khổ, khuyến khích tự tử hay tự làm đau bản thân, TikTok đã gián tiếp gây ra cái chết cho một bé gái do trào lưu \"ngạt thở\".",
+        "true_label": "QUOTATION_CLAIM",
+        "pred_label": "CAUSAL_CLAIM",
+        "failure_mode": "Semantic Ambiguity"
+      },
+      {
+        "index": 26,
+        "text": "Theo bà Trần Lê Quỳnh Anh, thế hệ Alpha có xu hướng ưa chuộng học tập thụ động và trải nghiệm thực tế, do đó, các chuyên ngành liên quan đến môi trường, y tế và công nghệ cũng sẽ phát triển mạnh trong tương lai.",
+        "true_label": "SCIENTIFIC_CLAIM",
+        "pred_label": "CAUSAL_CLAIM",
+        "failure_mode": "Semantic Ambiguity"
+      },
+      {
+        "index": 30,
+        "text": "Bí thư Lưu Ninh nhấn mạnh Việt Nam không là đối tác thương mại lớn nhất của Quảng Tây nhưng giữa hai bên trong thời gian qua kết quả hợp tác tốt đẹp.",
+        "true_label": "QUOTATION_CLAIM",
+        "pred_label": "FACTUAL_CLAIM",
+        "failure_mode": "Negation Complexity"
+      },
+      {
+        "index": 51,
+        "text": "Phó Phát ngôn Bộ Ngoại giao bà Phạm Thu Hằng 50 tuổi cho biết thêm, không chỉ trong lĩnh vực kinh tế, thương mại đầu tư, mà trong các lĩnh vực khác, như ứng phó với dịch bệnh COVID-19 và phục hồi sau đại dịch.",
+        "true_label": "QUOTATION_CLAIM",
+        "pred_label": "SCIENTIFIC_CLAIM",
+        "failure_mode": "Numerical/Statistical Ambiguity"
+      },
+      {
+        "index": 65,
+        "text": "Giám đốc Công ty Minh Khang - bà Nguyễn Thị Thanh Thùy tại cuộc họp báo cho biết nếu vụ tranh chấp không được giải quyết cặn kẽ thì Minh Khang sẽ đâm đơn kiện Sen Vàng, và bắt bồi thường với số tiền lên đến 1 tỷ đồng.",
+        "true_label": "STATISTICAL_CLAIM",
+        "pred_label": "QUOTATION_CLAIM",
+        "failure_mode": "Numerical/Statistical Ambiguity"
+      },
+      {
+        "index": 67,
+        "text": "BHXH Việt Nam triển khai cung cấp dịch vụ các tin nhắn tra cứu nêu trên qua đầu số 8079 vào cuối năm 2018, với mức phí 1.000 đồng/tin nhắn bằng cách soạn tin BHXH gửi 8079.",
+        "true_label": "STATISTICAL_CLAIM",
+        "pred_label": "HISTORICAL_CLAIM",
+        "failure_mode": "Numerical/Statistical Ambiguity"
+      },
+      {
+        "index": 70,
+        "text": "để phân loại, làm rõ các hành vi đánh bạc và tổ chức đánh bạc để xử lý theo quy định, lực lượng chức năng đã bắt 22 người về trụ sở, ngay sau đó, mạng xã hội lan truyền thông tin rằng ca sĩ - diễn viên Lý Hải cũng liên quan đến vụ đánh bạc này.",
+        "true_label": "STATISTICAL_CLAIM",
+        "pred_label": "FACTUAL_CLAIM",
+        "failure_mode": "Numerical/Statistical Ambiguity"
+      },
+      {
+        "index": 71,
+        "text": "Chiến thắng Bãi Sậy là chiến thắng mang hào khí mạnh mẽ của vua Quang Trung - Nguyễn Huệ và triều đại Tây Sơn.",
+        "true_label": "HISTORICAL_CLAIM",
+        "pred_label": "FACTUAL_CLAIM",
+        "failure_mode": "Semantic Ambiguity"
+      },
+      {
+        "index": 77,
+        "text": "Lực lượng công an phát hiện 218 vụ, 708 người phạm tội về tham nhũng và chức vụ; phát hiện 1.523 vụ, gần 2.000 người phạm tội về trật tự quản lý kinh tế trong quý I năm 2023.",
+        "true_label": "STATISTICAL_CLAIM",
+        "pred_label": "FACTUAL_CLAIM",
+        "failure_mode": "Numerical/Statistical Ambiguity"
+      },
+      {
+        "index": 82,
+        "text": "Nhằm thay cầu cống đập Rạch Chiếc nhỏ hẹp và xuống cấp, cầu Nam Lý  khởi công từ cách đây 7 năm đã hoàn thành 70%, song ngưng trệ từ tháng 4/2019, do vướng mặt bằng 54 hộ dân, tổ chức.",
+        "true_label": "STATISTICAL_CLAIM",
+        "pred_label": "HISTORICAL_CLAIM",
+        "failure_mode": "Numerical/Statistical Ambiguity"
+      },
+      {
+        "index": 99,
+        "text": "Thục Phán (An Dương Vương) là người có học thức, chuyên trồng trọt, thạo cung nỏ, lớn lên làm thủ lĩnh của bộ lạc Tây Âu, góp công lớn cùng tộc người Lạc Việt đánh bại quân Tần xâm lược, thế kỷ 3 trước Công nguyên, sau đó, ông lên ngôi thay thế Hùng Vương, lấy hiệu là An Dương Vương, lập nước Âu Lạc.",
+        "true_label": "HISTORICAL_CLAIM",
+        "pred_label": "FACTUAL_CLAIM",
+        "failure_mode": "Numerical/Statistical Ambiguity"
+      },
+      {
+        "index": 154,
+        "text": "Vinhomes Ocean Park 3 là nơi sinh sống lý tưởng cho các quan chức cấp cao đồng thời còn là nơi nghỉ dưỡng cho những doanh nhân hay các du khách sang trọng.",
+        "true_label": "FACTUAL_CLAIM",
+        "pred_label": "STATISTICAL_CLAIM",
+        "failure_mode": "Numerical/Statistical Ambiguity"
+      },
+      {
+        "index": 160,
+        "text": "Sau khi tham quan, học tập các mô hình du lịch sinh thái và cộng đồng tại hai tỉnh Bến Tre và Trà Vinh, ông cùng với một số người trong hợp tác xã tham gia 5 lớp tập huấn du lịch cộng đồng.",
+        "true_label": "FACTUAL_CLAIM",
+        "pred_label": "STATISTICAL_CLAIM",
+        "failure_mode": "Numerical/Statistical Ambiguity"
+      },
+      {
+        "index": 185,
+        "text": "Đã có 9 người Trung Quốc bị bắn chết trong vụ xả súng và các thi thể của nạn nhân được đưa về thủ đô Bangui của CH Trung Phi.",
+        "true_label": "STATISTICAL_CLAIM",
+        "pred_label": "FACTUAL_CLAIM",
+        "failure_mode": "Numerical/Statistical Ambiguity"
+      },
+      {
+        "index": 205,
+        "text": "Các hệ thống chấp nhận bán lỗ để giải phóng hàng tồn quá nhiều dẫn đến giá thành của mặt hàng Macbook có thể sẽ giảm tiếp lên đến 1 triệu đồng thời gian sắp tới.",
+        "true_label": "STATISTICAL_CLAIM",
+        "pred_label": "CAUSAL_CLAIM",
+        "failure_mode": "Numerical/Statistical Ambiguity"
+      },
+      {
+        "index": 219,
+        "text": "Góp phần xây dựng thành phố xứng tầm danh hiệu \"Huế - Đô thị giảm nhựa\", năm 2024 tỉnh này quyết tâm giảm 50% lượng rác thải nhựa thất thoát ra môi trường.",
+        "true_label": "QUOTATION_CLAIM",
+        "pred_label": "STATISTICAL_CLAIM",
+        "failure_mode": "Numerical/Statistical Ambiguity"
+      },
+      {
+        "index": 239,
+        "text": "Ma nhai ở danh thắng Ngũ Hành Sơn mang nhiều giá trị vượt ra ngoài ranh giới của một quốc gia với nội dung đa dạng, hình thức độc đáo, cùng nhiều thể loại văn học của các vị vua, quan triều Nguyễn, cao tăng, trí thức, có niên đại trải dài từ nửa đầu thế kỷ XV đến thế kỷ XVii.",
+        "true_label": "HISTORICAL_CLAIM",
+        "pred_label": "FACTUAL_CLAIM",
+        "failure_mode": "Semantic Ambiguity"
+      },
+      {
+        "index": 251,
+        "text": "Theo tin tức đưa tin thì ngọn lửa bùng lên và nhanh chóng lan ra, trong cơn hoảng loạn thì cô đã nhảy từ tầng 6 và qua đời do chấn thương quá nặng.",
+        "true_label": "FACTUAL_CLAIM",
+        "pred_label": "STATISTICAL_CLAIM",
+        "failure_mode": "Numerical/Statistical Ambiguity"
+      },
+      {
+        "index": 261,
+        "text": "Khi nhận giải Oscar 2022 diễn viên Brendan Fraser, người giành giải nam chính xuất sắc với phim The Whale, nói: Tôi xin cảm ơn Viện hàn lâm vì vinh dự này và xưởng phim A24 vì đã làm bộ phim can đảm như vậy. Vào một năm sau khi anh ấy giành giải Oscar 2023 thì anh ta đã không nói lời nào khi lên phát biểu.",
+        "true_label": "QUOTATION_CLAIM",
+        "pred_label": "FACTUAL_CLAIM",
+        "failure_mode": "Numerical/Statistical Ambiguity"
+      }
+    ]
+  },
+  "nli_verifier_errors": {
+    "total_errors": 559,
+    "error_rate": 0.3863,
+    "failure_mode_breakdown": {
+      "Semantic Lexical Gap": 315,
+      "Spurious Over-Retrieval Correlation": 99,
+      "Negation Inversion": 83,
+      "Numerical Inconsistency Miss": 62
+    },
+    "samples": [
+      {
+        "index": 1,
+        "statement": "Phần vỏ bánh được làm rất công phu, từ giai đoạn xay gạo đến cuốn bánh hết tổng 4 tiếng đồng hồ.",
+        "evidence": "Gạo tẻ ngon được xay nhuyễn bằng cối đá từ xưa, sau đó loại bỏ tạp chất bằng cách lọc qua nước để lấy bột nõn. Đây là công thức từ thời mẹ ông để lại và vẫn được ông duy trì những năm qua. Khách đến g...",
+        "true_label": "NEUTRAL",
+        "pred_label": "ENTAILMENT",
+        "failure_mode": "Spurious Over-Retrieval Correlation"
+      },
+      {
+        "index": 2,
+        "statement": "Đối tượng cố gắng bỏ chạy sau khi lực lượng công an đón dừng xe để kiểm tra.",
+        "evidence": "Khi lực lượng công an đón dừng xe để kiểm tra, Thành đã tăng tốc độ để bỏ chạy và va chạm với một xe ô tô khác đi ngược chiều",
+        "true_label": "ENTAILMENT",
+        "pred_label": "CONTRADICTION",
+        "failure_mode": "Semantic Lexical Gap"
+      },
+      {
+        "index": 4,
+        "statement": "Tại một địa điểm trên địa bàn huyện Củ Chi, TPHCM, Công an đã phát hiện hai nghi phạm có liên quan đến vụ việc là N. được xác định là mẹ ruột bé Th. và B. là người đàn ông xăm trổ xuất hiện trong video clip được lan truyền những ngày gần đây với nội dung bạo hành.",
+        "evidence": "N. được xác định là mẹ ruột của bé Th. B. chính là người đàn ông xăm trổ trong các clip lan truyền trên mạng xã hội về nội dung bạo hành Công an đã phát hiện B. và N. tại một địa điểm trên địa bàn huy...",
+        "true_label": "ENTAILMENT",
+        "pred_label": "NEUTRAL",
+        "failure_mode": "Semantic Lexical Gap"
+      },
+      {
+        "index": 5,
+        "statement": "Giảm nhẹ công tác tuyên truyền về phòng, chống dịch cúm gia cầm lây lan sang người để người dân hạn chế tiếp xúc với gia cầm ốm, chết và chất thải từ gia cầm bằng cách Sở Thông tin và Truyền thông phối hợp các sở, ngành, Ủy ban nhân dân các quận huyện, thị xã chỉ đạo thực hiện.",
+        "evidence": "Sở Thông tin và Truyền thông phối hợp các sở, ngành, Ủy ban nhân dân các quận huyện, thị xã chỉ đạo tăng cường công tác tuyên truyền về phòng, chống dịch cúm gia cầm lây lan sang người để người dân hạ...",
+        "true_label": "CONTRADICTION",
+        "pred_label": "NEUTRAL",
+        "failure_mode": "Semantic Lexical Gap"
+      },
+      {
+        "index": 7,
+        "statement": "Trong phim Everything Everywhere All at Once diễn viên Quan Kế Huy sinh năm 1890, người giành giải diễn viên nam chính xuất sắc nhất nói lời cảm ơn Viện hàn lâm vì giải thưởng vinh dự này.",
+        "evidence": "Diễn viên Quan Kế Huy, người giành giải diễn viên nam phụ xuất sắc nhất trong phim Everything Everywhere All at Once Cảm ơn Viện hàn lâm vì giải thưởng vinh dự này",
+        "true_label": "CONTRADICTION",
+        "pred_label": "NEUTRAL",
+        "failure_mode": "Semantic Lexical Gap"
+      },
+      {
+        "index": 10,
+        "statement": "Chương trình giáo dục song ngữ sẽ tập trung dạy các môn khoa học tự nhiên bằng tiếng Anh trong giai đoạn hai.",
+        "evidence": "Giai đoạn 2 (2026-2030), đề án tập trung phát triển, nâng cao chất lượng dạy và học các môn học bằng tiếng Anh trong trường chuyên của tỉnh.",
+        "true_label": "CONTRADICTION",
+        "pred_label": "ENTAILMENT",
+        "failure_mode": "Semantic Lexical Gap"
+      },
+      {
+        "index": 11,
+        "statement": "Chân sút Brobbey ở tuổi 23 đã có 12 bàn thắng trên mọi đấu trường mùa này cho Ajax và 35 bàn thắng ở các cấp độ trẻ của Hà Lan sẽ là đối thử của Mbappe.",
+        "evidence": "Chân sút 21 tuổi Brobbey đã có 12 bàn thắng trên mọi đấu trường mùa này cho Ajax và 32 bàn thắng ở các cấp độ trẻ của Hà Lan.",
+        "true_label": "CONTRADICTION",
+        "pred_label": "NEUTRAL",
+        "failure_mode": "Semantic Lexical Gap"
+      },
+      {
+        "index": 12,
+        "statement": "Hầu hết nữ giới sẽ chọn định cư ở quần đảo thay vì tìm nơi khác sinh sống.",
+        "evidence": "Nhiều nữ giới lựa chọn theo học đại học ở các thành phố lớn, sau đó, họ định cư ở thành phố để có được cơ hội việc làm tốt hơn, phù hợp với những ngành nghề mà mình đã theo học. Nhiều người không quay...",
+        "true_label": "CONTRADICTION",
+        "pred_label": "ENTAILMENT",
+        "failure_mode": "Semantic Lexical Gap"
+      },
+      {
+        "index": 15,
+        "statement": "Trong doanh nghiệp và văn phòng thì sử dụng Prompt giúp tiết kiệm thời gian và tăng năng suất làm việc gấp 5 lần so với thông thường khi không sử dụng.",
+        "evidence": "Đối với doanh nghiệp và người làm việc văn phòng, sử dụng Prompt giúp tiết kiệm thời gian và tăng hiệu quả làm việc bằng cách giảm thiểu việc phải nhập dữ liệu thủ công vào các bảng tính và phần mềm q...",
+        "true_label": "NEUTRAL",
+        "pred_label": "CONTRADICTION",
+        "failure_mode": "Negation Inversion"
+      },
+      {
+        "index": 16,
+        "statement": "Câu chuyện về cô gái Tô Thị Sự bị phỏng với việc gom rác vào buổi sáng và tối đến đi hát phòng trà đã khiến nhiều người khâm phục.",
+        "evidence": "Câu chuyện về cô gái bị phỏng sáng đi gom rác tối đi hát phòng trà khiến nhiều người khâm phục. Tô Thị Sự",
+        "true_label": "ENTAILMENT",
+        "pred_label": "NEUTRAL",
+        "failure_mode": "Semantic Lexical Gap"
+      },
+      {
+        "index": 18,
+        "statement": "Đề xuất của EVN đưa ra sau khi đơn vị tư vấn là Ban quản lý dự án điện 4 (thuộc EVN) đã rà soát nhu cầu phụ tải điện và xây dựng các thông báo.",
+        "evidence": "Đề xuất của EVN đưa ra sau khi đơn vị tư vấn là Ban quản lý dự án điện 3 (thuộc EVN) đã rà soát nhu cầu phụ tải điện và xây dựng các phương án. Đề xuất của EVN đưa ra sau khi đơn vị tư vấn là Ban quản...",
+        "true_label": "CONTRADICTION",
+        "pred_label": "NEUTRAL",
+        "failure_mode": "Numerical Inconsistency Miss"
+      },
+      {
+        "index": 20,
+        "statement": "Các thủ thuật phẫu thuật được thực hiện khi trẻ 2 tuổi.",
+        "evidence": "PGS Hoa cho biết bệnh nhi được phẫu thuật hạ tinh hoàn 2 bên xuống bìu lúc 1 tuổi và phẫu thuật tạo hình niệu đạo đưa lỗ tiểu thấp từ vị trí tầng sinh môn lên đỉnh quy đầu khi cháu 22 tháng tuổi.",
+        "true_label": "CONTRADICTION",
+        "pred_label": "ENTAILMENT",
+        "failure_mode": "Semantic Lexical Gap"
+      },
+      {
+        "index": 23,
+        "statement": "Chủ tịch PSSI cố gắng giúp Indonesia giữ quyền đăng cai U20 World Cup 2023, bên cạnh đó Thổng đốc Bali tuyên bố không cho phép đội tuyển quốc gia U20 Iran tham gia giải đấu.",
+        "evidence": "Chủ tịch PSSI, đang tìm cách giúp Indonesia giữ quyền đăng cai U20 World Cup 2023 Thống đốc Bali tuyên bố từ chối cho phép đội tuyển quốc gia U20 Israel tham gia giải đấu",
+        "true_label": "CONTRADICTION",
+        "pred_label": "NEUTRAL",
+        "failure_mode": "Negation Inversion"
+      },
+      {
+        "index": 29,
+        "statement": "Khoảng 1/3 tổng số ngoại hành tinh là siêu Trái Đất - đây là thuật ngữ dùng cho những hành tinh nhỏ hơn Trái Đất và nhẹ hơn hành tinh khí khổng lồ.",
+        "evidence": "Khoảng 1/3 tổng số ngoại hành tinh là siêu Trái Đất Siêu Trái Đất là thuật ngữ dùng cho những hành tinh lớn hơn Trái Đất nhưng nhẹ hơn hành tinh khí khổng lồ.",
+        "true_label": "CONTRADICTION",
+        "pred_label": "ENTAILMENT",
+        "failure_mode": "Semantic Lexical Gap"
+      },
+      {
+        "index": 31,
+        "statement": "Covid-19 đang bước vào giai đoạn cầm chừng do đó việc bắt buộc phải đeo khẩu trang vẫn còn tiếp tục",
+        "evidence": "Trong khi đó, báo Trung Quốc Global Times ngày 29.3 cho biết, chuyên gia về bệnh truyền nhiễm nổi tiếng của Trung Quốc tin rằng nước này bước vào giai đoạn tỷ lệ nhiễm Covid-19 mới thấp, việc đeo khẩu...",
+        "true_label": "CONTRADICTION",
+        "pred_label": "ENTAILMENT",
+        "failure_mode": "Semantic Lexical Gap"
+      },
+      {
+        "index": 35,
+        "statement": "Giám đốc tài chính của Victoria's Secret - Timothy Johnson cho biết, quyết định này được đưa ra trong cuộc họp của ban quản lý nhãn hiệu danh tiếng vào tháng 3/2023, theo đó, công ty sẽ dụa trên tiêu chí tiếp thị để rót tiền vào các hoạt động thương mại.",
+        "evidence": "Timothy Johnson - Giám đốc tài chính của Victoria's Secret cho biết Quyết định này được đưa ra trong cuộc họp của ban quản lý nhãn hiệu danh tiếng vào tháng 3/2023. họ sẽ dựa trên tiêu chí tiếp thị để...",
+        "true_label": "ENTAILMENT",
+        "pred_label": "NEUTRAL",
+        "failure_mode": "Numerical Inconsistency Miss"
+      },
+      {
+        "index": 37,
+        "statement": "Nhiều bình luận bày tỏ sự mong chờ tác phẩm và kỳ vọng vào sự kết hợp của 2 diễn viên Lee Dong Wook và Kim So Yeon chủ yếu đến từ khán giả Việt Nam.",
+        "evidence": "Nhiều bình luận bày tỏ sự mong chờ tác phẩm: Đặc biệt, không ít fan kỳ vọng vào màn kết hợp giữa Lee Dong Wook và Kim So Yeon.",
+        "true_label": "NEUTRAL",
+        "pred_label": "CONTRADICTION",
+        "failure_mode": "Spurious Over-Retrieval Correlation"
+      },
+      {
+        "index": 43,
+        "statement": "Nền cờ có màu đỏ tươi như màu cờ Tổ quốc; biểu tưởng \"Búa - Liềm\" được đặt ở trung tâm lá cờ có màu vàng tươi như màu ngôi sao 5 cánh của cờ Tổ quốc.",
+        "evidence": "Nền cờ màu đỏ tươi (như màu của cờ Tổ quốc); biểu tượng “Búa - Liềm” màu vàng tươi (như màu ngôi sao vàng 5 cánh của cờ Tổ quốc)… \"Búa - Liềm\" đặt ở trung tâm của lá cờ",
+        "true_label": "ENTAILMENT",
+        "pred_label": "CONTRADICTION",
+        "failure_mode": "Semantic Lexical Gap"
+      },
+      {
+        "index": 44,
+        "statement": "Kỷ niệm 1980 năm Ngày mất Hai Bà Trưng (6-2-43 – 6-2-2023 âm lịch) do Hội Liên hiệp Phụ nữ (LHPN) TP.HCM phối hợp Sở Văn hóa - Thể thao và Công viên Lịch sử Văn hóa Dân tộc TP tổ chức vào ngày 25-2.",
+        "evidence": "Ngày 25-2, Hội Liên hiệp Phụ nữ (LHPN) TP.HCM phối hợp Sở Văn hóa - Thể thao và Công viên Lịch sử Văn hóa Dân tộc TP tổ chức kỷ niệm 1980 năm Ngày mất Hai Bà Trưng (6-2-43 – 6-2-2023 âm lịch).",
+        "true_label": "ENTAILMENT",
+        "pred_label": "CONTRADICTION",
+        "failure_mode": "Semantic Lexical Gap"
+      },
+      {
+        "index": 52,
+        "statement": "Với chương trình cử nhân tài năng và cử nhân Asean Co-op, thí sinh đăng ký tối đa ba nguyện vọng đối với tất cả phương thức xét tuyển.",
+        "evidence": "Còn với chương trình cử nhân tài năng và cử nhân Asean Co-op, thí sinh đăng ký tối đa một nguyện vọng đối với mỗi phương thức xét tuyển (xét tuyển học sinh giỏi; quá trình học tập theo tổ hợp môn; dựa...",
+        "true_label": "CONTRADICTION",
+        "pred_label": "ENTAILMENT",
+        "failure_mode": "Semantic Lexical Gap"
+      },
+      {
+        "index": 55,
+        "statement": "Báo Nông thôn ngày nay đã gửi văn bản số 133-CV/NTNN ngày 23-3-2023 đến Cục Báo chí phản ánh vấn đề nhóm phóng viên bị hành hung, cản trở tác nghiệp.",
+        "evidence": "Cục Báo chí nhận được văn bản số 130-CV/NTNN ngày 23-3-2023 của Báo Nông thôn ngày nay, về việc nhóm phóng viên Báo Nông thôn ngày nay/điện tử Dân Việt bị hành hung, cản trở tác nghiệp",
+        "true_label": "CONTRADICTION",
+        "pred_label": "ENTAILMENT",
+        "failure_mode": "Semantic Lexical Gap"
+      },
+      {
+        "index": 59,
+        "statement": "Trận đấu tiếp theo của U20 Việt Nam là gặp U20 Iran tại VCK U20 châu Á.",
+        "evidence": "chúng tôi cần tính toán kỹ lưỡng cho trận đấu với U20 Iran\" Tối 4/3, U20 Việt Nam giành chiến thắng trước Qatar nhờ các pha lập công của Nguyễn Quốc Việt và Nguyễn Văn Trường",
+        "true_label": "ENTAILMENT",
+        "pred_label": "NEUTRAL",
+        "failure_mode": "Semantic Lexical Gap"
+      },
+      {
+        "index": 61,
+        "statement": "Đây là biệt thự bốn tầng tọa lạc tại số 45 đường Barker, với tổng diện tích sàn 437m2, Thời báo Kinh tế Hong Kong đưa tin. Ở khu biệt thự The Peak, giá mỗi foot vuông (1 foot vuông = 0,0929m2) có mức 255.000 HKD, đánh bại mức 140.800 HKD được thiết lập vào năm 2021, khi một căn hộ tại dự án Mount Nicholson được bán.",
+        "evidence": "Đây là biệt thự bốn tầng tọa lạc tại số 45 đường Barker, với tổng diện tích sàn 437m2, Thời báo Kinh tế Hong Kong đưa tin. Ở khu biệt thự The Peak, giá mỗi foot vuông (1 foot vuông = 0,0929m2) có mức ...",
+        "true_label": "ENTAILMENT",
+        "pred_label": "CONTRADICTION",
+        "failure_mode": "Semantic Lexical Gap"
+      },
+      {
+        "index": 65,
+        "statement": "Giám đốc Đài Khí tượng thủy văn khu vực Nam Bộ ông Lê Ngọc Quyền năm nay 60 tuổi cho biết đài được thành lập theo Quyết định số 133/TTg ngày 30-3-1993 của Thủ tướng Chính phủ, trên cơ sở sáp nhập 13 đài Khí tượng thủy văn các tỉnh tại Nam Bộ.",
+        "evidence": "ông Lê Ngọc Quyền - Giám đốc Đài Khí tượng thủy văn khu vực Nam Bộ cho biết đài được thành lập theo Quyết định số 133/TTg ngày 30-3-1993 của Thủ tướng Chính phủ, trên cơ sở sáp nhập 13 đài Khí tượng t...",
+        "true_label": "NEUTRAL",
+        "pred_label": "CONTRADICTION",
+        "failure_mode": "Spurious Over-Retrieval Correlation"
+      },
+      {
+        "index": 66,
+        "statement": "Sau khi chị T. bị nhóm của Phùng làm nhục và rời đi, cô gái ở Bình Thuận mới phát hiện mình bị mất chiếc iPhone 14 Pro Max.",
+        "evidence": "cô gái ở Bình Dương khai có bị mất chiếc iPhone 14 Pro Max Sau khi thực hiện hành vi làm nhục chị T. nhóm của Phùng rời khỏi hiện trường.",
+        "true_label": "CONTRADICTION",
+        "pred_label": "NEUTRAL",
+        "failure_mode": "Semantic Lexical Gap"
+      }
+    ]
+  }
+}

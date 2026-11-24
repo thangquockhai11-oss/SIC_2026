@@ -1,0 +1,218 @@
+[
+  {
+    "experiment_id": "TM-CLAIM-001",
+    "task": "Claim Classification (9-Class)",
+    "model_name": "Majority Class Baseline",
+    "description": "Zero-Rule Majority Predictor",
+    "duration_seconds": 0.01,
+    "accuracy": 0.1111,
+    "macro_f1": 0.0222,
+    "weighted_f1": 0.0222,
+    "precision": 0.0123,
+    "recall": 0.1111,
+    "bootstrap_ci95": {
+      "macro_f1_mean": 0.0223,
+      "macro_f1_std": 0.0024,
+      "macro_f1_ci95": [
+        0.0178,
+        0.0271
+      ],
+      "accuracy_mean": 0.1116,
+      "accuracy_std": 0.0133,
+      "accuracy_ci95": [
+        0.087,
+        0.1389
+      ]
+    },
+    "status": "COMPLETED"
+  },
+  {
+    "experiment_id": "TM-CLAIM-002",
+    "task": "Claim Classification (9-Class)",
+    "model_name": "Lexical TF-IDF + LogisticRegression",
+    "description": "Word TF-IDF (1,2) + LogisticRegression(C=1.0, max_iter=500)",
+    "duration_seconds": 2.32,
+    "accuracy": 0.8,
+    "macro_f1": 0.7961,
+    "weighted_f1": 0.7961,
+    "precision": 0.8009,
+    "recall": 0.8,
+    "bootstrap_ci95": {
+      "macro_f1_mean": 0.7949,
+      "macro_f1_std": 0.0158,
+      "macro_f1_ci95": [
+        0.7652,
+        0.8251
+      ],
+      "accuracy_mean": 0.7997,
+      "accuracy_std": 0.0173,
+      "accuracy_ci95": [
+        0.7685,
+        0.8333
+      ]
+    },
+    "status": "COMPLETED"
+  },
+  {
+    "experiment_id": "TM-CLAIM-003",
+    "task": "Claim Classification (9-Class)",
+    "model_name": "Word+Char TF-IDF + LinearSVC",
+    "description": "Dual TF-IDF (Word 1,2 + Char 2,5) + LinearSVC(C=1.0)",
+    "duration_seconds": 2.87,
+    "accuracy": 0.8426,
+    "macro_f1": 0.8372,
+    "weighted_f1": 0.8372,
+    "precision": 0.8365,
+    "recall": 0.8426,
+    "bootstrap_ci95": {
+      "macro_f1_mean": 0.8364,
+      "macro_f1_std": 0.0145,
+      "macro_f1_ci95": [
+        0.8054,
+        0.8644
+      ],
+      "accuracy_mean": 0.8425,
+      "accuracy_std": 0.0157,
+      "accuracy_ci95": [
+        0.8111,
+        0.8722
+      ]
+    },
+    "status": "COMPLETED"
+  },
+  {
+    "experiment_id": "TM-CLAIM-004",
+    "task": "Claim Classification (9-Class)",
+    "model_name": "TrustMedia Calibrated LinearSVC (Production Winner)",
+    "description": "Dual TF-IDF + 12D Linguistic Signals + CalibratedLinearSVC(C=1.5, cv=3)",
+    "duration_seconds": 5.22,
+    "accuracy": 0.9296,
+    "macro_f1": 0.9295,
+    "weighted_f1": 0.9295,
+    "precision": 0.9303,
+    "recall": 0.9296,
+    "bootstrap_ci95": {
+      "macro_f1_mean": 0.9289,
+      "macro_f1_std": 0.0107,
+      "macro_f1_ci95": [
+        0.9075,
+        0.9489
+      ],
+      "accuracy_mean": 0.9295,
+      "accuracy_std": 0.0111,
+      "accuracy_ci95": [
+        0.9056,
+        0.95
+      ]
+    },
+    "status": "COMPLETED"
+  },
+  {
+    "experiment_id": "TM-NLI-001",
+    "task": "NLI Evidence Verification (3-Class)",
+    "model_name": "Majority Class Baseline",
+    "description": "Zero-Rule Predictor (Always ENTAILMENT)",
+    "duration_seconds": 0.0,
+    "accuracy": 0.3511,
+    "macro_f1": 0.1732,
+    "weighted_f1": 0.1824,
+    "precision": 0.117,
+    "recall": 0.3333,
+    "bootstrap_ci95": {
+      "macro_f1_mean": 0.1732,
+      "macro_f1_std": 0.0045,
+      "macro_f1_ci95": [
+        0.1642,
+        0.1822
+      ],
+      "accuracy_mean": 0.3511,
+      "accuracy_std": 0.0123,
+      "accuracy_ci95": [
+        0.3269,
+        0.376
+      ]
+    },
+    "status": "COMPLETED"
+  },
+  {
+    "experiment_id": "TM-NLI-002",
+    "task": "NLI Evidence Verification (3-Class)",
+    "model_name": "Cross-Text TF-IDF + LogisticRegression",
+    "description": "Joint Text TF-IDF + LogisticRegression(C=1.0)",
+    "duration_seconds": 4.02,
+    "accuracy": 0.3967,
+    "macro_f1": 0.3926,
+    "weighted_f1": 0.3944,
+    "precision": 0.3923,
+    "recall": 0.3943,
+    "bootstrap_ci95": {
+      "macro_f1_mean": 0.3921,
+      "macro_f1_std": 0.0131,
+      "macro_f1_ci95": [
+        0.3656,
+        0.4175
+      ],
+      "accuracy_mean": 0.3963,
+      "accuracy_std": 0.0132,
+      "accuracy_ci95": [
+        0.3697,
+        0.4216
+      ]
+    },
+    "status": "COMPLETED"
+  },
+  {
+    "experiment_id": "TM-NLI-003",
+    "task": "NLI Evidence Verification (3-Class)",
+    "model_name": "Cross-Text TF-IDF + LinearSVC",
+    "description": "Joint Text TF-IDF + LinearSVC(C=1.0)",
+    "duration_seconds": 2.87,
+    "accuracy": 0.378,
+    "macro_f1": 0.3753,
+    "weighted_f1": 0.377,
+    "precision": 0.3749,
+    "recall": 0.3761,
+    "bootstrap_ci95": {
+      "macro_f1_mean": 0.3745,
+      "macro_f1_std": 0.0129,
+      "macro_f1_ci95": [
+        0.3485,
+        0.3998
+      ],
+      "accuracy_mean": 0.3774,
+      "accuracy_std": 0.013,
+      "accuracy_ci95": [
+        0.3524,
+        0.4022
+      ]
+    },
+    "status": "COMPLETED"
+  },
+  {
+    "experiment_id": "TM-NLI-004",
+    "task": "NLI Evidence Verification (3-Class)",
+    "model_name": "TrustMedia Calibrated NLI Verifier (Production Winner)",
+    "description": "Cross-TF-IDF + Dense Cosine + Negation/Numerical/Temporal Penalties + CalibratedLinearSVC(C=1.8)",
+    "duration_seconds": 35.96,
+    "accuracy": 0.6137,
+    "macro_f1": 0.6056,
+    "weighted_f1": 0.6065,
+    "precision": 0.6093,
+    "recall": 0.6112,
+    "bootstrap_ci95": {
+      "macro_f1_mean": 0.6052,
+      "macro_f1_std": 0.0129,
+      "macro_f1_ci95": [
+        0.5786,
+        0.6312
+      ],
+      "accuracy_mean": 0.6136,
+      "accuracy_std": 0.013,
+      "accuracy_ci95": [
+        0.5867,
+        0.64
+      ]
+    },
+    "status": "COMPLETED"
+  }
+]
