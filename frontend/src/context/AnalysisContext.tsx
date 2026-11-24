@@ -102,7 +102,7 @@ export interface ActiveArticle {
 }
 
 // Baseline Prototype Data matching stitch_trustmedia_research_interface exactly
-export const PROTOTYPE_ARTICLE: ActiveArticle = {
+const PROTOTYPE_ARTICLE: ActiveArticle = {
   id: "prototype-article-sample",
   code: "#TM-2024-8841A",
   category: "Thời sự & Đối chuẩn Báo chí",

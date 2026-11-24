@@ -1,5 +1,15 @@
 """Shared API test fixtures."""
 
+import sys
+from pathlib import Path
+
+# Ensure project root (SIC) and backend are in sys.path
+root_dir = Path(__file__).resolve().parent.parent.parent
+backend_dir = Path(__file__).resolve().parent.parent
+for p in [str(root_dir), str(backend_dir)]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
