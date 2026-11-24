@@ -35,3 +35,4 @@ Một trong những yêu cầu nghiêm ngặt nhất của TrustMedia AI là: **
 - Nếu không tìm thấy bằng chứng ngoài độc lập: Hệ thống gán ngay phán quyết `NOT_ENOUGH_INFORMATION`.
 - Nếu tài liệu tìm thấy không liên quan (`IRRELEVANT`): Hệ thống từ chối đưa ra kết luận khẳng định/bác bỏ, bảo lưu ở mức `NOT_ENOUGH_INFORMATION`.
 - Độ tin cậy cho phán quyết bảo lưu được neo ở mức cao (>= 0.85) để ghi nhận rằng sự thiếu hụt thông tin là một phát hiện khách quan.
+

@@ -17,8 +17,10 @@ import numpy as np
 
 from app.services.claim_article_aligner import claim_article_aligner, ClaimAttributes
 from app.services.evidence_cross_comparator import evidence_cross_comparator, EvidenceCrossEvaluation
+from app.services.gemini_evidence_validator import get_gemini_evidence_validator
 from app.services.gemini_nlp_service import gemini_nlp_service
 from app.services.hybrid_retrieval import hybrid_retriever
+from app.services.verification_state_machine import ClaimVerificationStateMachine, VerificationStage
 from app.services.model_manager import model_manager
 from app.services.rag.hybrid_retriever import hybrid_rag_retriever
 from app.services.rag.live_retriever import live_evidence_retriever
@@ -753,6 +755,12 @@ class FactCheckingAgent:
         original_text = claim.get("original_text", claim_text)
         claim_id = claim.get("claim_id") or str(uuid.uuid4())
 
+        # Initialize Claim Verification State Machine
+        v_state = ClaimVerificationStateMachine(claim_id=claim_id, claim_text=claim_text)
+        v_state.transition_to(VerificationStage.ARTICLE_EXTRACTED, reason="Tải nội dung bài báo")
+        v_state.transition_to(VerificationStage.CLAIMS_EXTRACTED, reason="Phân tách phát ngôn nguyên tử")
+        v_state.transition_to(VerificationStage.CLAIM_FIDELITY_CHECKED, reason="Đánh giá độ trung thực với bài gốc")
+
         # Extract/detect slots if missing
         temporal = claim.get("date_or_time_period") or self._extract_temporal_expressions(claim_text)
         numerical_values = claim.get("numerical_values") or self._extract_numerical_values(claim_text)
@@ -873,12 +881,13 @@ class FactCheckingAgent:
                 "independent_sources_count": 0,
             }
 
-        # 2. Multi-query Search Strategy prioritizing Research Datasets (ViFactCheck, ViWiki, X-FACT, FEVER)
+        # 2. Multi-query Search Strategy strictly scoped to this individual claim
+        v_state.transition_to(VerificationStage.EVIDENCE_RETRIEVED, reason="Thực hiện truy xuất theo từng claim độc lập")
         queries = self.generate_search_queries(claim, article_title=article_title)
         retrieved_candidates: list[dict[str, Any]] = []
         seen_chunk_ids: set[str] = set()
 
-        # Step 2.1: Always query the verified research dataset knowledge base first
+        # Step 2.1: Query verified research dataset knowledge base
         dataset_queries = [claim_text]
         if queries.get("verbatim") and queries["verbatim"] != claim_text:
             dataset_queries.append(queries["verbatim"])
@@ -890,7 +899,7 @@ class FactCheckingAgent:
                 dataset_cands = hybrid_retriever.retrieve(
                     claim_text=dq,
                     top_k=4,
-                    min_relevance_threshold=0.18,
+                    min_relevance_threshold=0.35,
                 )
                 for dc in dataset_cands:
                     cid = dc.get("chunk_id") or dc.get("excerpt", "")[:40]
@@ -917,7 +926,7 @@ class FactCheckingAgent:
                 candidates = hybrid_rag_retriever.retrieve(
                     query=q_str,
                     top_k=2,
-                    min_relevance_threshold=0.20,
+                    min_relevance_threshold=0.30,
                     agent_name="FactCheckingAgent",
                 )
                 for c in candidates:
@@ -929,18 +938,19 @@ class FactCheckingAgent:
             except Exception:
                 pass
 
-        # Step 2.3: Pre-seed with story-level candidates and live web search
+        # Step 2.3: Only admit story pool items if they have genuine semantic relevance to this claim
         if story_evidence_pool:
             for s_cand in story_evidence_pool:
                 cid = s_cand.get("chunk_id") or s_cand.get("source_url")
                 if cid and cid not in seen_chunk_ids:
-                    seen_chunk_ids.add(cid)
                     c_excerpt = s_cand.get("excerpt") or s_cand.get("content", "")
                     r_sc = live_evidence_retriever._compute_relevance_score(claim_text, c_excerpt)
-                    s_cand_copy = dict(s_cand)
-                    s_cand_copy["relevance_score"] = max(r_sc, 0.45)
-                    s_cand_copy["query_matched_strategy"] = "story_level_pool"
-                    retrieved_candidates.append(s_cand_copy)
+                    if r_sc >= 0.38:
+                        seen_chunk_ids.add(cid)
+                        s_cand_copy = dict(s_cand)
+                        s_cand_copy["relevance_score"] = r_sc
+                        s_cand_copy["query_matched_strategy"] = "story_level_pool"
+                        retrieved_candidates.append(s_cand_copy)
 
         if len(retrieved_candidates) < 4:
             live_cands = live_evidence_retriever.retrieve_for_claim(
@@ -1000,13 +1010,32 @@ class FactCheckingAgent:
         # Retain only candidates with sufficient confidence
         retrieved_candidates = [c for c in retrieved_candidates if c.get("rerank_score", 0.0) >= 0.35]
 
-        # Step 2.5: Attribute-level Cross-Comparison with External Evidence
+        # Step 2.5: Attribute-level Cross-Comparison with External Evidence & Gemini Hydrogen Validation
+        gemini_validator = get_gemini_evidence_validator()
         valid_evaluated_candidates = []
         evaluations: list[EvidenceCrossEvaluation] = []
         for cand in retrieved_candidates:
             c_text = cand.get("excerpt") or cand.get("content", "")
             s_nm = cand.get("source_name") or "Cơ quan báo chí độc lập"
             s_url = cand.get("source_url")
+
+            # 1. Mandatory Gemini Evidence Validation (Hydrogen semantic audit & collision guard)
+            v_report = gemini_validator.validate_evidence(
+                claim_text=claim_text,
+                evidence_text=c_text,
+                source_name=s_nm,
+                article_title=article_title or "",
+            )
+            cand["validation_report"] = v_report.model_dump()
+            if not v_report.is_topically_relevant or v_report.relation == "IRRELEVANT":
+                logger.info(
+                    "Dropping irrelevant evidence chunk for claim '%s': %s (reason: %s)",
+                    claim_text[:40],
+                    s_nm,
+                    v_report.rejection_reason or v_report.explanation,
+                )
+                continue
+
             cross_eval = evidence_cross_comparator.compare_evidence_against_claim(
                 claim_attrs=claim_attrs,
                 evidence_text=c_text,
@@ -1023,15 +1052,26 @@ class FactCheckingAgent:
             valid_evaluated_candidates.append(cand)
         retrieved_candidates = valid_evaluated_candidates
 
+        # Transition state machine to EVIDENCE_RELEVANCE_VALIDATED
+        v_state.transition_to(
+            VerificationStage.EVIDENCE_RELEVANCE_VALIDATED,
+            reason=f"Đã thẩm định {len(retrieved_candidates)} bằng chứng phù hợp ngữ nghĩa qua Gemini Hydrogen",
+        )
+
         # 3. If NO evidence found in research datasets & knowledge base
         if not retrieved_candidates:
-            calibrated_conf = round(0.60 + (abs(hash(claim_text)) % 10) * 0.01, 2)
-            reasoning = (
-                f"Phát ngôn về '{claim_text[:70]}...' chưa tìm thấy tài liệu đối chứng độc lập "
-                "đạt ngưỡng liên quan trong cơ sở tri thức đối chuẩn và mạng lưới báo chí độc lập. "
-                "Hệ thống tuân thủ nguyên tắc khoa học: bảo lưu trạng thái Chưa đủ thông tin (NOT_ENOUGH_INFORMATION), "
-                "không tự tạo nguồn hoặc suy đoán kết quả."
+            v_state.transition_to(
+                VerificationStage.CROSS_VERIFICATION_COMPLETED,
+                reason="Không có bằng chứng đạt ngưỡng liên quan, tiến hành bảo lưu kết quả",
             )
+            cv_verdict, cv_conf, cv_reason = v_state.resolve_conservative_verdict(
+                valid_evidences=[],
+                conflicts=[],
+                has_support=False,
+                has_refute=False,
+            )
+            calibrated_conf = cv_conf
+            reasoning = cv_reason
             try:
                 synthesis = gemini_nlp_service.align_and_synthesize(
                     claim_text=claim_text,
@@ -1061,11 +1101,11 @@ class FactCheckingAgent:
                 "entities": claim.get("entities", []),
                 "numerical_values": claim.get("numerical_values", []),
                 "checkability": True,
-                "verdict": synthesis.verdict if synthesis else "NOT_ENOUGH_INFORMATION",
-                "confidence": synthesis.confidence if synthesis else calibrated_conf,
+                "verdict": "NOT_ENOUGH_INFORMATION",
+                "confidence": calibrated_conf,
                 "confidence_metric_type": "Calibrated Epistemic Uncertainty",
-                "reasoning": synthesis.decisive_reasoning if synthesis else reasoning,
-                "decisive_reasoning": synthesis.decisive_reasoning if synthesis else reasoning,
+                "reasoning": reasoning,
+                "decisive_reasoning": reasoning,
                 "limitations": "Cần bổ sung nguồn tin thứ cấp độc lập từ cơ quan chức năng hoặc phúc tra thực địa.",
                 "model_name": model_name,
                 "model_version": model_version,
@@ -1074,35 +1114,35 @@ class FactCheckingAgent:
                 "supporting_evidences": [],
                 "refuting_evidences": [],
                 "retrieval_count": 0,
-                "article_quote": synthesis.article_quote if synthesis else original_text,
-                "article_quote_highlight": synthesis.article_highlight if synthesis else claim_text[:35],
-                "article_highlight": synthesis.article_highlight if synthesis else claim_text[:35],
-                "evidence_quote": synthesis.evidence_quote if synthesis else "Chưa có bằng chứng độc lập đạt ngưỡng liên quan trong cơ sở tri thức.",
-                "evidence_quote_highlight": synthesis.evidence_highlight if synthesis else "",
-                "evidence_highlight": synthesis.evidence_highlight if synthesis else "",
-                "evidence_source": synthesis.evidence_source if synthesis else "Hệ thống đối chuẩn TrustMedia",
-                "evidence_url": synthesis.evidence_url if synthesis else None,
-                "protocol_standard": synthesis.protocol_standard if synthesis else "IFCN Standard v2.4",
-                "compatibility_score": synthesis.compatibility_score if synthesis else f"{int(calibrated_conf*100)}%",
+                "article_quote": original_text,
+                "article_quote_highlight": claim_text[:35],
+                "article_highlight": claim_text[:35],
+                "evidence_quote": "Chưa tìm thấy bằng chứng đối chứng trực tiếp đạt ngưỡng liên quan trong cơ sở tri thức đối chuẩn.",
+                "evidence_quote_highlight": "",
+                "evidence_highlight": "",
+                "evidence_source": "Cơ sở dữ liệu đối chuẩn học thuật",
+                "evidence_url": None,
+                "protocol_standard": "IFCN Standard v2.4",
+                "compatibility_score": f"{int(calibrated_conf*100)}%",
                 "evidence_gap": {
-                    "t1_title": synthesis.gap_t1_title if synthesis else "Tầng 1: Dữ liệu bối cảnh",
-                    "t1_desc": synthesis.gap_t1_desc if synthesis else "Tài liệu sơ cấp",
-                    "t1_status": synthesis.gap_t1_status if synthesis else "CÓ CHỨNG CỨ",
-                    "t2_title": synthesis.gap_t2_title if synthesis else "Tầng 2: Đối chiếu chéo",
-                    "t2_desc": synthesis.gap_t2_desc if synthesis else "Khảo sát thực nghiệm",
-                    "t2_status": synthesis.gap_t2_status if synthesis else "CHƯA THỰC HIỆN",
-                    "t3_title": synthesis.gap_t3_title if synthesis else "Tầng 3: Giám định chính thức",
-                    "t3_desc": synthesis.gap_t3_desc if synthesis else "Văn bản kết luận",
-                    "t3_status": synthesis.gap_t3_status if synthesis else "CHƯA CẤP PHÉP",
-                    "t4_desc": synthesis.gap_t4_desc if synthesis else f"“{claim_text[:35]}...”",
-                    "claim_verdict": synthesis.gap_t4_status if synthesis else "CHƯA ĐỦ THÔNG TIN",
+                    "t1_title": "Tầng 1: Dữ liệu bối cảnh",
+                    "t1_desc": "Tài liệu sơ cấp",
+                    "t1_status": "CÓ CHỨNG CỨ",
+                    "t2_title": "Tầng 2: Đối chiếu chéo",
+                    "t2_desc": "Khảo sát thực nghiệm",
+                    "t2_status": "CHƯA THỰC HIỆN",
+                    "t3_title": "Tầng 3: Giám định chính thức",
+                    "t3_desc": "Văn bản kết luận",
+                    "t3_status": "CHƯA CẤP PHÉP",
+                    "t4_desc": f"“{claim_text[:35]}...”",
+                    "claim_verdict": "CHƯA ĐỦ THÔNG TIN",
                 },
                 "review_board": {
-                    "classification": synthesis.classification if synthesis else claim_type,
-                    "classification_desc": synthesis.classification_desc if synthesis else reasoning,
-                    "harm_level": synthesis.harm_level if synthesis else "TRUNG BÌNH",
-                    "harm_desc": synthesis.harm_desc if synthesis else "Cần đối chiếu thêm nguồn tin xác thực.",
-                    "signatories": "Hội đồng Thẩm định Báo chí TrustMedia",
+                    "classification": claim_type,
+                    "classification_desc": reasoning,
+                    "harm_level": "TRUNG BÌNH",
+                    "harm_desc": "Cần đối chiếu thêm nguồn tin xác thực.",
+                    "signatories": "Hội đồng Thẩm định Báo chí TrustMedia (Thẩm định độc lập)",
                 },
                 "article_fidelity": fidelity_report.to_dict(),
                 "claim_attributes": claim_attrs.to_dict(),
@@ -1206,7 +1246,12 @@ class FactCheckingAgent:
             else:
                 other_evidences.append(ev_item)
 
-        # 5. Fine-grained 7-label Verdict Synthesis with Source Independence & Conflict Matrix
+        # 5. Verification State Machine Conservative Resolution
+        v_state.transition_to(
+            VerificationStage.CROSS_VERIFICATION_COMPLETED,
+            reason="Hoàn thành phân tích độ tin cậy và đối chiếu chéo các nguồn bằng chứng",
+        )
+
         has_support = len(supporting_evidences) > 0
         has_refute = len(refuting_evidences) > 0
 
@@ -1221,83 +1266,20 @@ class FactCheckingAgent:
         any_num_mismatch = any(not ev.get("numerical_consistency", True) for ev in processed_evidences)
         any_temp_mismatch = any(not ev.get("temporal_consistency", True) for ev in processed_evidences)
 
-        if conflicts:
-            final_verdict = "CONFLICTING_EVIDENCE"
-            confidence = 0.85
-            primary_src = processed_evidences[0]["source_name"]
-            reasoning = (
-                f"Phát hiện BẰNG CHỨNG MÂU THUẪN (CONFLICTING_EVIDENCE): {conflicts[0].explanation}"
-            )
-            limitations = "Cần theo dõi thêm kết luận giám định chính thức từ các cơ quan thẩm quyền độc lập."
-
-        elif has_refute and not has_support:
-            if any_num_mismatch and claim_type == "STATISTICAL_CLAIM":
-                final_verdict = "PARTIALLY_SUPPORTED"
-                confidence = 0.84
-                reasoning = (
-                    f"Phát ngôn ĐÚNG MỘT PHẦN (PARTIALLY_SUPPORTED): Sự kiện cốt lõi được ghi nhận, "
-                    f"tuy nhiên số liệu chi tiết có sự chênh lệch so với tài liệu chính thức từ '{refuting_evidences[0]['source_name']}'."
-                )
-                limitations = "Số liệu thực tế cần được kiểm chứng lại với báo cáo thống kê chuyên ngành."
-            else:
-                final_verdict = "REFUTED"
-                avg_conf = float(np.mean([e.get("nli_confidence", 0.90) for e in refuting_evidences]))
-                confidence = round(min(0.97, max(0.78, avg_conf)), 3)
-                reasoning = (
-                    f"Phát ngôn bị BÁC BỎ (REFUTED) bởi tài liệu kiểm chứng độc lập từ '{refuting_evidences[0]['source_name']}'. "
-                    "Nội dung phát ngôn mâu thuẫn trực tiếp với hồ sơ thực chứng và thông cáo đính chính chính thức."
-                )
-                limitations = "Kết luận dựa trên bằng chứng đã được chuẩn hóa trong cơ sở dữ liệu đối chuẩn."
-
-        elif has_support and not has_refute:
-            if any_num_mismatch or any_temp_mismatch:
-                final_verdict = "PARTIALLY_SUPPORTED"
-                confidence = 0.85
-                reasoning = (
-                    f"Phát ngôn ĐÚNG MỘT PHẦN (PARTIALLY_SUPPORTED): Khẳng định về sự kiện là có căn cứ, "
-                    "tuy nhiên phát hiện sai khác về mốc thời gian hoặc chi tiết định lượng đối chiếu."
-                )
-                limitations = "Chi tiết định lượng hoặc thời gian cần chuẩn hóa theo nguồn sơ cấp."
-            elif fidelity_report.distortion_detected and fidelity_report.distortion_type in ("CAUSAL_DISTORTION", "MODALITY_EXAGGERATION"):
-                final_verdict = "MISLEADING"
-                confidence = 0.86
-                reasoning = (
-                    f"Thông tin GÂY HIỂU LẦM (MISLEADING): {fidelity_report.explanation}"
-                )
-                limitations = "Bản tin gốc chỉ phản ánh tương quan/khả năng nhưng phát ngôn bị thổi phồng thành khẳng định nhân quả."
-            else:
-                final_verdict = "SUPPORTED"
-                avg_conf = float(np.mean([e.get("nli_confidence", 0.90) for e in supporting_evidences]))
-                confidence = round(min(0.97, max(0.80, avg_conf)), 3)
-                if claim_type == "QUOTATION_CLAIM":
-                    reasoning = (
-                        f"Phát ngôn ĐÃ ĐƯỢC XÁC THỰC (SUPPORTED): Lời khai / động cơ của nhân vật được trích dẫn "
-                        f"và ghi nhận đồng nhất trên các cơ quan báo chí ('{supporting_evidences[0]['source_name']}'). "
-                        "Bằng chứng thực chứng xác nhận tính có thật của phát ngôn trong bối cảnh vụ việc."
-                    )
-                else:
-                    reasoning = (
-                        f"Phát ngôn ĐÃ ĐƯỢC XÁC THỰC (SUPPORTED) bởi tài liệu đối chứng từ '{supporting_evidences[0]['source_name']}'. "
-                        "Nội dung phát ngôn hoàn toàn đồng nhất với các tài liệu và bài báo kiểm chứng độc lập."
-                    )
-                limitations = "Căn cứ theo tài liệu nghiên cứu và hồ sơ báo chí lưu trữ."
-
-        else:
-            # Candidates exist but only discuss general context without confirming or refuting
-            final_verdict = "NOT_ENOUGH_INFORMATION"
-            confidence = 0.65
-            if processed_evidences:
-                reasoning = (
-                    f"Đã đối soát với {len(processed_evidences)} tài liệu bối cảnh liên quan từ cơ quan báo chí. "
-                    "Tuy nhiên các tài liệu này chỉ phản ánh thông tin diện rộng, chưa có tài liệu giám định dứt điểm riêng cho chi tiết phát ngôn này. "
-                    "Hệ thống bảo lưu trạng thái Chưa đủ thông tin (NOT_ENOUGH_INFORMATION) để đảm bảo tính khách quan."
-                )
-            else:
-                reasoning = (
-                    "Chưa tìm thấy bằng chứng đối chứng trực tiếp nào trong cơ sở tri thức đối chuẩn và mạng lưới báo chí. "
-                    "Hệ thống duy trì kết luận Chưa đủ thông tin (NOT_ENOUGH_INFORMATION) để tránh phán đoán vội vàng."
-                )
-            limitations = "Cần thêm văn bản kết luận trực tiếp đối với chi tiết phát ngôn này."
+        # Resolve verdict conservatively using ClaimVerificationStateMachine
+        cv_verdict, cv_conf, cv_reason = v_state.resolve_conservative_verdict(
+            valid_evidences=processed_evidences,
+            conflicts=conflicts,
+            has_support=has_support,
+            has_refute=has_refute,
+            has_partial=any_num_mismatch or any_temp_mismatch,
+            support_conf=float(np.mean([e.get("nli_confidence", 0.90) for e in supporting_evidences])) if supporting_evidences else 0.85,
+            refute_conf=float(np.mean([e.get("nli_confidence", 0.90) for e in refuting_evidences])) if refuting_evidences else 0.85,
+        )
+        final_verdict = cv_verdict
+        confidence = cv_conf
+        reasoning = cv_reason
+        limitations = "Căn cứ theo tài liệu nghiên cứu và hồ sơ báo chí lưu trữ."
 
         # Step 5.5: Gemini NLP Structured Synthesis & Exact Evidence Alignment
         try:
@@ -1312,18 +1294,30 @@ class FactCheckingAgent:
             logger.warning("Gemini evidence alignment error: %s", e)
             synthesis = None
 
-        if synthesis:
-            if synthesis.confidence >= 0.88 and final_verdict in ("SUPPORTED", "REFUTED", "PARTIALLY_SUPPORTED", "NOT_ENOUGH_INFORMATION"):
-                final_verdict = synthesis.verdict
-                confidence = max(confidence, synthesis.confidence)
-            if synthesis.verdict == final_verdict and synthesis.decisive_reasoning:
-                decisive_reasoning = synthesis.decisive_reasoning
-            else:
-                decisive_reasoning = reasoning
+        if synthesis and synthesis.verdict == final_verdict and synthesis.decisive_reasoning:
+            decisive_reasoning = synthesis.decisive_reasoning
         else:
             decisive_reasoning = reasoning
 
-        top_ev = processed_evidences[0] if processed_evidences else {}
+        # Strict Claim-Evidence-Verdict mapping
+        if final_verdict == "REFUTED" and refuting_evidences:
+            top_ev = refuting_evidences[0]
+            evidence_quote = top_ev.get("excerpt", "")
+            evidence_source = top_ev.get("source_name", "Nguồn kiểm chứng độc lập")
+            evidence_url = top_ev.get("source_url")
+            evidence_quote_highlight = top_ev.get("excerpt", "")[:50]
+        elif final_verdict in ("SUPPORTED", "PARTIALLY_SUPPORTED") and supporting_evidences:
+            top_ev = supporting_evidences[0]
+            evidence_quote = top_ev.get("excerpt", "")
+            evidence_source = top_ev.get("source_name", "Nguồn kiểm chứng độc lập")
+            evidence_url = top_ev.get("source_url")
+            evidence_quote_highlight = top_ev.get("excerpt", "")[:50]
+        else:
+            top_ev = processed_evidences[0] if processed_evidences else {}
+            evidence_quote = "Chưa tìm thấy bằng chứng đối chứng trực tiếp đạt ngưỡng liên quan trong cơ sở tri thức đối chuẩn."
+            evidence_source = "Cơ sở dữ liệu đối chuẩn học thuật"
+            evidence_url = None
+            evidence_quote_highlight = ""
 
         return {
             "claim_id": claim_id,
@@ -1359,32 +1353,32 @@ class FactCheckingAgent:
             "article_quote": synthesis.article_quote if synthesis else original_text,
             "article_quote_highlight": synthesis.article_highlight if synthesis else claim_text[:35],
             "article_highlight": synthesis.article_highlight if synthesis else claim_text[:35],
-            "evidence_quote": synthesis.evidence_quote if synthesis else (top_ev.get("excerpt") or "Chưa có bằng chứng độc lập đạt ngưỡng."),
-            "evidence_quote_highlight": synthesis.evidence_highlight if synthesis else (top_ev.get("excerpt", "")[:35]),
-            "evidence_highlight": synthesis.evidence_highlight if synthesis else "",
-            "evidence_source": synthesis.evidence_source if synthesis else (top_ev.get("source_name") or "Hệ thống đối chuẩn TrustMedia"),
-            "evidence_url": synthesis.evidence_url if (synthesis and synthesis.evidence_url) else top_ev.get("source_url"),
+            "evidence_quote": evidence_quote,
+            "evidence_quote_highlight": evidence_quote_highlight,
+            "evidence_highlight": evidence_quote_highlight,
+            "evidence_source": evidence_source,
+            "evidence_url": evidence_url,
             "protocol_standard": synthesis.protocol_standard if synthesis else "IFCN Standard v2.4",
             "compatibility_score": synthesis.compatibility_score if synthesis else f"{int(confidence*100)}%",
             "evidence_gap": {
-                "t1_title": synthesis.gap_t1_title if synthesis else "Tầng 1: Dữ liệu bối cảnh",
-                "t1_desc": synthesis.gap_t1_desc if synthesis else "Tài liệu sơ cấp",
-                "t1_status": synthesis.gap_t1_status if synthesis else "CÓ CHỨNG CỨ",
-                "t2_title": synthesis.gap_t2_title if synthesis else "Tầng 2: Đối chiếu chéo",
-                "t2_desc": synthesis.gap_t2_desc if synthesis else "Khảo sát thực nghiệm",
-                "t2_status": synthesis.gap_t2_status if synthesis else ("CÓ CHỨNG CỨ" if final_verdict == "SUPPORTED" else "CHƯA THỰC HIỆN"),
-                "t3_title": synthesis.gap_t3_title if synthesis else "Tầng 3: Giám định chính thức",
-                "t3_desc": synthesis.gap_t3_desc if synthesis else "Văn bản kết luận",
-                "t3_status": synthesis.gap_t3_status if synthesis else ("CÓ CHỨNG CỨ" if final_verdict == "SUPPORTED" else "CHƯA CẤP PHÉP"),
-                "t4_desc": synthesis.gap_t4_desc if synthesis else f"“{claim_text[:35]}...”",
-                "claim_verdict": synthesis.gap_t4_status if synthesis else ("ĐƯỢC XÁC THỰC" if final_verdict == "SUPPORTED" else ("BỊ BÁC BỎ" if final_verdict == "REFUTED" else "CHƯA ĐỦ THÔNG TIN")),
+                "t1_title": "Tầng 1: Dữ liệu bối cảnh",
+                "t1_desc": "Tài liệu sơ cấp",
+                "t1_status": "CÓ CHỨNG CỨ" if processed_evidences else "CHƯA ĐỦ BỐI CẢNH",
+                "t2_title": "Tầng 2: Đối chiếu chéo",
+                "t2_desc": "Khảo sát thực nghiệm & NLI",
+                "t2_status": "CÓ CHỨNG CỨ" if (has_support or has_refute) else "CHƯA THỰC HIỆN",
+                "t3_title": "Tầng 3: Giám định chính thức",
+                "t3_desc": "Phúc tra bởi Gemini Hydrogen",
+                "t3_status": "ĐÃ PHÚC TRA" if (has_support or has_refute) else "CHỜ PHÚC TRA",
+                "t4_desc": f"“{claim_text[:35]}...”",
+                "claim_verdict": "ĐƯỢC XÁC THỰC" if final_verdict == "SUPPORTED" else ("BỊ BÁC BỎ" if final_verdict == "REFUTED" else "CHƯA ĐỦ THÔNG TIN"),
             },
             "review_board": {
                 "classification": synthesis.classification if synthesis else claim_type,
                 "classification_desc": synthesis.classification_desc if synthesis else decisive_reasoning,
-                "harm_level": synthesis.harm_level if synthesis else ("RẤT CAO" if final_verdict == "REFUTED" else "TRUNG BÌNH"),
-                "harm_desc": synthesis.harm_desc if synthesis else "Tác động đến nhận thức người đọc và an ninh thông tin truyền thông.",
-                "signatories": "Hội đồng Thẩm định Báo chí TrustMedia",
+                "harm_level": "RẤT CAO" if final_verdict == "REFUTED" else "TRUNG BÌNH",
+                "harm_desc": "Tác động đến nhận thức người đọc và an ninh thông tin truyền thông.",
+                "signatories": "Hội đồng Thẩm định Báo chí TrustMedia (Thẩm định độc lập)",
             },
             "article_fidelity": fidelity_report.to_dict(),
             "claim_attributes": claim_attrs.to_dict(),

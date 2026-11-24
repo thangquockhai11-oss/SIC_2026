@@ -46,3 +46,4 @@ QUY TẮC BẮT BUỘC: Các mẫu dưới đây trích xuất từ ViFactCheck 
 học cách phân loại quan hệ (SUPPORTED / REFUTED / NOT_ENOUGH_INFORMATION) và tiêu chuẩn đối chuẩn ngữ nghĩa.
 TUYỆT ĐỐI KHÔNG sử dụng các đoạn trích này làm bằng chứng thực tế cho phát ngôn mới nếu không cùng thực thể và sự kiện.
 ```
+

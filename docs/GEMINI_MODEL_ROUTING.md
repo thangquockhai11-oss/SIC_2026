@@ -68,3 +68,4 @@ Khi hệ thống chạy trong môi trường offline, CI/CD, hoặc khi `GEMINI_
 - Thực thi ma trận kiểm chứng 15 chiều bằng thuật toán regex và luật suy diễn tất định (Deterministic Logic).
 - Đảm bảo 100% các trường dữ liệu tuân thủ schema Pydantic, không xảy ra ngoại lệ Null hoặc sập tiến trình.
 - Cung cấp lý giải phản biện chi tiết, đầy đủ căn cứ khoa học.
+

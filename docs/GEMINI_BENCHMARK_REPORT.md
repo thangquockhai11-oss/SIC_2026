@@ -37,3 +37,4 @@
 ## 3. KẾT LUẬN ĐÁNH GIÁ
 
 Sự kết hợp giữa **Gemini 4 Hydrogen** (xử lý định lượng, trích xuất cấu trúc và phân tích sơ bộ) và **Gemini 4 Neon** (phản biện độc lập khi phát hiện mâu thuẫn, ngụy biện nhân quả hoặc độ tin cậy thấp) đã loại bỏ hoàn toàn các điểm mù của các mô hình LLM đơn lẻ. Ma trận 15 chiều với các điểm neo tất định (deterministic anchors) đảm bảo rằng AI không thể bỏ qua các sai lệch số học, đơn vị đo hoặc mốc thời gian.
+

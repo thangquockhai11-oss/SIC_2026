@@ -32,3 +32,4 @@
 1. **Không cho phép mô hình tự sinh trích dẫn:** Mọi trích dẫn hiển thị trên giao diện (`evidence_quote`) phải là một chuỗi con thực tế (substring) được trích xuất nguyên vẹn từ các tài liệu tìm kiếm hoặc từ kho dataset.
 2. **Neon không được bịa đặt tài liệu đối chứng:** Khi phản biện, `gemini-4-neon` chỉ được phép sử dụng các sự kiện logic được cung cấp trong ngữ cảnh bằng chứng của lượt thẩm định.
 3. **Cơ chế bảo lưu khi thiếu dữ kiện:** Thay vì cố gắng phỏng đoán, hệ thống luôn ưu tiên dừng lại ở `NOT_ENOUGH_INFORMATION`.
+

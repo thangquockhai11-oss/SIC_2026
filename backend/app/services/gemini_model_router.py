@@ -238,10 +238,12 @@ class GeminiModelRouter:
             return f"[{model_name} response placeholder]"
 
         # If schema is requested, instantiate default fields
+        from pydantic_core import PydanticUndefined
+
         field_values = {}
         for field_name, field_info in schema.model_fields.items():
             default = field_info.default
-            if default is not None and default != Ellipsis:
+            if default is not None and default is not PydanticUndefined and default != Ellipsis:
                 field_values[field_name] = default
             else:
                 annotation = str(field_info.annotation)
@@ -319,3 +321,4 @@ def get_model_router() -> GeminiModelRouter:
     if _model_router is None:
         _model_router = GeminiModelRouter()
     return _model_router
+

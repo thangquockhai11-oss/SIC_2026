@@ -433,7 +433,7 @@ export default function FactCheckingPage() {
                   </div>
                   <div className="flex items-center gap-1.5 text-on-surface-variant font-label-sm text-label-sm bg-[#DCFCE7]/60 text-[#15803D] px-space-sm py-1 rounded-md font-medium">
                     <span className="material-symbols-outlined text-[16px]">groups</span>
-                    {currentClaim?.review_board?.signatories?.split("·")[0]?.trim() || "Hội đồng Thẩm định Báo chí TrustMedia"} biểu quyết 5/5
+                    {currentClaim?.review_board?.signatories || "Hội đồng Thẩm định Báo chí TrustMedia (Thẩm định độc lập)"}
                   </div>
                 </div>
 
@@ -575,7 +575,10 @@ export default function FactCheckingPage() {
                       </a>
                     ) : (
                       <span className="text-primary font-semibold inline-flex items-center gap-0.5 text-label-sm">
-                        Đã đối chiếu <span className="material-symbols-outlined text-[14px]">verified</span>
+                        {currentClaim?.verdict === "NOT_ENOUGH_INFORMATION" ? "Chưa đủ chứng cứ độc lập" : "Đã đối chiếu"}{" "}
+                        <span className="material-symbols-outlined text-[14px]">
+                          {currentClaim?.verdict === "NOT_ENOUGH_INFORMATION" ? "help_outline" : "verified"}
+                        </span>
                       </span>
                     )}
                   </div>

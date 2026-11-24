@@ -90,3 +90,4 @@ Mỗi phát ngôn sau đó được đối soát từng cặp thuộc tính vớ
 
 1. **Khả năng tái lập 100%:** Toàn bộ 12 test case trong bộ challenge benchmark (`backend/tests/test_gemini_hydrogen_neon_pipeline.py`) và toàn bộ 95 backend tests đều đạt 100% passing rate.
 2. **Không có sự phụ thuộc bên ngoài trái phép:** Hệ thống hoàn toàn giải phóng khỏi các mô hình 3rd-party vector embedding và tuân thủ chặt chẽ kiến trúc Gemini 4 Hydrogen + Neon.
+

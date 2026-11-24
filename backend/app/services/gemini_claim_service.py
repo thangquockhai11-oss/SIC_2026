@@ -216,3 +216,4 @@ def get_gemini_claim_service() -> GeminiClaimService:
     if _gemini_claim_service is None:
         _gemini_claim_service = GeminiClaimService()
     return _gemini_claim_service
+
