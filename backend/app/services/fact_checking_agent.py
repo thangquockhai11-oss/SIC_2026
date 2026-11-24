@@ -36,9 +36,31 @@ class FactCheckingAgent:
         self.agent_name = "FactChecker"
         self.agent_role = "Trích xuất Claim đa loại hình, Hybrid RAG đa truy vấn và kiểm chứng NLI"
 
+    @staticmethod
+    def is_boilerplate_or_administrative(sentence: str) -> bool:
+        """Check if sentence is boilerplate metadata, address, contact, copyright, or footer."""
+        s = sentence.lower().strip()
+        patterns = [
+            "trụ sở:", "trụ sở chính", "điện thoại:", "đt:", "fax:", "email:",
+            "đường dây nóng", "hotline", "giấy phép hoạt động", "giấy phép xuất bản",
+            "giấy phép số", "bản quyền thuộc", "©", "copyright", "tổng biên tập",
+            "phó tổng biên tập", "cơ quan chủ quản", "ghi rõ nguồn", "mọi hành vi sao chép",
+            "cục thông tin và truyền thông", "toà soạn:", "tòa soạn:", "liên hệ quảng cáo",
+            "phát hành lại thông tin", "báo điện tử của chính phủ", "theo ban thời sự",
+            "ảnh: ttxvn", "ảnh minh họa", "nguồn: internet", "pv thực hiện",
+            "cổng thông tin điện tử của", "thông tin tòa soạn"
+        ]
+        return any(p in s for p in patterns)
+
     def clean_text(self, text: str) -> str:
-        """Clean and normalize input text without removing vital content."""
-        cleaned = re.sub(r"[\r\t\f\v]+", " ", text)
+        """Clean and normalize input text without removing vital content, stripping boilerplate lines."""
+        lines = []
+        for line in text.splitlines():
+            line_str = line.strip()
+            if line_str and not self.is_boilerplate_or_administrative(line_str):
+                lines.append(line_str)
+        cleaned = " ".join(lines)
+        cleaned = re.sub(r"[\r\t\f\v]+", " ", cleaned)
         cleaned = re.sub(r"\s{2,}", " ", cleaned)
         return cleaned.strip()
 
@@ -247,23 +269,123 @@ class FactCheckingAgent:
         # 8. FACTUAL_CLAIM: default factual assertion
         return "FACTUAL_CLAIM", True
 
+    def _normalize_title_to_claim(self, title: str) -> tuple[str, str]:
+        """Normalize article title into a declarative verifiable proposition.
+        
+        Returns (original_title_clean, normalized_claim_statement).
+        """
+        clean_t = title.strip(" \"'“”«»")
+        if not clean_t:
+            return "Thông tin bài báo", "Thông tin bài báo"
+        
+        norm = clean_t
+        if clean_t.endswith("?"):
+            base = clean_t[:-1].strip()
+            # If title is in question form like "Thay xăng bằng nước lã và rác thải?"
+            if re.match(r"^(thay\s+|dùng\s+|sử dụng\s+)", base, re.I):
+                norm = f"Có thể {base[0].lower() + base[1:]} để vận hành động cơ và phương tiện"
+            elif re.match(r"^(liệu|có phải|có thể|thực hư việc)\s+", base, re.I):
+                norm = re.sub(r"^(liệu|có phải|có thể|thực hư việc)\s+", "Khẳng định về việc ", base, flags=re.I)
+            else:
+                norm = f"Tuyên bố về việc {base[0].lower() + base[1:] if len(base) > 1 else base}"
+        return clean_t, norm
+
     def extract_checkable_claims(
         self,
         text: str,
         language: str = "vi",
         max_claims: int = 5,
         source_article_id: str | None = None,
+        article_title: str | None = None,
     ) -> list[dict[str, Any]]:
-        """Segment article text into verifiable, structured assertions."""
+        """Segment article text into verifiable, structured assertions anchored to the article title."""
         cleaned = self.clean_text(text)
-        # Split on sentence boundaries while preserving substantive assertions
+        claims = []
+
+        # 1. Luận điểm 1 (Claim #01) BẮT BUỘC là Luận điểm cốt lõi của Tiêu đề bài báo
+        if article_title and len(article_title.strip()) >= 5:
+            orig_title, norm_title = self._normalize_title_to_claim(article_title)
+            entities = self._extract_entities(norm_title)
+            numerical_values = self._extract_numerical_values(norm_title)
+            temporal = self._extract_temporal_expressions(norm_title)
+            location = self._extract_locations(norm_title)
+            subject, predicate, obj = self._extract_syntactic_slots(norm_title)
+
+            claim_type, checkability = self._classify_claim_type(
+                norm_title,
+                has_numbers=bool(numerical_values),
+                temporal=temporal,
+                slots=(subject, predicate, obj),
+            )
+            # If about fuels, medicine, scientific experiments, classify as SCIENTIFIC_CLAIM
+            if any(w in norm_title.lower() for w in ["xăng", "nước lã", "rác thải", "động cơ", "ung thư", "thuốc", "vắc xin"]):
+                claim_type = "SCIENTIFIC_CLAIM"
+
+            claim_id = str(uuid.uuid4())
+            claims.append({
+                "claim_id": claim_id,
+                "original_text": orig_title,
+                "normalized_claim": norm_title,
+                "claim_text": norm_title,
+                "claim_type": claim_type,
+                "subject": subject or orig_title[:45],
+                "predicate": predicate or "khẳng định tính khả thi",
+                "object": obj,
+                "date_or_time_period": temporal,
+                "location": location,
+                "entities": entities,
+                "numerical_values": numerical_values,
+                "source_article_id": source_article_id,
+                "checkability": True,
+                "is_checkable": True,
+                "is_key_claim": True,
+                "is_title_anchor": True,
+                "location_in_doc": "Tiêu đề bài báo (Luận điểm chủ chốt)",
+            })
+
+        # 2. Các luận điểm tiếp theo (#02, #03, #04...): Lọc từ thân bài nhưng PHẢI liên quan đến Tiêu đề
         raw_sentences = [
             s.strip() for s in re.split(r"(?<=[.!?\n])\s+", cleaned)
-            if len(s.strip()) >= 22
+            if len(s.strip()) >= 25
+            and not self.is_boilerplate_or_administrative(s.strip())
         ]
 
-        claims = []
-        for sentence in raw_sentences:
+        # Extract title keywords for semantic topic relevance ranking
+        title_words = set(re.findall(r"\w+", (article_title or "").lower()))
+        stopwords = {
+            "và", "là", "của", "có", "trong", "cho", "được", "với", "các", "những", "này",
+            "khi", "đã", "sẽ", "về", "như", "tại", "đến", "từ", "ở", "gì", "sao", "thế", "nào",
+            "theo", "bài", "báo", "tin", "tức", "ông", "bà", "vừa", "qua"
+        }
+        substantive_title_words = {w for w in title_words if len(w) > 2 and w not in stopwords}
+
+        scored_sentences = []
+        clean_title_low = (article_title or "").lower().strip(" \"'“”«»?")
+        for s in raw_sentences:
+            s_low = s.lower()
+            # Avoid repeating the title verbatim
+            if clean_title_low and (clean_title_low in s_low or s_low in clean_title_low):
+                continue
+            # Avoid questions and rhetoric
+            if s.endswith("?") or s.count("?") > 0:
+                continue
+            
+            s_words = set(re.findall(r"\w+", s_low))
+            overlap_count = len(s_words.intersection(substantive_title_words))
+            has_nums = bool(self._extract_numerical_values(s))
+            has_entities = bool(self._extract_entities(s))
+            
+            # Topic relevance score
+            relevance_score = (overlap_count * 2.5) + (1.5 if has_nums else 0.0) + (1.0 if has_entities else 0.0)
+            scored_sentences.append((relevance_score, s))
+
+        # Sort descending by relevance to title topic
+        scored_sentences.sort(key=lambda x: x[0], reverse=True)
+
+        for _, sentence in scored_sentences:
+            if len(claims) >= max_claims:
+                break
+            
             entities = self._extract_entities(sentence)
             numerical_values = self._extract_numerical_values(sentence)
             temporal = self._extract_temporal_expressions(sentence)
@@ -277,9 +399,7 @@ class FactCheckingAgent:
                 slots=(subject, predicate, obj),
             )
 
-            # Preserve normalized claim without distorting meaning
             norm_claim = sentence.strip(" \"'“”«»")
-
             claim_id = str(uuid.uuid4())
             claims.append({
                 "claim_id": claim_id,
@@ -297,19 +417,20 @@ class FactCheckingAgent:
                 "source_article_id": source_article_id,
                 "checkability": checkability,
                 "is_checkable": checkability,
+                "is_key_claim": False,
+                "is_title_anchor": False,
+                "location_in_doc": f"Đoạn văn thân bài (Luận điểm #{len(claims)+1})",
             })
 
-            if len(claims) >= max_claims:
-                break
-
         # Fallback if no sentence reached threshold
-        if not claims and cleaned:
+        if not claims:
+            fallback_text = (article_title or cleaned[:200]).strip()
             claim_id = str(uuid.uuid4())
             claims.append({
                 "claim_id": claim_id,
-                "original_text": cleaned[:200],
-                "normalized_claim": cleaned[:200],
-                "claim_text": cleaned[:200],
+                "original_text": fallback_text,
+                "normalized_claim": fallback_text,
+                "claim_text": fallback_text,
                 "claim_type": "FACTUAL_CLAIM",
                 "subject": None,
                 "predicate": None,
@@ -321,11 +442,18 @@ class FactCheckingAgent:
                 "source_article_id": source_article_id,
                 "checkability": True,
                 "is_checkable": True,
+                "is_key_claim": True,
+                "is_title_anchor": True,
+                "location_in_doc": "Tiêu đề bài báo",
             })
 
         return claims
 
-    def generate_search_queries(self, claim: dict[str, Any]) -> dict[str, str]:
+    def generate_search_queries(
+        self,
+        claim: dict[str, Any],
+        article_title: str | None = None,
+    ) -> dict[str, str]:
         """Generate multi-query retrieval strategies as required by Section 6, empowered by Gemini NLP."""
         norm_claim = claim.get("normalized_claim") or claim.get("claim_text", "")
         subject = claim.get("subject") or ""
@@ -338,29 +466,44 @@ class FactCheckingAgent:
         entity_str = " ".join(entities[:3]) if entities else ""
         core_tokens = f"{subject} {predicate}".strip() or norm_claim[:60]
 
+        # Extract title anchor keywords to avoid off-topic drift
+        title_anchor = ""
+        if article_title and article_title.strip():
+            t_words = [
+                w for w in re.findall(r"\w+", article_title.lower())
+                if len(w) > 2 and w not in ["báo", "tin", "tức", "điện", "cho", "biết", "vừa", "qua", "ngày"]
+            ]
+            title_anchor = " ".join(t_words[:6])
+
+        # Formulate base query combining title anchor and claim tokens
+        if title_anchor and title_anchor not in norm_claim.lower():
+            anchored_target = f"{title_anchor} {norm_claim}".strip()
+        else:
+            anchored_target = norm_claim
+
         # Use Gemini NLP structured query planner
         try:
-            plan = gemini_nlp_service.plan_retrieval_queries(norm_claim, context=claim.get("original_text", ""))
-            refute_q = plan.refutation_search_query or f"{core_tokens} bác bỏ tin đồn sai sự thật cảnh báo lừa đảo".strip()
-            support_q = plan.corroboration_search_query or f"{core_tokens} chính thức xác nhận công bố phê duyệt".strip()
-            semantic_q = plan.semantic_search_query or norm_claim[:160]
-            kw_q = " ".join(plan.bm25_keywords) if plan.bm25_keywords else norm_claim[:80]
+            plan = gemini_nlp_service.plan_retrieval_queries(anchored_target, context=claim.get("original_text", ""))
+            refute_q = plan.refutation_search_query or f"{anchored_target[:80]} bác bỏ sai sự thật cảnh báo lừa đảo".strip()
+            support_q = plan.corroboration_search_query or f"{anchored_target[:80]} chính thức xác nhận công bố phê duyệt".strip()
+            semantic_q = plan.semantic_search_query or anchored_target[:160]
+            kw_q = " ".join(plan.bm25_keywords) if plan.bm25_keywords else anchored_target[:80]
         except Exception as e:
             logger.warning("Gemini query planning error in generate_search_queries: %s", e)
-            refute_q = f"{core_tokens} bác bỏ tin đồn sai sự thật cảnh báo lừa đảo".strip()
-            support_q = f"{core_tokens} chính thức xác nhận công bố phê duyệt".strip()
-            semantic_q = norm_claim[:160]
-            kw_q = norm_claim[:80]
+            refute_q = f"{anchored_target[:80]} bác bỏ sai sự thật cảnh báo lừa đảo".strip()
+            support_q = f"{anchored_target[:80]} chính thức xác nhận công bố phê duyệt".strip()
+            semantic_q = anchored_target[:160]
+            kw_q = anchored_target[:80]
 
         queries = {
-            "verbatim": norm_claim[:160],
-            "entity": f"{subject} {entity_str} {location}".strip() or norm_claim[:80],
-            "event": f"{subject} {predicate} {obj}".strip() or norm_claim[:80],
-            "temporal": f"{core_tokens} {temporal}".strip() or norm_claim[:80],
+            "verbatim": anchored_target[:160],
+            "entity": f"{title_anchor} {subject} {entity_str} {location}".strip() or anchored_target[:80],
+            "event": f"{title_anchor} {subject} {predicate} {obj}".strip() or anchored_target[:80],
+            "temporal": f"{title_anchor} {core_tokens} {temporal}".strip() or anchored_target[:80],
             "support": support_q,
             "refute": refute_q,
-            "quotation": f"{subject} phát biểu tuyên bố trả lời phỏng vấn thông cáo".strip(),
-            "raw_data": f"{subject} {temporal} số liệu thống kê báo cáo kết luận".strip(),
+            "quotation": f"{title_anchor} phát biểu tuyên bố trả lời phỏng vấn thông cáo".strip(),
+            "raw_data": f"{title_anchor} số liệu thống kê báo cáo kết luận".strip(),
             "semantic": semantic_q,
             "keywords": kw_q,
         }
@@ -487,6 +630,9 @@ class FactCheckingAgent:
             )
             return {
                 "claim_id": claim_id,
+                "is_key_claim": claim.get("is_key_claim", False),
+                "is_title_anchor": claim.get("is_title_anchor", False),
+                "location_in_doc": claim.get("location_in_doc", "Tiêu đề bài báo" if claim.get("is_key_claim") else "Đoạn văn thân bài"),
                 "original_text": original_text,
                 "normalized_claim": claim_text,
                 "claim_text": claim_text,
@@ -546,7 +692,7 @@ class FactCheckingAgent:
             }
 
         # 2. Multi-query Search Strategy prioritizing Research Datasets (ViFactCheck, ViWiki, X-FACT, FEVER)
-        queries = self.generate_search_queries(claim)
+        queries = self.generate_search_queries(claim, article_title=article_title)
         retrieved_candidates: list[dict[str, Any]] = []
         seen_chunk_ids: set[str] = set()
 
@@ -629,6 +775,35 @@ class FactCheckingAgent:
                     l_cand["query_matched_strategy"] = "live_news_web_retriever"
                     retrieved_candidates.append(l_cand)
 
+        # Step 2.38: Topic relevance gating against Title and Claim to avoid irrelevant matching
+        filtered_candidates = []
+        topic_target_text = f"{article_title or ''} {claim_text}".lower()
+        topic_words = set(re.findall(r"\w+", topic_target_text))
+        generic_stopwords = {
+            "chính", "phủ", "nước", "cộng", "hòa", "xã", "hội", "chủ", "nghĩa", "việt", "nam",
+            "báo", "điện", "tử", "cổng", "thông", "tin", "ngày", "tháng", "năm", "tin", "tức",
+            "bài", "viết", "cho", "biết", "vừa", "qua", "ông", "bà", "các", "những", "với", "trong", "đã", "sẽ",
+            "đại", "sứ", "pháp", "ngoại", "giao", "hội", "nghị", "thải", "nhật", "bản"
+        }
+        substantive_topic_words = {w for w in topic_words if len(w) > 2 and w not in generic_stopwords}
+        is_fuel_water_topic = any(k in topic_target_text for k in ["xăng", "nước lã", "rác thải", "nhiên liệu", "động cơ"])
+
+        for cand in retrieved_candidates:
+            c_text = (cand.get("excerpt") or cand.get("content") or "").lower()
+
+            # For fuel/engine assertions, candidate must possess relevant technical/fuel domain keywords
+            if is_fuel_water_topic:
+                fuel_matches = [k for k in ["xăng", "nhiên liệu", "động cơ", "nước lã", "nhiệt động", "năng lượng"] if k in c_text]
+                if not fuel_matches:
+                    continue
+
+            if substantive_topic_words:
+                has_substantive_match = any(sw in c_text for sw in substantive_topic_words)
+                if not has_substantive_match:
+                    continue
+            filtered_candidates.append(cand)
+        retrieved_candidates = filtered_candidates
+
         # Step 2.4: BGE-Reranker v2 M3 cross-scoring across ALL retrieved candidates
         for cand in retrieved_candidates:
             c_text = cand.get("excerpt") or cand.get("content", "")
@@ -638,6 +813,8 @@ class FactCheckingAgent:
 
         # Sort candidates descending by rerank_score: highest relevance dataset evidence at rank 1
         retrieved_candidates.sort(key=lambda x: x.get("rerank_score", 0.0), reverse=True)
+        # Retain only candidates with sufficient confidence
+        retrieved_candidates = [c for c in retrieved_candidates if c.get("rerank_score", 0.0) >= 0.35]
 
         # 3. If NO evidence found in research datasets & knowledge base
         if not retrieved_candidates:
@@ -662,6 +839,9 @@ class FactCheckingAgent:
 
             return {
                 "claim_id": claim_id,
+                "is_key_claim": claim.get("is_key_claim", False),
+                "is_title_anchor": claim.get("is_title_anchor", False),
+                "location_in_doc": claim.get("location_in_doc", "Tiêu đề bài báo" if claim.get("is_key_claim") else "Đoạn văn thân bài"),
                 "original_text": original_text,
                 "normalized_claim": claim_text,
                 "claim_text": claim_text,
@@ -923,6 +1103,9 @@ class FactCheckingAgent:
 
         return {
             "claim_id": claim_id,
+            "is_key_claim": claim.get("is_key_claim", False),
+            "is_title_anchor": claim.get("is_title_anchor", False),
+            "location_in_doc": claim.get("location_in_doc", "Tiêu đề bài báo" if claim.get("is_key_claim") else "Đoạn văn thân bài"),
             "original_text": original_text,
             "normalized_claim": claim_text,
             "claim_text": claim_text,
@@ -995,12 +1178,13 @@ class FactCheckingAgent:
         start_time = datetime.now(timezone.utc)
         t0 = time.time()
 
-        # Step 1: Claim extraction
+        # Step 1: Claim extraction (anchoring Luận điểm 1 to article_title)
         raw_claims = self.extract_checkable_claims(
             content,
             language=language,
             max_claims=5,
             source_article_id=source_article_id,
+            article_title=article_title,
         )
 
         # Step 1.5: Story-level context & news retrieval pool

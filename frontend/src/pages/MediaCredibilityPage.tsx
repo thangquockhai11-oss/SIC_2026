@@ -5,6 +5,9 @@ import { api } from "../api/client";
 
 function getReviewCouncil(category?: string, title?: string): string {
   const combined = `${category || ""} ${title || ""}`.toLowerCase();
+  if (["xăng", "nhiên liệu", "nước lã", "rác thải", "động cơ", "dầu khí", "nhiệt động", "khoa học kỹ thuật"].some((w) => combined.includes(w))) {
+    return "Tiểu ban Thẩm định Khoa học & Công nghệ Năng lượng ĐHQG";
+  }
   if (["ung thư", "y tế", "thuốc", "bệnh", "thảo dược", "điều trị", "sức khỏe", "dược", "bác sĩ"].some((w) => combined.includes(w))) {
     return "Tiểu ban Thẩm định Y tế & Khoa học Sức khỏe ĐHQG";
   }

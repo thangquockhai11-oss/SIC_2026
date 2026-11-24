@@ -265,7 +265,18 @@ class HybridKnowledgeRetriever:
 
             chunk = self.chunks[idx]
             # Check content token overlap ratio to prevent obscure queries matching unrelated text
+            ADMIN_STOPWORDS = {
+                "chính", "phủ", "nước", "cộng", "hòa", "xã", "hội", "chủ", "nghĩa", "việt", "nam",
+                "báo", "điện", "tử", "cổng", "thông", "tin", "ngày", "tháng", "năm", "tin", "tức",
+                "bài", "viết", "cho", "biết", "vừa", "qua", "ông", "bà", "các", "những", "với", "trong", "đã", "sẽ"
+            }
             c_tokens = set(self._tokenize(chunk.evidence_text + " " + chunk.claim_text))
+            substantive_query_tokens = [t for t in tokens if t not in ADMIN_STOPWORDS and len(t) > 2]
+            if substantive_query_tokens:
+                sub_matched = set(substantive_query_tokens).intersection(c_tokens)
+                if not sub_matched:
+                    continue
+
             matched_tokens = set(tokens).intersection(c_tokens)
             if len(matched_tokens) < 2 or (len(matched_tokens) / len(set(tokens))) < 0.28:
                 continue

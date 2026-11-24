@@ -194,6 +194,30 @@ def fetch_and_extract_article(url: str) -> tuple[str, str]:
     for tag in soup(["script", "style", "nav", "footer", "header", "form", "iframe", "noscript", "aside", "svg", "button", "figure", "figcaption"]):
         tag.decompose()
 
+    # Also decompose footer/boilerplate containers by class and id
+    for selector in [
+        "[class*='footer']", "[id*='footer']", "[class*='bottom']", "[class*='copyright']",
+        "[class*='license']", "[class*='lien-he']", "[class*='contact']", "[class*='toa-soan']",
+        "[class*='toasoan']", "[class*='ban-quyen']", "[class*='meta-bottom']", "[class*='social']",
+        "[class*='share']", "[class*='breadcrumb']", "[class*='comment']", "[class*='author-bio']",
+        "[class*='box-info']", "[class*='thong-tin-toa-soan']", "[id*='copyright']"
+    ]:
+        for el in soup.select(selector):
+            el.decompose()
+
+    def is_boilerplate_text(t: str) -> bool:
+        """Filter out press license, address, hotline, copyright, and footer metadata."""
+        tl = t.lower()
+        patterns = [
+            "trụ sở:", "trụ sở chính", "điện thoại:", "đt:", "fax:", "email:",
+            "đường dây nóng", "hotline", "giấy phép hoạt động", "giấy phép xuất bản",
+            "giấy phép số", "bản quyền thuộc", "©", "copyright", "tổng biên tập",
+            "phó tổng biên tập", "cơ quan chủ quản", "ghi rõ nguồn", "mọi hành vi sao chép",
+            "cục thông tin và truyền thông", "toà soạn:", "tòa soạn:", "liên hệ quảng cáo",
+            "phát hành lại thông tin", "báo điện tử của chính phủ"
+        ]
+        return any(p in tl for p in patterns)
+
     # Extract title with multi-layer fallback
     title = ""
     if soup.h1 and soup.h1.get_text().strip():
@@ -215,13 +239,19 @@ def fetch_and_extract_article(url: str) -> tuple[str, str]:
         ".content", ".fck_detail", ".cms-body", ".news-content", ".post_content", ".detail__content", ".item-content"
     ]:
         for el in soup.select(selector):
-            ps = [p.get_text().strip() for p in el.find_all("p") if len(p.get_text().strip()) >= 15]
+            ps = [
+                p.get_text().strip() for p in el.find_all("p")
+                if len(p.get_text().strip()) >= 15 and not is_boilerplate_text(p.get_text())
+            ]
             if ps:
                 candidates.append((sum(len(p) for p in ps), ps))
 
     # 2. General div / section search
     for tag in soup.find_all(["div", "section"]):
-        ps = [p.get_text().strip() for p in tag.find_all("p") if len(p.get_text().strip()) >= 18]
+        ps = [
+            p.get_text().strip() for p in tag.find_all("p")
+            if len(p.get_text().strip()) >= 18 and not is_boilerplate_text(p.get_text())
+        ]
         if len(ps) >= 2:
             total_len = sum(len(p) for p in ps)
             candidates.append((total_len, ps))
@@ -231,16 +261,22 @@ def fetch_and_extract_article(url: str) -> tuple[str, str]:
         body_text = "\n\n".join(candidates[0][1])
     else:
         # Fallback to all paragraphs in document
-        all_ps = [p.get_text().strip() for p in soup.find_all("p") if len(p.get_text().strip()) >= 15]
+        all_ps = [
+            p.get_text().strip() for p in soup.find_all("p")
+            if len(p.get_text().strip()) >= 15 and not is_boilerplate_text(p.get_text())
+        ]
         if all_ps:
             body_text = "\n\n".join(all_ps)
         else:
             meta_desc = soup.find("meta", attrs={"name": "description"}) or soup.find("meta", attrs={"property": "og:description"})
-            if meta_desc and meta_desc.get("content"):
+            if meta_desc and meta_desc.get("content") and not is_boilerplate_text(str(meta_desc.get("content"))):
                 body_text = str(meta_desc.get("content")).strip()
             else:
                 body_elem = soup.find("body") or soup
-                lines = [line.strip() for line in body_elem.get_text(separator="\n").splitlines() if len(line.strip()) >= 20]
+                lines = [
+                    line.strip() for line in body_elem.get_text(separator="\n").splitlines()
+                    if len(line.strip()) >= 20 and not is_boilerplate_text(line)
+                ]
                 body_text = "\n\n".join(lines)
 
     if len(body_text) < 25:

@@ -678,11 +678,13 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
     const combined = `${titleLower} ${contentLower}`;
 
     let category = "THỜI SỰ & BÁO CHÍ ĐỐI CHUẨN";
-    if (["ung thư", "y tế", "thuốc", "bệnh", "thảo dược", "điều trị", "sức khỏe"].some((w) => combined.includes(w))) {
+    if (["xăng", "nhiên liệu", "nước lã", "rác thải", "động cơ", "dầu khí", "nhiệt động"].some((w) => combined.includes(w))) {
+      category = "KHOA HỌC KỸ THUẬT & CẢNH BÁO BÁO CHÍ";
+    } else if (["ung thư", "y tế", "thuốc", "bệnh", "thảo dược", "điều trị", "sức khỏe"].some((w) => combined.includes(w))) {
       category = "NGHIÊN CỨU Y TẾ & SỨC KHỎE CỘNG ĐỒNG";
     } else if (["cư kuin", "đắk lắk", "daklak", "tấn công", "khủng bố", "công an", "an ninh", "trật tự", "bắt giữ", "hình sự"].some((w) => combined.includes(w))) {
       category = "AN NINH TRẬT TỰ & AN TOÀN XÃ HỘI";
-    } else if (["bếp gas", "nước lã", "lừa đảo", "chiêu trò", "bẫy lừa"].some((w) => combined.includes(w))) {
+    } else if (["bếp gas", "lừa đảo", "chiêu trò", "bẫy lừa"].some((w) => combined.includes(w))) {
       category = "AN NINH MẠNG & CẢNH BÁO LỪA ĐẢO";
     } else if (["thủy điện", "vỡ đập", "mưa lũ", "thiên tai", "hồ đập", "sạt lở"].some((w) => combined.includes(w))) {
       category = "PHÒNG CHỐNG THIÊN TAI & AN TOÀN HỒ ĐẬP";
@@ -698,12 +700,18 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
     if (!sourceName && detail.source_url) {
       try {
         const host = new URL(detail.source_url).hostname.replace("www.", "");
-        if (host.includes("tuoitre")) sourceName = "Báo Tuổi Trẻ";
+        if (host.includes("chinhphu") || host.includes("baochinhphu")) sourceName = "Báo Điện tử Chính phủ";
+        else if (host.includes("tuoitre")) sourceName = "Báo Tuổi Trẻ";
         else if (host.includes("baodaklak") || host.includes("daklak")) sourceName = "Báo Đắk Lắk điện tử";
         else if (host.includes("cafef")) sourceName = "Báo điện tử CafeF";
         else if (host.includes("vnexpress")) sourceName = "Báo điện tử VnExpress";
         else if (host.includes("thanhnien")) sourceName = "Báo Thanh Niên";
         else if (host.includes("vtv")) sourceName = "Đài Truyền hình Việt Nam (VTV)";
+        else if (host.includes("dantri")) sourceName = "Báo Dân Trí";
+        else if (host.includes("vietnamnet")) sourceName = "Báo VietNamNet";
+        else if (host.includes("laodong")) sourceName = "Báo Lao Động";
+        else if (host.includes("cand")) sourceName = "Báo Công an Nhân dân";
+        else if (host.includes("nhandan")) sourceName = "Báo Nhân Dân";
         else sourceName = host;
       } catch {
         sourceName = "Cơ quan báo chí độc lập";
